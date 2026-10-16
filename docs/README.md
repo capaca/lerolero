@@ -1,6 +1,6 @@
-# Especificação — App de mensagens
+# Especificação — Lero-lero
 
-App de mensagens com criptografia ponta a ponta, para o público geral, sem infraestrutura paga pelo autor.
+Lero-lero é um app de mensagens com criptografia ponta a ponta, para o público geral, sem infraestrutura paga pelo autor.
 
 ## Documentos
 
