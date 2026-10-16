@@ -149,7 +149,7 @@ O motor de sincronização **continua recebendo** normalmente. O módulo de Aten
 ## Estrutura do código (proposta)
 
 ```
-chat-app/
+lerolero/
 ├── docs/                  # esta especificação
 ├── packages/
 │   ├── core/              # núcleo em TypeScript, sem interface (testável isoladamente)
