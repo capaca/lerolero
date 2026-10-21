@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Lero-lero · rolagem</title>
+  </head>
+  <body>
+    <main>
+      <h1>Lero-lero · teste de rolagem</h1>
+      <p class="hint">
+        Abre uma conversa longa em Svelte e rola para cima pelo histórico, em cinco montagens da lista.
+        Não toque na tela durante a medição. <a href="./">← Outras medições</a>
+      </p>
+
+      <div class="actions">
+        <label for="count" class="hint" style="margin: 0">Mensagens</label>
+        <select id="count">
+          <option>500</option>
+          <option selected>2000</option>
+          <option>5000</option>
+        </select>
+        <button id="run-btn" class="primary">Medir</button>
+        <button id="copy-btn">Copiar resultados (JSON)</button>
+      </div>
+      <p id="status" class="hint"></p>
+      <textarea id="json" rows="8" hidden readonly></textarea>
+
+      <div id="stage"></div>
+      <section id="results"></section>
+    </main>
+    <script type="module" src="/src/rolagem/main.ts"></script>
+  </body>
+</html>
