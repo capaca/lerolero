@@ -1,0 +1,54 @@
+:root {
+  --bg: #fafaf7;
+  --fg: #1d1d1b;
+  --muted: #6b6b66;
+  --line: #deded8;
+  --accent: #1f6f5c;
+  --ok: #1f7a3a;
+  --fail: #b3261e;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.45;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615;
+    --fg: #ececea;
+    --muted: #a0a09a;
+    --line: #34342f;
+    --accent: #5cc2a6;
+    --ok: #6fd18a;
+    --fail: #ff8a80;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); }
+main { max-width: 720px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 1.3rem; margin: 0.5rem 0; }
+h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+section { border-top: 1px solid var(--line); padding: 1rem 0; }
+.hint { color: var(--muted); font-size: 0.9rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 1rem 0; }
+button {
+  font: inherit; padding: 0.55rem 1rem; border-radius: 8px;
+  border: 1px solid var(--line); background: transparent; color: var(--fg);
+}
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+button:disabled { opacity: 0.5; }
+textarea {
+  width: 100%; font: 0.85rem ui-monospace, monospace; padding: 8px;
+  background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 8px;
+  margin: 0.25rem 0 0.5rem;
+}
+label { display: block; margin-bottom: 0.5rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; padding: 4px 8px 4px 0; vertical-align: top; overflow-wrap: anywhere; }
+th { color: var(--muted); font-weight: 500; }
+.grid td, .grid th { border-bottom: 1px solid var(--line); }
+.out { margin-top: 0.75rem; }
+.checks { padding-left: 0; list-style: none; font-size: 0.9rem; }
+.badge { font-size: 0.75rem; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--line); }
+.badge.ok { color: var(--ok); border-color: currentColor; }
+.badge.fail { color: var(--fail); border-color: currentColor; }
+.good { color: var(--ok); }
+.bad, .err { color: var(--fail); }
+.err { font-size: 0.8rem; }

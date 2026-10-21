@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Lero-lero · medição</title>
+  </head>
+  <body>
+    <main>
+      <h1>Lero-lero · protótipo de medição</h1>
+      <p class="hint">
+        Mede no próprio aparelho o que decide o stack (ADR-0002). Feche os outros apps antes, rode
+        tudo e use “Copiar resultados” para registrar.
+      </p>
+
+      <div class="actions">
+        <button id="all-btn" class="primary">Rodar tudo</button>
+        <button id="copy-btn">Copiar resultados (JSON)</button>
+        <span id="copy-status" class="hint"></span>
+      </div>
+      <textarea id="json" rows="8" hidden readonly></textarea>
+
+      <section>
+        <h2>Aparelho</h2>
+        <table id="env"><tr><td>Carregando…</td></tr></table>
+      </section>
+
+      <section>
+        <h2>Cifrar e decifrar (NIP-17)</h2>
+        <button id="nip17-btn">Medir</button>
+        <div id="nip17-out" class="out"></div>
+      </section>
+
+      <section>
+        <h2>PIN → chave (Argon2id)</h2>
+        <button id="argon2-btn">Medir</button>
+        <div id="argon2-out" class="out"></div>
+      </section>
+
+      <section>
+        <h2>Prova de trabalho (NIP-13)</h2>
+        <button id="pow-btn">Medir</button>
+        <div id="pow-out" class="out"></div>
+      </section>
+
+      <section>
+        <h2>Relays</h2>
+        <label for="relays" class="hint">Um por linha:</label>
+        <textarea id="relays" rows="5" spellcheck="false"></textarea>
+        <label class="hint">
+          <input type="checkbox" id="roundtrip" checked />
+          Medir ida e volta (publica um gift wrap de teste, com chaves descartáveis)
+        </label>
+        <button id="relays-btn">Medir</button>
+        <div id="relays-out" class="out"></div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
