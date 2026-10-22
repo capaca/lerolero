@@ -12,5 +12,6 @@ rodam como estão (caminhos de uma pasta temporária, Chrome do macOS, relays re
 | `audio.mjs`, `audio2.mjs` | gravar (microfone simulado), enviar, tocar, velocidade, um áudio por vez |
 | `apagar.mjs` | apagar para mim e para todos, remoção no Blossom (branch `exclusao-de-mensagens`) |
 | `update.mjs`, `upgrade.mjs`, `branca.mjs`, `laco.mjs` | atualização do app, service worker, tela branca e autocorreção |
+| `teclado.mjs` | regressão: com o teclado aberto, as últimas mensagens continuam junto do campo |
 | `comentario.mjs`, `rede.mjs`, `copiar.mjs` | enviar comentário, kind 10050 na rede, copiar a frase |
 | `pages-server.mjs` | servidor estático que imita o GitHub Pages (404.html, `.html`, cache opcional) |

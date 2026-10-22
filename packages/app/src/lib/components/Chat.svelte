@@ -148,6 +148,19 @@
 
 	const nearBottom = () => !scroller || scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 150;
 
+	// O teclado encolhe a área das mensagens: quem estava no fim continua vendo as últimas.
+	let atEnd = true;
+	const onscroll = () => (atEnd = !!scroller && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 8);
+	$effect(() => {
+		if (!scroller) return;
+		const el = scroller;
+		const observer = new ResizeObserver(() => {
+			if (atEnd) el.scrollTop = el.scrollHeight;
+		});
+		observer.observe(el);
+		return () => observer.disconnect();
+	});
+
 	async function load() {
 		const limit = PAGE_SIZE * (1 + extraPages);
 		const list = await session.getMessages(conversationId, limit + 1);
@@ -222,7 +235,7 @@
 	{@render header()}
 	{@render banner?.()}
 
-	<div class="messages" bind:this={scroller} aria-live="polite">
+	<div class="messages" bind:this={scroller} {onscroll} aria-live="polite">
 		{#if hasOlder}
 			<button class="link older" onclick={loadOlder}>Carregar mensagens anteriores</button>
 		{/if}
@@ -367,6 +380,12 @@
 		overflow-y: auto;
 		padding: 0.5rem 0.8rem;
 		overflow-anchor: none;
+		display: flex;
+		flex-direction: column;
+	}
+	/* poucas mensagens ficam junto do campo, como nos outros apps; com muitas, a margem some */
+	.messages > :first-child {
+		margin-top: auto;
 	}
 	.block {
 		content-visibility: auto;
