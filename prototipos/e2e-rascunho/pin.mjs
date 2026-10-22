@@ -1,0 +1,62 @@
+// PIN em bolinhas (2026-10-22): cadastro, PINs diferentes, desbloqueio com PIN errado e certo, ver a frase.
+import puppeteer from 'puppeteer-core'
+const URL0 = 'http://localhost:4181/lerolero/'
+const D = new URL('.', import.meta.url).pathname
+const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', defaultViewport: { width: 400, height: 820 } })
+let failed = 0
+const ok = (c, m) => (console.log(c ? '✓' : '✗', m), c || failed++)
+const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+const page = await (await browser.createBrowserContext()).newPage()
+page.on('pageerror', (e) => console.log('ERRO NA PÁGINA:', String(e)))
+page.on('console', (m) => m.type() === 'error' && !m.text().includes('404') && console.log('console:', m.text()))
+const clickText = (label) => page.evaluate((label) => { const el = [...document.querySelectorAll('a,button')].find((e) => e.textContent.trim().startsWith(label)); if (!el) throw new Error('não achei: ' + label); el.click() }, label)
+const text = () => page.evaluate(() => document.body.innerText)
+const active = () => page.evaluate(() => document.activeElement?.id)
+const filled = (sel) => page.$$eval(sel + ' .dot.filled', (d) => d.length)
+try {
+  await page.goto(URL0); await page.waitForFunction(() => location.pathname.endsWith('/bem-vindo'))
+  await clickText('Criar minha conta'); await page.waitForSelector('#nome'); await page.type('#nome', 'Maria'); await clickText('Continuar')
+  await page.waitForSelector('#pin'); await wait(200)
+  ok((await active()) === 'pin', 'cadastro: o foco começa no PIN')
+  await page.keyboard.type('123'); ok((await page.$$eval('.dot.filled', (d) => d.length)) === 3, '3 números → 3 bolinhas cheias')
+  await page.keyboard.type('456'); await wait(100)
+  ok((await active()) === 'pin2', 'completar o 1º pula para o 2º')
+  await page.screenshot({ path: D + '/pin-cadastro.png' })
+  await page.keyboard.type('654321'); await wait(300)
+  const t = await text()
+  ok(t.includes('Os dois PINs não são iguais') && (await active()) === 'pin2' && (await page.$eval('#pin2', (e) => e.value)) === '', 'PINs diferentes → aviso, 2º apagado e com foco')
+  ok(!!(await page.$('.pin.error')), 'bolinhas do 2º em vermelho')
+  await page.screenshot({ path: D + '/pin-diferentes.png' })
+  await page.keyboard.type('123456')
+  await page.waitForFunction(() => document.body.innerText.includes('Sua frase de recuperação'), { timeout: 20000 })
+  ok(true, 'PINs iguais → conta criada sem tocar em botão')
+
+  // bloquear: a sessão aberta dura 5 min; apagar o registro força o PIN
+  await page.evaluate(() => new Promise((ok) => { const r = indexedDB.open('lerolero'); r.onsuccess = () => { r.result.transaction('settings', 'readwrite').objectStore('settings').delete('sessaoAberta').onsuccess = ok } }))
+  await page.goto(URL0); await page.waitForFunction(() => location.pathname.endsWith('/desbloquear'), { timeout: 20000 })
+  await page.waitForSelector('#pin'); await wait(300)
+  await page.keyboard.type('000000')
+  await page.waitForSelector('.pin.error', { timeout: 15000 }); await wait(200)
+  ok((await active()) === 'pin' && (await filled('.pin')) === 0, 'desbloqueio: PIN errado → vermelho, apagado e com foco')
+  await page.screenshot({ path: D + '/pin-errado.png' })
+  await page.keyboard.type('1'); await wait(100)
+  ok(!(await page.$('.pin.error')), 'voltar a digitar tira o vermelho')
+  await page.keyboard.type('23456')
+  await page.waitForFunction(() => location.pathname.endsWith('/lerolero/'), { timeout: 20000 })
+  ok(true, 'PIN certo → início')
+
+  await page.evaluate(() => document.querySelector('a[href$="/ajustes"]').click()); await page.waitForFunction(() => location.pathname.endsWith('/ajustes'))
+  await page.evaluate(() => document.querySelector('a[href$="/ajustes/frase"]').click()); await page.waitForSelector('#pin'); await wait(200)
+  await page.keyboard.type('999999'); await page.waitForSelector('.pin.error', { timeout: 15000 })
+  ok((await text()).match(/PIN/), 'ver a frase: PIN errado avisa: ' + (await page.$eval('p.error', (e) => e.textContent).catch(() => '?')))
+  await page.keyboard.type('123456')
+  await page.waitForFunction(() => document.querySelectorAll('ol li').length === 12, { timeout: 15000 })
+  ok(true, 'ver a frase: PIN certo mostra as 12 palavras sem tocar em botão')
+
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }])
+  await page.evaluate(() => new Promise((ok) => { const r = indexedDB.open('lerolero'); r.onsuccess = () => { r.result.transaction('settings', 'readwrite').objectStore('settings').delete('sessaoAberta').onsuccess = ok } }))
+  await page.goto(URL0); await page.waitForFunction(() => location.pathname.endsWith('/desbloquear'), { timeout: 20000 })
+  await clickText('Esqueci o PIN'); await page.waitForSelector('#pin2'); await page.type('#pin', '111'); await wait(100)
+  await page.screenshot({ path: D + '/pin-esqueci-escuro.png', fullPage: true })
+} finally { await browser.close() }
+process.exit(failed ? 1 : 0)
