@@ -65,7 +65,7 @@ Somando: **~33 semanas de desenvolvimento + 6 de beta** → MVP público por vol
 - Cartão de perfil privado com nome e foto (Q-P5, RF-02).
 - **Excluir áudio e mídia:** apagar para mim (mensagem e arquivo no aparelho) e apagar para todos (pedido cifrado ao contato, como no RF-25, e remoção do arquivo dos servidores Blossom por quem enviou).
 
-**Andamento (2026-10-22):** Blossom e áudio prontos (Opus a ~17 kbps, Q-R2 resolvida). Ordem combinada a seguir: suite e2e, fotos, cartão de perfil, expiração.
+**Andamento (2026-10-22):** Blossom, áudio (Opus a ~17 kbps, Q-R2 resolvida) e exclusão de mensagens e áudios prontos e publicados. Ordem combinada a seguir: melhorias de UX/UI, suite e2e, fotos, cartão de perfil, expiração.
 
 **Pronto quando:** os critérios de aceite "Mídia salva uma vez" passam; 1 minuto de áudio fica em torno de 120 KB e uma foto em até 200 KB.
 
