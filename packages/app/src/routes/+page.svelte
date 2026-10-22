@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { contactName, toNpub, type ContactRecord, type ConversationRecord } from '@lerolero/core';
+	import Icon from '#lib/components/Icon.svelte';
 	import { formatWhen } from '#lib/format.ts';
 	import { takePendingInvite } from '#lib/pending-invite.ts';
 	import { highRiskOfDataLoss, isIOS } from '#lib/platform.ts';
@@ -95,7 +96,15 @@
 								<span class="when" class:unread={conversation.unread > 0}>{formatWhen(conversation.lastMessageAt)}</span>
 							</span>
 							<span class="bottom">
-								<span class="preview">{conversation.lastMessagePreview ?? ''}</span>
+								<span class="preview">
+									{#if conversation.lastMessageKind === 'audio' || conversation.lastMessagePreview?.startsWith('🎤')}
+										<Icon name="mic" size={15} /> Áudio
+									{:else if conversation.lastMessageKind === 'arquivo' || conversation.lastMessagePreview?.startsWith('📎')}
+										<Icon name="paperclip" size={15} /> Arquivo
+									{:else}
+										{conversation.lastMessagePreview ?? ''}
+									{/if}
+								</span>
 								{#if conversation.unread > 0}
 									<span class="badge" aria-label={`${conversation.unread} não lidas`}>{conversation.unread}</span>
 								{/if}
@@ -156,6 +165,10 @@
 		font-weight: 600;
 	}
 	.preview {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+		min-width: 0;
 		color: var(--muted);
 		font-size: 0.92rem;
 		white-space: nowrap;

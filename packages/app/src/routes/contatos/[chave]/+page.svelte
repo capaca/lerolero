@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { contactName, toNpub, type ContactRecord } from '@lerolero/core';
@@ -25,7 +26,7 @@
 <svelte:head><title>{contact ? contactName(contact) : 'Contato'} · Lero-lero</title></svelte:head>
 
 <main>
-	<p><a href={resolve('/contatos')}>← Contatos</a></p>
+	<BackLink href={resolve('/contatos')} label="Contatos" />
 	{#if contact === null}
 		<p>Contato não encontrado.</p>
 	{:else if contact}

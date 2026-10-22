@@ -203,7 +203,7 @@
 								{#if m.media?.type.startsWith('audio/')}
 									<AudioPlayer media={m.media} />
 								{:else if m.media}
-									<p class="hint">📎 Arquivo (ainda não suportado nesta versão)</p>
+									<p class="hint file"><Icon name="paperclip" size={16} /> Arquivo (ainda não suportado nesta versão)</p>
 								{:else}
 									<p>{m.text}</p>
 								{/if}
@@ -372,6 +372,12 @@
 		to {
 			opacity: 0.3;
 		}
+	}
+	.file {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin: 0;
 	}
 	.round {
 		width: 2.9rem;

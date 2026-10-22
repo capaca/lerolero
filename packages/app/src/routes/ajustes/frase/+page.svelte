@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	import { resolve } from '$app/paths';
 	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
 	import PhraseBackup from '#lib/components/PhraseBackup.svelte';
@@ -34,7 +35,7 @@
 <svelte:head><title>Frase de recuperação · Lero-lero</title></svelte:head>
 
 <main>
-	<p><a href={resolve('/ajustes')}>← Ajustes</a></p>
+	<BackLink href={resolve('/ajustes')} label="Ajustes" />
 	<h1>Frase de recuperação</h1>
 
 	{#if words.length === 0}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { contactName, parseInvite, toNpub, type ContactRecord, type Invite } from '@lerolero/core';
@@ -45,7 +46,7 @@
 <svelte:head><title>Convite · Lero-lero</title></svelte:head>
 
 <main>
-	<p><a href={resolve('/contatos')}>← Contatos</a></p>
+	<BackLink href={resolve('/contatos')} label="Contatos" />
 	{#if error}
 		<h1>Convite</h1>
 		<p class="error" role="alert">{error}</p>

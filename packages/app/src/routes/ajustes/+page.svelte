@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toNpub } from '@lerolero/core';
@@ -33,7 +34,7 @@
 <svelte:head><title>Ajustes · Lero-lero</title></svelte:head>
 
 <main>
-	<p><a href={resolve('/')}>← Voltar</a></p>
+	<BackLink href={resolve('/')} label="Início" />
 	<h1>Ajustes</h1>
 
 	<section class="card">

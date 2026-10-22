@@ -1,12 +1,14 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	import { resolve } from '$app/paths';
+	import Icon from '#lib/components/Icon.svelte';
 	import { FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
 </script>
 
 <svelte:head><title>Como testar · Lero-lero</title></svelte:head>
 
 <main class="page">
-	<p><a href={resolve('/')}>← Abrir o app</a></p>
+	<BackLink href={resolve('/')} label="Abrir o app" />
 	<h1>Como testar o Lero-lero</h1>
 	<p>
 		Obrigado por testar o Lero-lero, um app de mensagens privadas que não pede telefone nem e-mail. Esta é uma
@@ -59,8 +61,9 @@
 			e depois mostre o QR ou compartilhe o link.
 		</li>
 		<li>
-			<strong>Converse.</strong> Abra o contato e toque em <strong>Conversar</strong>. Cada mensagem mostra 🕓
-			enquanto sai e ✓ quando chegou ao servidor.
+			<strong>Converse.</strong> Abra o contato e toque em <strong>Conversar</strong>. Cada mensagem mostra
+			<span class="inline-icon"><Icon name="clock" size={14} /></span> enquanto sai e
+			<span class="inline-icon"><Icon name="check" size={14} /></span> quando chegou ao servidor.
 		</li>
 	</ol>
 	<p>O app pede o PIN sempre que é aberto. Esqueceu o PIN? Use <strong>Esqueci o PIN</strong> e digite a frase.</p>
@@ -143,5 +146,9 @@
 	}
 	h2 {
 		margin-top: 2rem;
+	}
+	.inline-icon {
+		display: inline-block;
+		vertical-align: -2px;
 	}
 </style>

@@ -35,6 +35,8 @@ export type ConversationRecord = {
 	members: string[];
 	lastMessageAt: number;
 	lastMessagePreview?: string;
+	/** tipo da última mensagem, para a lista mostrar o ícone certo */
+	lastMessageKind?: 'texto' | 'audio' | 'arquivo';
 	unread: number;
 	/** já mandei meu nome nesta conversa (tag "nome" na primeira mensagem) */
 	nameSent?: boolean;

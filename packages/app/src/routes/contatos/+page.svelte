@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	import { resolve } from '$app/paths';
 	import { contactName, type ContactRecord } from '@lerolero/core';
 	import { onMount } from 'svelte';
@@ -11,7 +12,7 @@
 <svelte:head><title>Contatos · Lero-lero</title></svelte:head>
 
 <main>
-	<p><a href={resolve('/')}>← Início</a></p>
+	<BackLink href={resolve('/')} label="Início" />
 	<h1>Contatos</h1>
 
 	<div class="actions">

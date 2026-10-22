@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	import { resolve } from '$app/paths';
 	import { inviteLink } from '@lerolero/core';
 	import { onMount } from 'svelte';
@@ -29,7 +30,7 @@
 <svelte:head><title>Meu convite · Lero-lero</title></svelte:head>
 
 <main>
-	<p><a href={resolve('/contatos')}>← Contatos</a></p>
+	<BackLink href={resolve('/contatos')} label="Contatos" />
 	<h1>Meu convite</h1>
 	<p>Mostre este QR code para a pessoa ler no app dela, ou mande o link por qualquer meio.</p>
 	{#if link}

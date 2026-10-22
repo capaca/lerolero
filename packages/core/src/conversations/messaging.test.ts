@@ -136,7 +136,7 @@ describe('conversas 1:1', () => {
 		const wrapped = alice.vault.wrapDirectMessage(bob.publicKey, media.urls[0], mediaTags(media), 15);
 		const sent = await storeOutgoing(alice.storage, wrapped.rumor, bob.publicKey);
 		expect(sent.message.media).toEqual(media);
-		expect(sent.conversation.lastMessagePreview).toBe('🎤 Áudio');
+		expect(sent.conversation).toMatchObject({ lastMessagePreview: 'Áudio', lastMessageKind: 'audio' });
 
 		const got = await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(wrapped.toRecipient));
 		expect(got?.message).toMatchObject({ kind: 15, text: '', media });

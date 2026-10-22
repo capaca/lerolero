@@ -17,8 +17,16 @@ export const directConversationId = (other: string) => `direta:${other}`;
 
 const PREVIEW_LENGTH = 80;
 
+function kindOf(message: Pick<MessageRecord, 'media'>): 'texto' | 'audio' | 'arquivo' {
+	if (!message.media) return 'texto';
+	return message.media.type.startsWith('audio/') ? 'audio' : 'arquivo';
+}
+
+/** Prévia em texto; o ícone fica por conta da interface, pelo `lastMessageKind`. */
 function preview(message: Pick<MessageRecord, 'text' | 'media'>): string {
-	if (message.media) return message.media.type.startsWith('audio/') ? '🎤 Áudio' : '📎 Arquivo';
+	const kind = kindOf(message);
+	if (kind === 'audio') return 'Áudio';
+	if (kind === 'arquivo') return 'Arquivo';
 	return message.text.replace(/\s+/g, ' ').trim().slice(0, PREVIEW_LENGTH);
 }
 
@@ -84,6 +92,7 @@ async function upsertConversation(
 		unread: (existing?.unread ?? 0) + (changes.unread ?? 0),
 		lastMessageAt: isLatest ? message.createdAt : existing.lastMessageAt,
 		lastMessagePreview: isLatest ? preview(message) : existing.lastMessagePreview,
+		lastMessageKind: isLatest ? kindOf(message) : existing.lastMessageKind,
 		nameSent: changes.nameSent || existing?.nameSent
 	};
 	await storage.conversations.put(conversation);

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackLink from '#lib/components/BackLink.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { version } from '$app/env';
@@ -41,7 +42,7 @@
 <svelte:head><title>Enviar comentário · Lero-lero</title></svelte:head>
 
 <main>
-	<p><a href={resolve('/ajustes')}>← Ajustes</a></p>
+	<BackLink href={resolve('/ajustes')} label="Ajustes" />
 	<h1>Enviar comentário</h1>
 	{#if !FEEDBACK_INVITE}
 		<p class="hint">O envio de comentários ainda não está configurado.</p>
