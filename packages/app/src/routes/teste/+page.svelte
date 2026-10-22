@@ -12,7 +12,7 @@
 	<h1>Como testar o Lero-lero</h1>
 	<p>
 		Obrigado por testar o Lero-lero, um app de mensagens privadas que não pede telefone nem e-mail. Esta é uma
-		versão de teste: ela já troca mensagens de texto, mas ainda falta muita coisa.
+		versão de teste: ela já troca mensagens de texto e áudio, mas ainda falta muita coisa.
 	</p>
 
 	<h2>Antes de começar</h2>
@@ -61,20 +61,31 @@
 			e depois mostre o QR ou compartilhe o link.
 		</li>
 		<li>
-			<strong>Converse.</strong> Abra o contato e toque em <strong>Conversar</strong>. Cada mensagem mostra
-			<span class="inline-icon"><Icon name="clock" size={14} /></span> enquanto sai e
+			<strong>Converse.</strong> Toque na conversa, ou em <strong>+ → Conversar com um contato</strong>. Cada
+			mensagem mostra <span class="inline-icon"><Icon name="clock" size={14} /></span> enquanto sai e
 			<span class="inline-icon"><Icon name="check" size={14} /></span> quando chegou ao servidor.
+		</li>
+		<li>
+			<strong>Mande um áudio.</strong> Com a caixa de texto vazia, toque no
+			<span class="inline-icon"><Icon name="mic" size={14} /></span> para começar a gravar e toque em
+			<span class="inline-icon"><Icon name="send" size={14} /></span> para enviar (até 5 minutos). Quem recebe pode
+			ouvir em 1x, 1,5x ou 2x.
+		</li>
+		<li>
+			<strong>Apague uma mensagem.</strong> Segure o dedo sobre ela e escolha <strong>Apagar para mim</strong> ou,
+			nas suas mensagens, <strong>Apagar para todos</strong>.
 		</li>
 	</ol>
 	<p>O app pede o PIN sempre que é aberto. Esqueceu o PIN? Use <strong>Esqueci o PIN</strong> e digite a frase.</p>
 
 	<h2>O que ainda não funciona</h2>
-	<p>Esta versão só troca <strong>texto, entre duas pessoas</strong>. O resto vem nas próximas versões.</p>
+	<p>Esta versão troca <strong>texto e áudio, entre duas pessoas</strong>. O resto vem nas próximas versões.</p>
 	<table>
 		<thead><tr><th>Limitação</th><th>O que isso significa para você</th></tr></thead>
 		<tbody>
 			<tr><td>Sem notificações</td><td>Abra o app de vez em quando para ver se chegou mensagem</td></tr>
-			<tr><td>Sem fotos, áudios ou grupos</td><td>Só texto, de pessoa para pessoa</td></tr>
+			<tr><td>Sem fotos, arquivos ou grupos</td><td>Só texto e áudio, de pessoa para pessoa</td></tr>
+			<tr><td>"Apagar para todos" é um pedido</td><td>No Lero-lero a mensagem some dos dois lados; se a outra pessoa usar outro app compatível, ele pode ignorar o pedido</td></tr>
 			<tr><td>Sem "entregue" e "lida"</td><td>O ✓ diz só que a mensagem chegou ao servidor, não ao celular da outra pessoa</td></tr>
 			<tr><td>Sem bloqueio e sem filtro de spam</td><td>Quem tiver seu link de convite consegue te mandar mensagem</td></tr>
 			<tr><td>Sem backup dos contatos</td><td>Se trocar de celular, a frase recupera a conta, mas os contatos precisam ser adicionados de novo</td></tr>
@@ -113,6 +124,7 @@
 		<li><strong>A frase de 12 palavras:</strong> entendeu para que serve? Onde guardou?</li>
 		<li><strong>O convite:</strong> conseguiu adicionar a pessoa? Pelo QR ou pelo link?</li>
 		<li><strong>Mensagens:</strong> alguma não chegou, chegou repetida ou demorou muito? Diga mais ou menos o dia e a hora.</li>
+		<li><strong>Áudios:</strong> o som ficou claro? Algum não tocou ou demorou para carregar?</li>
 		<li><strong>Seu celular:</strong> modelo, e se é Android ou iPhone.</li>
 	</ul>
 	<p>Um print da tela ajuda, desde que não mostre a frase de 12 palavras.</p>
