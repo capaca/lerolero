@@ -47,7 +47,8 @@ pnpm build      # site estático em packages/app/build
 | `prototipos/` | Pesquisas e medições feitas antes das decisões |
 | `docs/` | Especificação e ADRs |
 
-Cada push na `main` passa pela CI e é publicado no GitHub Pages.
+Tudo entra na `main` por pull request, com testes unitários a cada commit e testes com a rede real pedidos por rótulo.
+O app vai para o GitHub Pages só numa release ([ADR-0006](docs/adr/0006-fluxo-de-trabalho-e-releases.md)).
 
 ## Licença
 

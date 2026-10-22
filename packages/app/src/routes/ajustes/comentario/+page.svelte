@@ -19,7 +19,7 @@
 			`Navegador: ${navigator.userAgent}`,
 			`Tela: ${screen.width}×${screen.height}, janela ${innerWidth}×${innerHeight}`,
 			`Instalado: ${matchMedia('(display-mode: standalone)').matches ? 'sim' : 'não'}`,
-			`Versão do app: ${version}`,
+			`Versão do app: ${__APP_RELEASE__} (build ${version})`,
 			`Servidores conectados: ${session.connectedRelays().length}`
 		].join('\n')
 	);

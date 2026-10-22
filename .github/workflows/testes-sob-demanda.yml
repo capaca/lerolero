@@ -1,0 +1,99 @@
+name: Testes sob demanda
+
+# Testes lentos ou que dependem da rede real rodam só quando pedidos, com um rótulo no PR:
+# `integration-tests` (relays e Blossom de verdade) ou `e2e-tests` (suíte de ponta a ponta).
+# O resultado vira um status no commit ("testes de integração", "testes e2e"), que a regra da
+# main exige para o merge. Um commit novo deixa o status pendente outra vez, e o rótulo sai
+# depois de cada rodada: para testar de novo, ponha o rótulo de novo.
+#
+# O resultado é um status gravado pela API, e não o próprio job, porque um job pulado conta como
+# aprovado para as checagens obrigatórias do GitHub.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+
+permissions:
+  contents: read
+  statuses: write
+  pull-requests: write
+
+jobs:
+  pendente:
+    if: github.event.action != 'labeled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      # PR só de documentação (docs/ ou arquivos .md) não precisa dos testes lentos
+      # com a fila do Actions lenta, este job pode rodar depois da rodada pedida pelo rótulo; não
+      # sobrescreve o resultado dela
+      - name: Marca o status do commit
+        run: |
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/statuses" \
+              --jq '[.[] | select(.context == "testes de integração")] | length')" != 0 ]; then
+            echo "o commit já tem status de integração"; exit 0
+          fi
+          if gh pr diff ${{ github.event.pull_request.number }} -R "$GITHUB_REPOSITORY" --name-only \
+              | grep -qvE '^docs/|\.md$'; then
+            state=pending; desc="Ponha o rótulo integration-tests para rodar"
+          else
+            state=success; desc="Só documentação: dispensado"
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=$state \
+            -f context='testes de integração' -f description="$desc"
+
+  integracao:
+    if: github.event.action == 'labeled' && github.event.label.name == 'integration-tests'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+      CONTEXT: testes de integração
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Marca como rodando
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending \
+            -f context="$CONTEXT" -f description="Rodando" -f target_url="$RUN_URL"
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Relays e Blossom reais
+        working-directory: packages/core
+        run: pnpm test:rede
+      - name: Grava o resultado
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = success ]; then state=success; desc="Passou"; else state=failure; desc="Falhou"; fi
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=$state \
+            -f context="$CONTEXT" -f description="$desc" -f target_url="$RUN_URL"
+      - name: Tira o rótulo
+        if: always()
+        run: gh pr edit ${{ github.event.pull_request.number }} -R "$GITHUB_REPOSITORY" --remove-label integration-tests
+
+  e2e:
+    if: github.event.action == 'labeled' && github.event.label.name == 'e2e-tests'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      # a suíte (packages/e2e) é a próxima etapa do roadmap; quando existir, este job roda ela
+      # como o de integração, e o status "testes e2e" passa a ser exigido para o merge
+      - name: Ainda não há suíte e2e
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=failure -f context='testes e2e' \
+            -f description="A suíte e2e ainda não existe" -f target_url="$RUN_URL"
+          gh pr edit ${{ github.event.pull_request.number }} -R "$GITHUB_REPOSITORY" --remove-label e2e-tests
