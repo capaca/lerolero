@@ -121,6 +121,14 @@ test('com o teclado aberto, a última mensagem continua junto do campo', async (
 	for (let i = 1; i <= 25; i++) await enviar(page, `Mensagem ${i}`);
 	await page.setViewportSize({ width: 400, height: 450 });
 	await juntoDoCampo();
+	// regressão (2026-10-22, achado na CI): uma rolagem pendente no mesmo quadro em que o teclado abre era
+	// medida já com a área menor, e a conversa "esquecia" que estava no fim
+	await page.setViewportSize({ width: 400, height: 850 });
+	await page.locator('.messages').evaluate((s) => {
+		s.scrollTop -= 1;
+		(document.querySelector('.chat') as HTMLElement).style.height = '450px';
+	});
+	await juntoDoCampo();
 });
 
 test('"Mensagens novas" ao abrir e ao chegar, com o botão de ir para o fim contando', async ({ novaPessoa }) => {
