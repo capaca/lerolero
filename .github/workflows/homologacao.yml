@@ -51,12 +51,30 @@ jobs:
             fs.writeFileSync("manifest.webmanifest", JSON.stringify(m, null, "\t"));
           '
           find . -name '*.html' -exec sed -i 's/name="theme-color" content="#1f6f5c"/name="theme-color" content="#c2410c"/' {} +
-      - name: Busca o que está publicado
+      # O token vai num cabeçalho, não na URL: um espaço ou uma quebra de linha colados junto com o secret
+      # quebravam a URL ("Malformed input to a URL function") no primeiro deploy (2026-10-22).
+      - name: Prepara o acesso ao repositório da homologação
         env:
           TOKEN: ${{ secrets.HOMOLOG_TOKEN }}
         run: |
-          git clone --depth 1 --branch gh-pages "https://x-access-token:$TOKEN@github.com/$DESTINO.git" site \
-            || { git init -b gh-pages site && git -C site remote add origin "https://x-access-token:$TOKEN@github.com/$DESTINO.git"; }
+          token=$(printf %s "$TOKEN" | tr -d '[:space:]')
+          case "$token" in
+            github_pat_*) ;;
+            *) echo "::error::O secret HOMOLOG_TOKEN não parece um token fine-grained (deveria começar com github_pat_)"; exit 1 ;;
+          esac
+          auth=$(printf 'x-access-token:%s' "$token" | base64 -w0)
+          echo "::add-mask::$auth"
+          echo "GIT_AUTH=AUTHORIZATION: basic $auth" >> "$GITHUB_ENV"
+      - name: Busca o que está publicado
+        run: |
+          rc=0
+          git -c "http.extraHeader=$GIT_AUTH" ls-remote --exit-code "https://github.com/$DESTINO.git" gh-pages >/dev/null || rc=$?
+          case $rc in
+            0) git -c "http.extraHeader=$GIT_AUTH" clone -q --depth 1 --branch gh-pages "https://github.com/$DESTINO.git" site ;;
+            # primeiro deploy: o branch ainda não existe
+            2) git init -q -b gh-pages site && git -C site remote add origin "https://github.com/$DESTINO.git" ;;
+            *) echo "::error::Sem acesso a $DESTINO: confira se o HOMOLOG_TOKEN tem Contents: Read and write nele e se a organização aprovou o token"; exit 1 ;;
+          esac
       # Como na release: mantém o código da versão publicada até agora, que páginas antigas guardadas ainda
       # pedem logo depois do deploy; sem isto o app abre em branco. Só a versão anterior, para não acumular.
       - name: Troca o site, mantendo o código da versão anterior
@@ -81,5 +99,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -q -m "Homologação: ${GITHUB_SHA::7} $(git -C .. log -1 --format=%s)"
-          git push -q origin gh-pages
+          git -c "http.extraHeader=$GIT_AUTH" push -q origin gh-pages
           echo "Publicado em $SITE/ (commit ${GITHUB_SHA::7}). O Pages leva ~1 minuto, e o cache até 10." >> "$GITHUB_STEP_SUMMARY"
