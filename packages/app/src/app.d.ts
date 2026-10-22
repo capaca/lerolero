@@ -2,6 +2,7 @@
 // for information about these interfaces
 declare global {
 	const __APP_RELEASE__: string;
+	const __APP_HOMOLOG__: boolean;
 
 	namespace App {
 		// interface Error {}

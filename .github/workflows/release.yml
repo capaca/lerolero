@@ -1,8 +1,9 @@
 name: Release
 
 # Única forma de pôr o app no ar. Disparo manual no Actions (ou `gh workflow run release.yml -f tipo=minor`):
-# calcula a versão a partir da última tag (SemVer 0.x até o beta), verifica, monta o site, publica no
-# GitHub Pages e só então cria a tag e a Release com as notas geradas dos PRs.
+# pega o commit que está na homologação (ADR-0007: o que o Pedro conferiu, não o que estiver na main), calcula a
+# versão a partir da última tag (SemVer 0.x até o beta), verifica, monta o site, publica no GitHub Pages e só
+# então cria a tag e a Release com as notas geradas dos PRs.
 
 on:
   workflow_dispatch:
@@ -28,10 +29,21 @@ jobs:
     timeout-minutes: 15
     outputs:
       versao: ${{ steps.versao.outputs.versao }}
+      commit: ${{ steps.validado.outputs.commit }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # as tags dizem qual foi a última versão
+      - name: Pega o commit validado na homologação
+        id: validado
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          commit=$(gh api repos/lerolero-app/lerolero/contents/commit.txt?ref=gh-pages --jq .content | base64 -d | tr -d '[:space:]')
+          git merge-base --is-ancestor "$commit" origin/main || { echo "::error::$commit (homologação) não está na main"; exit 1; }
+          git checkout -q "$commit"
+          echo "publicando o commit da homologação: $(git log -1 --format='%h %s')" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
       - name: Calcula a versão
         id: versao
         run: |
@@ -112,8 +124,9 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       VERSAO: ${{ needs.montar.outputs.versao }}
+      COMMIT: ${{ needs.montar.outputs.commit }}
     steps:
       - name: Cria a tag e a Release
         run: |
-          gh release create "v$VERSAO" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+          gh release create "v$VERSAO" -R "$GITHUB_REPOSITORY" --target "$COMMIT" \
             --title "Lero-lero $VERSAO" --generate-notes
