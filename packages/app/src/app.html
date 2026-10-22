@@ -8,6 +8,42 @@
 		<meta name="theme-color" content="#1f6f5c" />
 		<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/icon-192.png" />
+		<script>
+			// Autocorreção: se um arquivo de código do app não carregar (cópia antiga de uma
+			// versão já substituída no site), apaga as cópias guardadas do app (service worker
+			// e caches) e recarrega, uma vez. A conta e as conversas ficam no IndexedDB, que
+			// não é tocado. Fica aqui, e não no código do app, porque é justamente ele que falha.
+			(function () {
+				var KEY = 'lerolero.recuperacao';
+				function broken(reason) {
+					var msg = String((reason && reason.message) || reason || '');
+					return /dynamically imported module|Importing a module script failed|loading dynamically imported module/i.test(msg);
+				}
+				async function recover() {
+					try {
+						if (sessionStorage.getItem(KEY)) return; // já tentou nesta sessão: não entra em laço
+						sessionStorage.setItem(KEY, '1');
+					} catch (e) {
+						return;
+					}
+					try {
+						var regs = navigator.serviceWorker ? await navigator.serviceWorker.getRegistrations() : [];
+						await Promise.all(regs.map(function (r) { return r.unregister(); }));
+						var keys = window.caches ? await caches.keys() : [];
+						await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+					} catch (e) {}
+					location.reload();
+				}
+				addEventListener('unhandledrejection', function (e) { if (broken(e.reason)) recover(); });
+				addEventListener('error', function (e) { if (broken(e.error || e.message)) recover(); });
+				// abriu bem: libera a autocorreção para uma próxima vez
+				addEventListener('load', function () {
+					setTimeout(function () {
+						try { sessionStorage.removeItem(KEY); } catch (e) {}
+					}, 10000);
+				});
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

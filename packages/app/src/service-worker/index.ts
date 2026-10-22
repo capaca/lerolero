@@ -24,7 +24,11 @@ self.addEventListener('install', (event) => {
 	event.waitUntil(
 		(async () => {
 			const cache = await caches.open(CACHE_NAME);
-			await cache.addAll([...PRECACHE, RELAYS, FALLBACK]);
+			// `reload`: busca direto do site, ignorando a cópia do navegador. O GitHub Pages
+			// manda guardar as páginas por 10 minutos; sem isto, uma publicação logo depois de
+			// outra guardava páginas antigas que apontam para código que não existe mais
+			// (tela vazia com "Failed to fetch dynamically imported module").
+			await cache.addAll([...PRECACHE, RELAYS, FALLBACK].map((url) => new Request(url, { cache: 'reload' })));
 			// assume já, sem esperar todas as janelas fecharem: num app instalado no Android
 			// elas quase nunca fecham, e a versão nova ficaria parada; a página avisa e recarrega
 			await self.skipWaiting();
