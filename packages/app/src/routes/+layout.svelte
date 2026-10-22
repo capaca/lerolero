@@ -10,6 +10,10 @@
 
 	let { children }: LayoutProps = $props();
 
+	// versão nova do app ativada pelo service worker: avisa em vez de recarregar sozinho,
+	// para não perder uma mensagem que a pessoa esteja digitando
+	let updateReady = $state(false);
+
 	// rotas permitidas em cada estado; fora delas, vai para a primeira
 	const ALLOWED: Record<Exclude<Status, 'carregando'>, string[]> = {
 		'sem-identidade': ['/bem-vindo', '/cadastro', '/restaurar'],
@@ -36,10 +40,24 @@
 	onMount(() => {
 		void session.init();
 		// RF-80: ao voltar para o app ou quando a internet volta, reconecta e esvazia a fila
-		const resume = () => document.visibilityState === 'visible' && session.resumeNetwork();
+		// a primeira troca de controle numa página sem worker é a instalação, não uma versão nova
+		let controlled = !!navigator.serviceWorker?.controller;
+		const onControllerChange = () => {
+			if (controlled) updateReady = true;
+			controlled = true;
+		};
+		navigator.serviceWorker?.addEventListener('controllerchange', onControllerChange);
+		const checkForUpdate = () => void navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => {});
+
+		const resume = () => {
+			if (document.visibilityState !== 'visible') return;
+			session.resumeNetwork();
+			checkForUpdate();
+		};
 		document.addEventListener('visibilitychange', resume);
 		addEventListener('online', resume);
 		return () => {
+			navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
 			document.removeEventListener('visibilitychange', resume);
 			removeEventListener('online', resume);
 		};
@@ -60,6 +78,39 @@
 	<link rel="icon" href={asset('icon-192.png')} />
 </svelte:head>
 
+{#if updateReady}
+	<div class="update" role="status">
+		<span>Nova versão disponível.</span>
+		<button onclick={() => location.reload()}>Atualizar</button>
+	</div>
+{/if}
+
 {#if session.status !== 'carregando'}
 	{@render children()}
 {/if}
+
+<style>
+	.update {
+		position: fixed;
+		left: 50%;
+		bottom: calc(5rem + env(safe-area-inset-bottom));
+		transform: translateX(-50%);
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		gap: 0.8rem;
+		padding: 0.6rem 0.7rem 0.6rem 1rem;
+		border-radius: 999px;
+		background: var(--fg);
+		color: var(--bg);
+		box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+		white-space: nowrap;
+	}
+	.update button {
+		padding: 0.4rem 0.9rem;
+		border-radius: 999px;
+		border: none;
+		background: var(--accent);
+		color: var(--accent-fg);
+	}
+</style>

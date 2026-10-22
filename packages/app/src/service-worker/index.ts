@@ -25,6 +25,9 @@ self.addEventListener('install', (event) => {
 		(async () => {
 			const cache = await caches.open(CACHE_NAME);
 			await cache.addAll([...PRECACHE, RELAYS, FALLBACK]);
+			// assume já, sem esperar todas as janelas fecharem: num app instalado no Android
+			// elas quase nunca fecham, e a versão nova ficaria parada; a página avisa e recarrega
+			await self.skipWaiting();
 		})()
 	);
 });
