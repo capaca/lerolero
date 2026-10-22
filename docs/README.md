@@ -29,6 +29,14 @@ Cada decisão relevante tem um ADR em [`adr/`](adr/), seguindo o [template](adr/
 | [0004](adr/0004-midia.md) | Mídia (cifrada, Blossom, deduplicada) | ✅ aceito |
 | [0005](adr/0005-notificacoes.md) | Notificações (UnifiedPush no Android) | ✅ aceito |
 
+## Estudos
+
+Levantamentos que embasam decisões, com a data em que foram feitos.
+
+| Estudo | Data |
+|---|---|
+| [Apps de mensagens brasileiros](estudos/apps-brasileiros.md) | 2026-10-22 |
+
 ## Processo
 
 1. Para cada seção, uma rodada de perguntas e respostas.
