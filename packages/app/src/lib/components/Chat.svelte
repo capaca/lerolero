@@ -131,10 +131,12 @@
 	}
 	const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-	// first/last: começo e fim de uma sequência de balões da mesma pessoa no mesmo dia, sem aviso no meio.
+	// first/last: começo e fim de uma sequência de balões da mesma pessoa no mesmo dia, sem aviso nem
+	// a linha "Mensagens novas" no meio.
 	// Só o último ganha a pontinha; nos grupos, o nome vai no primeiro.
 	type Item =
 		| { type: 'dia'; key: number; label: string }
+		| { type: 'novas' }
 		| { type: 'msg'; message: MessageRecord; first: boolean; last: boolean; day: string };
 	const blocks = $derived.by(() => {
 		const items: Item[] = [];
@@ -148,9 +150,15 @@
 				items.push({ type: 'dia', key: day, label: dayLabel });
 			}
 			const first =
-				day !== lastDay || !previous || !!previous.message.notice || !!message.notice || previous.message.sender !== message.sender;
+				day !== lastDay ||
+				!previous ||
+				!!previous.message.notice ||
+				!!message.notice ||
+				previous.message.sender !== message.sender ||
+				message.id === newFrom;
 			if (first && previous) previous.last = true;
 			lastDay = day;
+			if (message.id === newFrom) items.push({ type: 'novas' });
 			previous = { type: 'msg', message, first, last: false, day: dayLabel };
 			items.push(previous);
 		}
@@ -160,12 +168,21 @@
 		return out;
 	});
 
+	// "Mensagens novas": a linha fica antes da primeira não lida ao abrir, ou da primeira que
+	// chegou enquanto a pessoa lia lá em cima; o botão de ir para o fim conta as que chegaram.
+	let newFrom = $state<string>();
+	let pending = $state(0);
+	let farFromEnd = $state(false);
+
 	const nearBottom = () => !scroller || scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 150;
 
 	// O teclado encolhe a área das mensagens: quem estava no fim continua vendo as últimas.
 	let atEnd = true;
 	function onscroll() {
-		atEnd = !!scroller && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 8;
+		const distance = scroller ? scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight : 0;
+		atEnd = distance < 8;
+		farFromEnd = distance > 300;
+		if (atEnd) pending = 0;
 		if (!dayFrame) dayFrame = requestAnimationFrame(updateFloatingDay);
 	}
 
@@ -214,15 +231,47 @@
 
 	async function load() {
 		const limit = PAGE_SIZE * (1 + extraPages);
-		const list = await session.getMessages(conversationId, limit + 1);
+		const [list, conversation] = await Promise.all([
+			session.getMessages(conversationId, limit + 1),
+			session.getConversation(conversationId)
+		]);
 		const stick = firstLoad || nearBottom() || list.at(-1)?.sender === me;
+		const fromOthers = (m: MessageRecord) => m.sender !== me && !m.notice;
+		if (firstLoad) {
+			const unread = list.filter(fromOthers).slice(-(conversation?.unread ?? 0));
+			if (conversation?.unread) newFrom = unread[0]?.id;
+		} else if (!stick) {
+			// só as que chegaram depois da última na tela (não as antigas de "carregar anteriores")
+			const known = new Set(messages.map((m) => m.id));
+			const after = messages.at(-1)?.createdAt ?? 0;
+			const arrived = list.filter((m) => fromOthers(m) && !known.has(m.id) && m.createdAt >= after);
+			if (arrived.length && !pending) newFrom = arrived[0].id;
+			pending += arrived.length;
+		}
 		hasOlder = list.length > limit;
 		messages = hasOlder ? list.slice(1) : list;
 		loaded = true;
 		await tick();
-		if (stick && scroller) scroller.scrollTop = scroller.scrollHeight;
+		const divider = scroller?.querySelector('.new-line');
+		if (firstLoad && divider && scroller) {
+			// abre na primeira não lida; se forem poucas, isso já é o fim
+			scroller.scrollTop += divider.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 8;
+			onscroll();
+		} else if (stick && scroller) {
+			scroller.scrollTop = scroller.scrollHeight;
+			pending = 0;
+		}
 		firstLoad = false;
-		if ((await session.getConversation(conversationId))?.unread) await session.markRead(conversationId);
+		if (conversation?.unread) await session.markRead(conversationId);
+	}
+
+	// Pulo direto, sem rolagem suave: os blocos desenhados no caminho crescem do tamanho estimado
+	// para o real e o fim se afasta; por isso confere de novo nos quadros seguintes.
+	function goToEnd(frames = 3) {
+		if (!scroller) return;
+		scroller.scrollTop = scroller.scrollHeight;
+		pending = 0;
+		if (frames > 0) requestAnimationFrame(() => goToEnd(frames - 1));
 	}
 
 	// recarrega quando muda a conversa ou chega/sai qualquer mensagem (session.version)
@@ -290,8 +339,10 @@
 			{/if}
 			{#each blocks as block, b (b)}
 				<div class="block" style:--block-estimate="{block.length * 56}px">
-					{#each block as item (item.type === 'dia' ? `d${item.key}` : item.message.id)}
-						{#if item.type === 'dia'}
+					{#each block as item (item.type === 'msg' ? item.message.id : item.type === 'dia' ? `d${item.key}` : 'novas')}
+						{#if item.type === 'novas'}
+							<p class="new-line"><span>Mensagens novas</span></p>
+						{:else if item.type === 'dia'}
 							<p class="day" data-day={item.label}>{item.label}</p>
 						{:else if item.message.notice}
 							<p class="notice-line">{nameOf ? describeNotice(item.message.notice, item.message.sender, nameOf) : item.message.text}</p>
@@ -344,6 +395,12 @@
 				</div>
 			{/each}
 		</div>
+		{#if farFromEnd || pending}
+			<button class="round jump" onclick={() => goToEnd()} aria-label={pending ? `Ir para o fim, ${pending} ${pending === 1 ? 'mensagem nova' : 'mensagens novas'}` : 'Ir para o fim'}>
+				<Icon name="chevron-down" />
+				{#if pending}<span class="badge" aria-hidden="true">{pending > 99 ? '99+' : pending}</span>{/if}
+			</button>
+		{/if}
 	</div>
 
 	{#if menuFor}
@@ -455,6 +512,48 @@
 	}
 	.floating-day.visible {
 		opacity: 1;
+	}
+	.jump {
+		position: absolute;
+		right: 0.8rem;
+		bottom: 0.8rem;
+		z-index: 1;
+		width: 2.6rem;
+		height: 2.6rem;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		color: var(--fg);
+		box-shadow: 0 2px 6px rgb(0 0 0 / 0.15);
+	}
+	.badge {
+		position: absolute;
+		top: -0.45rem;
+		right: -0.3rem;
+		min-width: 1.3rem;
+		padding: 0 0.3rem;
+		border-radius: 999px;
+		background: var(--accent);
+		color: var(--accent-fg);
+		font-size: 0.72rem;
+		font-weight: 700;
+		line-height: 1.3rem;
+		text-align: center;
+	}
+	.new-line {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		margin: 0.8rem 0 0.2rem;
+		color: var(--accent);
+		font-size: 0.8rem;
+		font-weight: 600;
+	}
+	.new-line::before,
+	.new-line::after {
+		content: '';
+		flex: 1;
+		border-top: 1px solid currentColor;
+		opacity: 0.5;
 	}
 	.messages {
 		flex: 1;
