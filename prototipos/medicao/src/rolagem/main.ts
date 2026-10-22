@@ -7,10 +7,11 @@ import ChatWindow from './ChatWindow.svelte'
 import { generateMessages } from './messages'
 import { afterPaint, scrollUp, type ScrollResult } from './measure'
 import { ms } from '../stats'
+import { ensureIsolated, pageMemoryMB } from '../memory'
 
 type Mode = 'simples' | 'cv por mensagem' | 'cv em blocos' | 'janela' | 'virtualizada'
 type ChatExports = { element(): HTMLElement; scrollToBottom(): Promise<void> }
-type Run = { modo: Mode; mensagens: number; abrirMs: number; nosNoDom: number; heapMB?: number; rolagem: ScrollResult }
+type Run = { modo: Mode; mensagens: number; abrirMs: number; nosNoDom: number; heapMB?: number; memoriaMB?: number; rolagem: ScrollResult }
 
 const MODES: Mode[] = ['simples', 'cv por mensagem', 'cv em blocos', 'janela', 'virtualizada']
 const SPEED = 2500 // px/s, um arrasto rápido
@@ -53,6 +54,9 @@ async function measure(mode: Mode, n: number): Promise<Run> {
     heapMB: heapMB(),
     rolagem: await scrollUp(chat.element(), SPEED, DISTANCE),
   }
+  // com a conversa ainda montada; o navegador mede no próximo GC (até ~20 s)
+  $('#status').textContent = `Medindo a memória de ${mode}…`
+  run.memoriaMB = await pageMemoryMB()
   unmount(chat)
   await afterPaint()
   return run
@@ -66,11 +70,11 @@ function render() {
     <td>${r.rolagem.droppedPct.toFixed(1)}%</td>
     <td class="${r.rolagem.janks === 0 ? 'good' : 'bad'}">${r.rolagem.janks}</td>
     <td>${ms(r.rolagem.frameTime.p95)}</td>
-    <td>${r.nosNoDom}</td><td>${r.heapMB ?? '—'}</td></tr>`
+    <td>${r.nosNoDom}</td><td>${r.memoriaMB ?? '—'}</td><td>${r.heapMB ?? '—'}</td></tr>`
   $('#results').innerHTML = `<table class="grid">
-    <tr><th>Modo</th><th>Msgs</th><th>Abrir</th><th>FPS</th><th>Quadros perdidos</th><th>Engasgos</th><th>p95 quadro</th><th>Nós DOM</th><th>Heap MB</th></tr>
+    <tr><th>Modo</th><th>Msgs</th><th>Abrir</th><th>FPS</th><th>Quadros perdidos</th><th>Engasgos</th><th>p95 quadro</th><th>Nós DOM</th><th>Memória MB</th><th>Heap JS MB</th></tr>
     ${runs.map(fmt).join('')}</table>
-    <p class="hint">Metas: abrir &lt; 500 ms (RNF-11); rolagem a 60 fps sem engasgos (RNF-14). Engasgo = quadro acima de 50 ms; quadro perdido = acima de 25 ms.</p>`
+    <p class="hint">Metas: abrir &lt; 500 ms (RNF-11); rolagem a 60 fps sem engasgos (RNF-14). Engasgo = quadro acima de 50 ms; quadro perdido = acima de 25 ms. Memória = JavaScript + DOM da página, com a conversa aberta; Heap JS conta só o JavaScript.</p>`
 }
 
 $<HTMLButtonElement>('#run-btn').addEventListener('click', async (e) => {
@@ -104,4 +108,11 @@ $<HTMLButtonElement>('#copy-btn').addEventListener('click', async () => {
     $('#json').hidden = false
     $('#status').textContent = 'Não deu para copiar automaticamente; copie do campo abaixo.'
   }
+})
+
+ensureIsolated().then((isolated) => {
+  report.isolado = isolated
+  $('#isolation').textContent = isolated
+    ? 'Medição de memória (JS + DOM) disponível.'
+    : 'Este navegador não mede a memória da página (JS + DOM); a coluna Memória fica vazia. No Android, use o Chrome.'
 })
