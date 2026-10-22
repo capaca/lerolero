@@ -30,9 +30,10 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
 - `packages/app`: SvelteKit 3 estático (SPA). Imports via `#lib/...`; estado da sessão em `src/lib/session.svelte.ts`.
 - `prototipos/`: pesquisas fora do workspace (usam npm). `prototipos/e2e-rascunho` tem os rascunhos em Puppeteer
   ainda não migrados para `packages/e2e`.
-- Fluxo (ADR-0006): push direto na `main` é bloqueado; tudo entra por PR com squash. `ci.yml` (tipos, testes, build)
-  roda a cada commit; `testes-sob-demanda.yml` roda pelos rótulos `integration-tests` e `e2e-tests`; só
-  `release.yml` (manual, SemVer 0.x) publica no Pages.
+- Fluxo (ADR-0006 e 0007): push direto na `main` é bloqueado; tudo entra por PR com squash. `ci.yml` (tipos, testes,
+  build) roda a cada commit; `testes-sob-demanda.yml` roda pelos rótulos `integration-tests` e `e2e-tests`; cada merge
+  vai para a homologação (`homologacao.yml`, https://lerolero-app.github.io/lerolero/, outra origem e outra conta);
+  só `release.yml` (manual, SemVer 0.x) publica no Pages da produção, e publica o commit que está na homologação.
 
 ## Convenções
 

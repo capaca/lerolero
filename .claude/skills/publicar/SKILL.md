@@ -61,9 +61,16 @@ gh run list --branch "$(git branch --show-current)" --limit 1 --json databaseId 
 - PR só de documentação (`docs/` ou `.md`) dispensa os testes de integração.
 - Acompanhe em segundo plano (`gh run watch <id> --exit-status`) e diga o resultado. Se falhar, mostre o passo e o erro.
   Falha por instabilidade de relay público: ponha o rótulo de novo.
-- Merge só quando o Pedro pedir: `gh pr merge --squash`. Merge **não** publica.
+- Merge só quando o Pedro pedir: `gh pr merge --squash`. O merge vai para a homologação, não para a produção.
 
-## 5. Release
+## 5. Homologação
+
+O merge dispara `homologacao.yml`, que publica o app em https://lerolero-app.github.io/lerolero/ (ADR-0007): outra
+origem, com moldura laranja "Homologação" e outra conta, sem tocar nos dados da produção. Passe ao Pedro o link da
+execução (`gh run list --workflow homologacao.yml --limit 1`) e diga o que conferir no celular nesse endereço. O Pages
+leva ~1 minuto, e o cache até 10. Mudança só de docs não vai para a homologação.
+
+## 6. Release
 
 Quando o Pedro pedir para publicar (ou juntar o que já entrou), decida o tipo pelos PRs desde a última tag
 (regra da ADR-0007):
@@ -76,7 +83,14 @@ git fetch -q --tags && git log --oneline "$(git describe --tags --abbrev=0 origi
 - **patch**: só correções e ajustes que não mudam o que se faz no app;
 - **nada a lançar**: só testes, docs ou bastidores. Uma release pede ao testador para atualizar; não gaste à toa.
 
-Mostre ao Pedro a lista de PRs com o tipo sugerido e espere a confirmação. Só então dispare na `main`:
+A release publica o commit que está na homologação (`commit.txt` do branch `gh-pages` de `lerolero-app/lerolero`),
+não o que estiver na `main`. Confira qual é e se o Pedro já o validou no celular:
+
+```bash
+gh api repos/lerolero-app/lerolero/contents/commit.txt?ref=gh-pages --jq .content | base64 -d | xargs git log -1 --oneline
+```
+
+Mostre ao Pedro a lista de PRs com o tipo sugerido e o commit que vai sair, e espere a confirmação. Só então dispare:
 
 ```bash
 gh workflow run release.yml -f tipo=minor   # ou patch
@@ -87,7 +101,7 @@ gh run list --workflow release.yml --limit 1 --json databaseId \
 Passe o link, acompanhe e, no fim, passe o link da Release criada (`gh release view --json url --jq .url`).
 O número da versão aparece em Ajustes.
 
-## 6. Dizer como testar no celular
+## 7. Dizer como testar no celular
 
 Explique em poucas linhas o que o Pedro deve fazer no celular (Motorola Edge 60): tocar em "Atualizar" no aviso de
 versão nova, conferir em Ajustes se o número é o da release e o que testar. Diga se a primeira abertura depois da

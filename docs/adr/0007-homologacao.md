@@ -1,6 +1,6 @@
 # ADR-0007: Homologação antes da produção
 
-- **Status:** aceito (implementação pendente)
+- **Status:** aceito
 - **Data:** 2026-10-22
 
 ## Contexto
@@ -44,14 +44,17 @@ verdade (ver [ADR-0003](0003-armazenamento-local.md)).
 
 Escolhas do Pedro em 2026-10-22:
 
-- **Opção B:** a homologação fica no GitHub Pages de uma organização GitHub separada (nome a definir pelo Pedro), com
-  origem própria. A opção A foi rejeitada pelo risco de misturar os dados; a C, por trazer mais um serviço.
-- **Atualizada a cada merge na `main`**, por um workflow deste repositório que monta o app e publica no repositório
-  da organização com um token restrito a ele.
-- **A release promove o commit validado:** publica na produção o commit que está na homologação, e não o que estiver
-  na `main` na hora. O fluxo fica: merge → homologação → o Pedro confere no celular → release.
+- **Opção B:** a homologação fica no GitHub Pages da organização **`lerolero-app`** (criada pelo Pedro em 2026-10-22), no
+  repositório `lerolero-app/lerolero`: https://lerolero-app.github.io/lerolero/, com origem própria e o mesmo caminho
+  `/lerolero` da produção (o build é o mesmo). A opção A foi rejeitada pelo risco de misturar os dados; a C, por trazer mais um serviço.
+- **Atualizada a cada merge na `main`** (`homologacao.yml`, que pula mudança só de docs): monta o app e publica no
+  branch `gh-pages` de `lerolero-app/lerolero` com o secret `HOMOLOG_TOKEN` (token fine-grained, só Contents: write
+  naquele repositório, validade de 1 ano). Grava o commit em `commit.txt`.
+- **A release promove o commit validado:** lê o `commit.txt` da homologação, confere que ele está na `main` e publica
+  na produção esse commit, e não o que estiver na `main` na hora. O fluxo fica: merge → homologação → o Pedro confere no celular → release.
 - A homologação mantém a proteção contra a tela branca da produção (o código da versão anterior continua no ar) e se
-  distingue dela na tela e no ícone do PWA, para não haver dúvida de qual app está aberto.
+  distingue dela: moldura laranja com a etiqueta "Homologação" (`APP_AMBIENTE=homologacao` no build), "· homologação"
+  ao lado da versão em Ajustes, nome "Lero homolog" e cor laranja no PWA instalado.
 - **Regra de versão da release** (ajuste à ADR-0006, mesma data): `minor` se algum PR desde a última tag traz algo que o
   testador vê de novo (funcionalidade, tela, fluxo); `patch` se só correções e ajustes; **nada a lançar** se só testes,
   docs ou bastidores. A skill `publicar` lista os PRs, sugere o tipo e o Pedro confirma.
@@ -64,3 +67,6 @@ Escolhas do Pedro em 2026-10-22:
 - Mais uma peça para manter: a organização, o token (com prazo de validade) e o workflow.
 - Os deploys da homologação também caem no cache de ~10 minutos do Pages; merges seguidos podem demorar a aparecer.
 - Com domínio próprio (Q-N1), rever: `homolog.<domínio>` na mesma organização.
+- **Mudar a produção de endereço muda a origem:** se um dia a produção sair de `capaca.github.io` (para a organização
+  ou para um domínio), cada pessoa começa do zero no endereço novo e precisa recuperar a conta com a frase de 12
+  palavras; contatos e conversas ficam no endereço antigo. Planejar antes do beta, junto com a Q-N1.

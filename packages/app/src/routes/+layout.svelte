@@ -100,6 +100,11 @@
 	{@render children()}
 {/if}
 
+{#if __APP_HOMOLOG__}
+	<!-- moldura laranja: esta é a homologação, com outra conta, e não o app de verdade (ADR-0007) -->
+	<p class="homolog" aria-hidden="true"><span>Homologação</span></p>
+{/if}
+
 <style>
 	.update {
 		position: fixed;
@@ -123,5 +128,25 @@
 		border: none;
 		background: var(--accent);
 		color: var(--accent-fg);
+	}
+	.homolog {
+		position: fixed;
+		inset: 0;
+		margin: 0;
+		border: 3px solid #c2410c;
+		pointer-events: none;
+		z-index: 100;
+	}
+	.homolog span {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		transform: translateX(-50%);
+		padding: 0 0.5rem 0.1rem;
+		border-radius: 0 0 6px 6px;
+		background: #c2410c;
+		color: #fff;
+		font-size: 0.65rem;
+		font-weight: 600;
 	}
 </style>

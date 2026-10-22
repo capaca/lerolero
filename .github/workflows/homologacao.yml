@@ -1,0 +1,85 @@
+name: Homologação
+
+# A cada merge na main, publica o app em https://lerolero-app.github.io/lerolero/ (ADR-0007): outra organização,
+# outra origem, então nada se mistura com a conta e as conversas da produção no mesmo celular. O Pedro confere lá
+# e a release (release.yml) promove para a produção exatamente o commit que está aqui (commit.txt).
+# Publica no branch gh-pages de lerolero-app/lerolero com o secret HOMOLOG_TOKEN (fine-grained, só
+# Contents: write naquele repositório).
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['docs/**', '**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# um deploy por vez e na ordem: deploys seguidos já deram tela branca pelo cache do Pages
+concurrency:
+  group: homologacao
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DESTINO: lerolero-app/lerolero
+      SITE: https://lerolero-app.github.io/lerolero
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build do app
+        run: APP_RELEASE="homolog-${GITHUB_SHA::7}" pnpm build
+        env:
+          BASE_PATH: /lerolero
+          APP_AMBIENTE: homologacao
+      # outro nome e outra cor no ícone instalado e na barra do celular, para não confundir com a produção
+      - name: Marca a homologação no PWA
+        working-directory: packages/app/build
+        run: |
+          node -e '
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync("manifest.webmanifest", "utf8"));
+            Object.assign(m, { name: "Lero-lero (homologação)", short_name: "Lero homolog", theme_color: "#c2410c" });
+            fs.writeFileSync("manifest.webmanifest", JSON.stringify(m, null, "\t"));
+          '
+          find . -name '*.html' -exec sed -i 's/name="theme-color" content="#1f6f5c"/name="theme-color" content="#c2410c"/' {} +
+      - name: Busca o que está publicado
+        env:
+          TOKEN: ${{ secrets.HOMOLOG_TOKEN }}
+        run: |
+          git clone --depth 1 --branch gh-pages "https://x-access-token:$TOKEN@github.com/$DESTINO.git" site \
+            || { git init -b gh-pages site && git -C site remote add origin "https://x-access-token:$TOKEN@github.com/$DESTINO.git"; }
+      # Como na release: mantém o código da versão publicada até agora, que páginas antigas guardadas ainda
+      # pedem logo depois do deploy; sem isto o app abre em branco. Só a versão anterior, para não acumular.
+      - name: Troca o site, mantendo o código da versão anterior
+        run: |
+          mkdir anteriores
+          if [ -f site/service-worker.js ]; then
+            grep -o '_app/immutable/[^"`]*' site/service-worker.js | sort -u | while read -r f; do
+              [ -f "site/$f" ] && mkdir -p "anteriores/$(dirname "$f")" && cp "site/$f" "anteriores/$f"
+            done
+          fi
+          find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -rL anteriores/. site/
+          cp -rL packages/app/build/. site/
+          echo "arquivos da versão anterior mantidos: $(find anteriores -type f | wc -l)"
+          # sem isto o Pages (Jekyll) ignora a pasta _app
+          touch site/.nojekyll
+          echo "$GITHUB_SHA" > site/commit.txt
+      - name: Publica
+        working-directory: site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Homologação: ${GITHUB_SHA::7} $(git -C .. log -1 --format=%s)"
+          git push -q origin gh-pages
+          echo "Publicado em $SITE/ (commit ${GITHUB_SHA::7}). O Pages leva ~1 minuto, e o cache até 10." >> "$GITHUB_STEP_SUMMARY"

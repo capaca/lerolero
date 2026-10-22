@@ -5,6 +5,8 @@ test('cadastro: PINs diferentes avisam, iguais criam a conta sem tocar em botão
 	const page = await novoAparelho();
 	await page.goto('./');
 	await expect(page).toHaveURL(/\/bem-vindo$/);
+	// a moldura "Homologação" (ADR-0007) só existe no build da homologação
+	await expect(page.locator('.homolog')).toHaveCount(0);
 	await page.getByRole('link', { name: 'Criar minha conta' }).or(page.getByRole('button', { name: 'Criar minha conta' })).click();
 	await page.locator('#nome').fill('Maria');
 	await page.getByRole('button', { name: 'Continuar' }).click();

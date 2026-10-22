@@ -88,7 +88,7 @@
 		{/if}
 	</section>
 
-	<p class="hint release">Lero-lero {__APP_RELEASE__}</p>
+	<p class="hint release">Lero-lero {__APP_RELEASE__}{__APP_HOMOLOG__ ? ' · homologação' : ''}</p>
 </main>
 
 <style>

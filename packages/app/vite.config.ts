@@ -8,7 +8,11 @@ const base = (process.env.BASE_PATH ?? '') as '' | `/${string}`;
 export default defineConfig({
 	// número da release (SemVer), definido pelo workflow de release; fora dele, "dev".
 	// O `version` do SvelteKit continua sendo o do build e nomeia o cache do service worker.
-	define: { __APP_RELEASE__: JSON.stringify(process.env.APP_RELEASE ?? 'dev') },
+	// APP_AMBIENTE=homologacao marca o app da homologação (ADR-0007), para não confundir com a produção.
+	define: {
+		__APP_RELEASE__: JSON.stringify(process.env.APP_RELEASE ?? 'dev'),
+		__APP_HOMOLOG__: JSON.stringify(process.env.APP_AMBIENTE === 'homologacao')
+	},
 	plugins: [
 		sveltekit({
 			compilerOptions: {
