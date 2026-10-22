@@ -4,6 +4,7 @@
 	import { contactName, directConversationId, MAX_TEXT_LENGTH, toNpub, type ContactRecord, type MessageRecord } from '@lerolero/core';
 	import { onDestroy, tick } from 'svelte';
 	import AudioPlayer from '#lib/components/AudioPlayer.svelte';
+	import Avatar from '#lib/components/Avatar.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import MessageMenu from '#lib/components/MessageMenu.svelte';
 	import { dayKey, formatDay, formatTime } from '#lib/format.ts';
@@ -205,9 +206,15 @@
 	<header>
 		<a class="back" href={resolve('/')} aria-label="Voltar para as conversas"><Icon name="back" size={22} /></a>
 		{#if isContact}
-			<a class="name" href={resolve('/contatos/[chave]', { chave: publicKey })}>{name}</a>
+			<a class="who" href={resolve('/contatos/[chave]', { chave: publicKey })}>
+				<Avatar name={contact ? contactName(contact) : undefined} {publicKey} size={36} />
+				<span class="name">{name}</span>
+			</a>
 		{:else}
-			<span class="name">{name}</span>
+			<span class="who">
+				<Avatar {publicKey} size={36} />
+				<span class="name">{name}</span>
+			</span>
 		{/if}
 	</header>
 
@@ -331,7 +338,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.8rem;
-		padding: 0.7rem 1rem;
+		padding: 0.5rem 1rem;
 		border-bottom: 1px solid var(--line);
 		background: var(--surface);
 	}
@@ -339,7 +346,16 @@
 		text-decoration: none;
 		font-size: 1.2rem;
 	}
+	.who {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		min-width: 0;
+	}
 	.name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 		font-weight: 700;
 		font-size: 1.05rem;
 		color: var(--fg);

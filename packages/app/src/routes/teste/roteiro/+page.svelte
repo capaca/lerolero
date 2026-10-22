@@ -4,8 +4,8 @@
 
 	// Passos do critério de aceite do M1 (docs/07-roadmap.md)
 	const steps = [
-		['A e B criam a conta: nome, PIN, frase e conferir 2 palavras', 'Chegam à tela "Olá, nome", sem lembrete da frase'],
-		['B lê o QR de A (A em Convidar alguém; B em Ver contatos → Adicionar contato → Abrir a câmera)', 'B vê "Se apresenta como" com o nome de A; depois de Adicionar, A está nos contatos de B'],
+		['A e B criam a conta: nome, PIN, frase e conferir 2 palavras', 'Chegam à tela de conversas, sem lembrete da frase'],
+		['B lê o QR de A (A em + → Convidar alguém; B em + → Adicionar contato → Abrir a câmera)', 'B vê "Se apresenta como" com o nome de A; depois de Adicionar, A está nos contatos de B'],
 		['B abre A, toca em Conversar e envia "oi"', 'A mensagem aparece na hora com o relógio, que vira ✓ em até 2 s'],
 		['A abre o app', 'A conversa com B está na lista, com o nome de B e 1 não lida; ao abrir, aviso "não está nos seus contatos" e Adicionar aos contatos funciona'],
 		['A e B trocam 5 mensagens com a conversa aberta', 'Cada uma chega sem recarregar, em poucos segundos, na ordem e sem repetir'],

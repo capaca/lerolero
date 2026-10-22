@@ -54,10 +54,10 @@
 		</li>
 		<li>
 			<strong>Adicione quem te convidou.</strong> Toque no link de convite que você recebeu, ou vá em
-			<strong>Ver contatos → Adicionar contato</strong> e leia o QR code da pessoa com a câmera.
+			<strong>+ → Adicionar contato</strong> e leia o QR code da pessoa com a câmera.
 		</li>
 		<li>
-			<strong>Mande seu convite</strong>, se quiser falar com mais alguém do teste: <strong>Convidar alguém</strong>,
+			<strong>Mande seu convite</strong>, se quiser falar com mais alguém do teste: <strong>+ → Convidar alguém</strong>,
 			e depois mostre o QR ou compartilhe o link.
 		</li>
 		<li>
@@ -93,7 +93,7 @@
 	<ul>
 		{#if FEEDBACK_INVITE}
 			<li>
-				<strong>Pelo app:</strong> <strong>Ajustes → Enviar comentário</strong>. Chega cifrado para a equipe, e a
+				<strong>Pelo app:</strong> <strong>Ajustes</strong> (a engrenagem no topo) <strong>→ Enviar comentário</strong>. Chega cifrado para a equipe, e a
 				resposta aparece como uma conversa.
 			</li>
 		{/if}

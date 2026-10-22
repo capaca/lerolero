@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Avatar from '#lib/components/Avatar.svelte';
 	import BackLink from '#lib/components/BackLink.svelte';
 	import { resolve } from '$app/paths';
 	import { contactName, type ContactRecord } from '@lerolero/core';
@@ -32,10 +33,13 @@
 			{#each contacts as contact (contact.publicKey)}
 				<li>
 					<a href={resolve('/contatos/[chave]', { chave: contact.publicKey })}>
-						<strong>{contactName(contact)}</strong>
-						{#if contact.localName && contact.chosenName && contact.localName !== contact.chosenName}
-							<span class="hint">se apresenta como “{contact.chosenName}”</span>
-						{/if}
+						<Avatar name={contactName(contact)} publicKey={contact.publicKey} />
+						<span class="text">
+							<strong>{contactName(contact)}</strong>
+							{#if contact.localName && contact.chosenName && contact.localName !== contact.chosenName}
+								<span class="hint">se apresenta como “{contact.chosenName}”</span>
+							{/if}
+						</span>
 					</a>
 				</li>
 			{/each}
@@ -65,10 +69,16 @@
 	}
 	.list li a {
 		display: flex;
-		flex-direction: column;
-		padding: 0.8rem 0;
+		align-items: center;
+		gap: 0.8rem;
+		padding: 0.6rem 0;
 		border-bottom: 1px solid var(--line);
 		color: var(--fg);
 		text-decoration: none;
+	}
+	.text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
 	}
 </style>

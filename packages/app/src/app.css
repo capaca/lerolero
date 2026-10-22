@@ -132,4 +132,5 @@ button:disabled {
 }
 .banner .actions {
 	margin-top: 0.5rem;
+	align-items: baseline;
 }
