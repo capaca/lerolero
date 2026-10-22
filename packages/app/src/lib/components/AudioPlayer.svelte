@@ -2,6 +2,7 @@
 	// Player de áudio de mensagem (RF-40): baixa só ao tocar, velocidade 1x / 1,5x / 2x.
 	import type { MessageMedia } from '@lerolero/core';
 	import { onDestroy } from 'svelte';
+	import Icon from './Icon.svelte';
 	import { session } from '#lib/session.svelte.ts';
 
 	let { media }: { media: MessageMedia } = $props();
@@ -41,6 +42,19 @@
 		}
 	}
 
+	// o evento timeupdate do navegador vem só ~4 vezes por segundo e a barra anda aos
+	// saltos; enquanto toca, a posição é lida a cada quadro da tela
+	let frame = 0;
+	function followPlayback() {
+		cancelAnimationFrame(frame);
+		const step = () => {
+			if (!audio || audio.paused) return;
+			current = audio.currentTime;
+			frame = requestAnimationFrame(step);
+		};
+		frame = requestAnimationFrame(step);
+	}
+
 	function cycleSpeed() {
 		speedIndex = (speedIndex + 1) % SPEEDS.length;
 		if (audio) audio.playbackRate = SPEEDS[speedIndex];
@@ -50,28 +64,34 @@
 		if (audio && Number.isFinite(audio.duration)) audio.currentTime = Number((event.target as HTMLInputElement).value);
 	}
 
-	onDestroy(() => src && URL.revokeObjectURL(src));
+	onDestroy(() => {
+		cancelAnimationFrame(frame);
+		if (src) URL.revokeObjectURL(src);
+	});
+
+	const progress = $derived(total ? Math.min(100, (current / total) * 100) : 0);
 </script>
 
 <div class="player">
 	<button class="play" onclick={toggle} aria-label={phase === 'tocando' ? 'Pausar' : 'Tocar'} disabled={phase === 'baixando'}>
-		{phase === 'tocando' ? '❚❚' : phase === 'baixando' ? '…' : '▶'}
+		<Icon name={phase === 'tocando' ? 'pause' : phase === 'baixando' ? 'loader' : 'play'} size={18} />
 	</button>
 	<input
 		type="range"
 		min="0"
 		max={total || 1}
-		step="0.1"
+		step="any"
 		value={current}
 		oninput={seek}
 		aria-label="Posição do áudio"
 		disabled={!src}
+		style:--progress="{progress}%"
 	/>
 	<span class="time">{fmt(phase === 'parado' ? total : current)}</span>
 	<button class="speed" onclick={cycleSpeed} aria-label="Velocidade">{String(SPEEDS[speedIndex]).replace('.', ',')}x</button>
 	<audio
 		bind:this={audio}
-		onplay={() => (phase = 'tocando')}
+		onplay={() => ((phase = 'tocando'), followPlayback())}
 		onpause={() => (phase = 'pausado')}
 		onended={() => ((phase = 'pausado'), (current = 0))}
 		ontimeupdate={() => (current = audio!.currentTime)}
@@ -89,21 +109,59 @@
 		min-width: 220px;
 	}
 	.play {
-		width: 2.4rem;
-		height: 2.4rem;
+		width: 2.5rem;
+		height: 2.5rem;
 		border-radius: 50%;
 		padding: 0;
 		flex-shrink: 0;
+		display: grid;
+		place-items: center;
 		background: var(--accent);
 		color: var(--accent-fg);
 		border: none;
 	}
+	/* barra própria: trilho cinza, parte tocada na cor do app, bolinha que cresce ao tocar */
 	input[type='range'] {
 		flex: 1;
+		height: 1.4rem;
 		padding: 0;
 		border: none;
 		background: transparent;
-		accent-color: var(--accent);
+		appearance: none;
+		cursor: pointer;
+	}
+	input[type='range']::-webkit-slider-runnable-track {
+		height: 4px;
+		border-radius: 999px;
+		background: linear-gradient(to right, var(--accent) var(--progress), var(--line) var(--progress));
+	}
+	input[type='range']::-moz-range-track {
+		height: 4px;
+		border-radius: 999px;
+		background: linear-gradient(to right, var(--accent) var(--progress), var(--line) var(--progress));
+	}
+	input[type='range']::-webkit-slider-thumb {
+		appearance: none;
+		width: 12px;
+		height: 12px;
+		margin-top: -4px;
+		border-radius: 50%;
+		background: var(--accent);
+		border: none;
+		transition: transform 0.15s;
+	}
+	input[type='range']::-moz-range-thumb {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		background: var(--accent);
+		border: none;
+	}
+	input[type='range']:active::-webkit-slider-thumb {
+		transform: scale(1.4);
+	}
+	input[type='range']:disabled {
+		cursor: default;
 	}
 	.time {
 		font-size: 0.8rem;

@@ -4,6 +4,7 @@
 	import { contactName, directConversationId, MAX_TEXT_LENGTH, toNpub, type ContactRecord, type MessageRecord } from '@lerolero/core';
 	import { onDestroy, tick } from 'svelte';
 	import AudioPlayer from '#lib/components/AudioPlayer.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { dayKey, formatDay, formatTime } from '#lib/format.ts';
 	import { MAX_SECONDS, startRecording, type Recording } from '#lib/recorder.ts';
 	import { friendlyError, session } from '#lib/session.svelte.ts';
@@ -165,7 +166,7 @@
 
 <div class="chat">
 	<header>
-		<a href={resolve('/')} aria-label="Voltar para as conversas">←</a>
+		<a class="back" href={resolve('/')} aria-label="Voltar para as conversas"><Icon name="back" size={22} /></a>
 		{#if isContact}
 			<a class="name" href={resolve('/contatos/[chave]', { chave: publicKey })}>{name}</a>
 		{:else}
@@ -210,7 +211,7 @@
 									{formatTime(m.createdAt)}
 									{#if m.sender === me}
 										<span class="status" title={m.status === 'pendente' ? 'Enviando' : 'Enviada'}>
-											{m.status === 'pendente' ? '🕓' : '✓'}
+											<Icon name={m.status === 'pendente' ? 'clock' : 'check'} size={13} label={m.status === 'pendente' ? 'enviando' : 'enviada'} />
 										</span>
 									{/if}
 								</span>
@@ -226,13 +227,17 @@
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
 		{#if recording}
 			<div class="line recording" role="status">
+				<button type="button" class="round ghost" onclick={cancelAudio} aria-label="Cancelar gravação">
+					<Icon name="trash" />
+				</button>
 				<span class="dot" aria-hidden="true"></span>
 				<span class="elapsed">Gravando {clock(elapsed)}</span>
-				<button type="button" onclick={cancelAudio}>Cancelar</button>
-				<button type="button" class="primary" onclick={finishAudio}>Enviar áudio</button>
+				<button type="button" class="round primary" onclick={finishAudio} aria-label="Enviar áudio">
+					<Icon name="send" />
+				</button>
 			</div>
 		{:else if sendingAudio}
-			<p class="hint sending" role="status">Enviando áudio…</p>
+			<p class="hint sending" role="status"><Icon name="loader" size={16} /> Enviando áudio…</p>
 		{:else}
 			<div class="line">
 				<textarea
@@ -245,9 +250,9 @@
 					aria-label="Mensagem"
 				></textarea>
 				{#if text.trim()}
-					<button class="primary" type="submit" aria-label="Enviar">Enviar</button>
+					<button class="round primary" type="submit" aria-label="Enviar"><Icon name="send" /></button>
 				{:else}
-					<button class="primary mic" type="button" onclick={startAudio} aria-label="Gravar áudio">🎤</button>
+					<button class="round primary" type="button" onclick={startAudio} aria-label="Gravar áudio"><Icon name="mic" /></button>
 				{/if}
 			</div>
 		{/if}
@@ -368,13 +373,35 @@
 			opacity: 0.3;
 		}
 	}
-	.mic {
-		font-size: 1.1rem;
-		padding: 0.6rem 0.9rem;
+	.round {
+		width: 2.9rem;
+		height: 2.9rem;
+		border-radius: 50%;
+		padding: 0;
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+	}
+	.round.ghost {
+		border-color: transparent;
+		background: transparent;
+		color: var(--muted);
+	}
+	.back {
+		display: grid;
+		place-items: center;
+		color: var(--fg);
+	}
+	.status {
+		display: inline-block;
+		vertical-align: -2px;
 	}
 	.sending {
 		margin: 0.4rem 0;
-		text-align: center;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 0.4rem;
 	}
 	textarea {
 		flex: 1;
