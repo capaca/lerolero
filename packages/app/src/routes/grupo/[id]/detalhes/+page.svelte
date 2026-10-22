@@ -9,7 +9,8 @@
 	import BackLink from '#lib/components/BackLink.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
-	import { friendlyError, session } from '#lib/session.svelte.ts';
+	import { friendlyError } from '#lib/errors.ts';
+	import { session } from '#lib/session.svelte.ts';
 
 	const groupId = $derived(page.params.id ?? '');
 	const conversationId = $derived(groupConversationId(groupId));

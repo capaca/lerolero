@@ -4,7 +4,8 @@
 	import { resolve } from '$app/paths';
 	import { contactName, parseInvite, toNpub, type ContactRecord, type Invite } from '@lerolero/core';
 	import { onMount } from 'svelte';
-	import { friendlyError, session } from '#lib/session.svelte.ts';
+	import { friendlyError } from '#lib/errors.ts';
+	import { session } from '#lib/session.svelte.ts';
 
 	let invite = $state.raw<Invite>();
 	let existing = $state.raw<ContactRecord>();

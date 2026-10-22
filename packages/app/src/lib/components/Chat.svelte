@@ -1,15 +1,15 @@
 <script lang="ts">
 	// Conversa (1:1 ou grupo): mensagens, avisos de grupo, menu da mensagem e campo de envio.
 	// O topo e os avisos de cima ficam com a tela que usa o componente.
-	import { describeNotice, MAX_TEXT_LENGTH, type MessageRecord } from '@lerolero/core';
+	import { describeNotice, type MessageRecord } from '@lerolero/core';
 	import { onDestroy, tick, type Snippet } from 'svelte';
-	import AudioPlayer from './AudioPlayer.svelte';
-	import { hue } from './Avatar.svelte';
+	import Composer from './Composer.svelte';
 	import Icon from './Icon.svelte';
+	import MessageBubble from './MessageBubble.svelte';
 	import MessageMenu from './MessageMenu.svelte';
-	import { dayKey, formatDay, formatTime } from '#lib/format.ts';
-	import { MAX_SECONDS, startRecording, type Recording } from '#lib/recorder.ts';
-	import { friendlyError, session } from '#lib/session.svelte.ts';
+	import { dayKey, formatDay } from '#lib/format.ts';
+	import { friendlyError } from '#lib/errors.ts';
+	import { session } from '#lib/session.svelte.ts';
 
 	let {
 		conversationId,
@@ -39,65 +39,11 @@
 	let hasOlder = $state(false);
 	let extraPages = 0;
 	let firstLoad = true;
-	let text = $state('');
 	let error = $state('');
 	let scroller = $state<HTMLDivElement>();
-	let input = $state<HTMLTextAreaElement>();
-
-	// gravação de áudio: um toque começa, outro envia (RF-40)
-	let recording = $state<Recording>();
-	let elapsed = $state(0);
-	let sendingAudio = $state(false);
-	let ticker: ReturnType<typeof setInterval> | undefined;
-
-	async function startAudio() {
-		error = '';
-		try {
-			recording = await startRecording();
-			elapsed = 0;
-			ticker = setInterval(() => {
-				elapsed = Math.floor((performance.now() - recording!.startedAt) / 1000);
-				if (elapsed >= MAX_SECONDS) void finishAudio();
-			}, 250);
-		} catch (err) {
-			error = friendlyError(err);
-		}
-	}
-
-	function stopTicker() {
-		clearInterval(ticker);
-		ticker = undefined;
-	}
-
-	function cancelAudio() {
-		stopTicker();
-		recording?.cancel();
-		recording = undefined;
-	}
-
-	async function finishAudio() {
-		const current = recording;
-		if (!current) return;
-		stopTicker();
-		recording = undefined;
-		const { file, duration } = await current.stop();
-		if (duration < 1) return; // toque sem querer
-		sendingAudio = true;
-		try {
-			await session.sendAudio(conversationId, file, duration);
-		} catch (err) {
-			error = friendlyError(err);
-		} finally {
-			sendingAudio = false;
-		}
-	}
-
-	onDestroy(cancelAudio);
 
 	// menu da mensagem: toque longo (celular) ou botão direito (computador)
 	let menuFor = $state.raw<MessageRecord>();
-	let pressTimer: ReturnType<typeof setTimeout> | undefined;
-	let pressStart = { x: 0, y: 0 };
 
 	function openMenu(message: MessageRecord) {
 		if (message.deleted || message.notice) return;
@@ -123,19 +69,6 @@
 	}
 	onDestroy(() => clearTimeout(copiedTimer));
 
-	function onpointerdown(event: PointerEvent, message: MessageRecord) {
-		// botões e a barra do áudio continuam funcionando normalmente
-		if ((event.target as HTMLElement).closest('button, input, a')) return;
-		pressStart = { x: event.clientX, y: event.clientY };
-		pressTimer = setTimeout(() => openMenu(message), 500);
-	}
-
-	const cancelPress = () => clearTimeout(pressTimer);
-
-	// o dedo sempre treme um pouco: só cancela se andar de verdade (rolagem)
-	function onpointermove(event: PointerEvent) {
-		if (Math.hypot(event.clientX - pressStart.x, event.clientY - pressStart.y) > 10) cancelPress();
-	}
 
 	async function deleteMessage(forEveryone: boolean) {
 		const message = menuFor;
@@ -148,7 +81,6 @@
 			error = friendlyError(err);
 		}
 	}
-	const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 	// first/last: começo e fim de uma sequência de balões da mesma pessoa no mesmo dia, sem aviso nem
 	// a linha "Mensagens novas" no meio.
@@ -319,28 +251,6 @@
 		scroller!.scrollTop += scroller!.scrollHeight - before;
 	}
 
-	async function send(event?: SubmitEvent) {
-		event?.preventDefault();
-		const message = text.trim();
-		if (!message) return;
-		error = '';
-		text = '';
-		try {
-			await session.sendText(conversationId, message);
-		} catch (err) {
-			text = message;
-			error = friendlyError(err);
-		}
-		input?.focus();
-	}
-
-	// no computador, Enter envia e Shift+Enter quebra a linha; no celular, Enter quebra a linha
-	function onkeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter' && !event.shiftKey && matchMedia('(pointer: fine)').matches) {
-			event.preventDefault();
-			void send();
-		}
-	}
 </script>
 
 <div class="chat">
@@ -367,48 +277,15 @@
 							<p class="notice-line">{nameOf ? describeNotice(item.message.notice, item.message.sender, nameOf) : item.message.text}</p>
 						{:else}
 							{@const m = item.message}
-							<div class="row" class:mine={m.sender === me} class:first={item.first} class:last={item.last} data-day={item.day}>
-								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<div
-									class="bubble"
-									class:deleted={m.deleted}
-									onpointerdown={(e) => onpointerdown(e, m)}
-									onpointerup={cancelPress}
-									onpointerleave={cancelPress}
-									{onpointermove}
-									oncontextmenu={(e) => (e.preventDefault(), openMenu(m))}
-								>
-									{#if item.last}
-										<svg class="tail" viewBox="0 0 10 12" aria-hidden="true">
-											<path class="tail-fill" d="M10 0C10 7 6 11 0 12H10Z" />
-											<path class="tail-line" d="M9.5 0C9.5 7 6 11 0.5 11.5H10" />
-										</svg>
-									{/if}
-									{#if nameOf && item.first && m.sender !== me}
-										<span class="sender" style:--h={hue(m.sender)}>{nameOf!(m.sender)}</span>
-									{/if}
-									{#if m.deleted}
-										<p class="deleted-text">
-											<Icon name="trash" size={14} />
-											{m.sender === me ? 'Você apagou esta mensagem' : 'Esta mensagem foi apagada'}
-										</p>
-									{:else if m.media?.type.startsWith('audio/')}
-										<AudioPlayer media={m.media} />
-									{:else if m.media}
-										<p class="hint file"><Icon name="paperclip" size={16} /> Arquivo (ainda não suportado nesta versão)</p>
-									{:else}
-										<p>{m.text}</p>
-									{/if}
-									<span class="meta">
-										{formatTime(m.createdAt)}
-										{#if m.sender === me}
-											<span class="status" title={m.status === 'pendente' ? 'Enviando' : 'Enviada'}>
-												<Icon name={m.status === 'pendente' ? 'clock' : 'check'} size={13} label={m.status === 'pendente' ? 'enviando' : 'enviada'} />
-											</span>
-										{/if}
-									</span>
-								</div>
-							</div>
+							<MessageBubble
+								message={m}
+								mine={m.sender === me}
+								first={item.first}
+								last={item.last}
+								day={item.day}
+								senderName={nameOf && item.first && m.sender !== me ? nameOf(m.sender) : undefined}
+								onmenu={() => openMenu(m)}
+							/>
 						{/if}
 					{/each}
 				</div>
@@ -436,42 +313,7 @@
 		/>
 	{/if}
 
-	<form class="composer" onsubmit={send}>
-		{#if error}<p class="error" role="alert">{error}</p>{/if}
-		{#if closed}
-			<p class="hint closed" role="status">{closed}</p>
-		{:else if recording}
-			<div class="line recording" role="status">
-				<button type="button" class="round ghost" onclick={cancelAudio} aria-label="Cancelar gravação">
-					<Icon name="trash" />
-				</button>
-				<span class="dot" aria-hidden="true"></span>
-				<span class="elapsed">Gravando {clock(elapsed)}</span>
-				<button type="button" class="round primary" onclick={finishAudio} aria-label="Enviar áudio">
-					<Icon name="send" />
-				</button>
-			</div>
-		{:else if sendingAudio}
-			<p class="hint sending" role="status"><Icon name="loader" size={16} /> Enviando áudio…</p>
-		{:else}
-			<div class="line">
-				<textarea
-					bind:this={input}
-					bind:value={text}
-					{onkeydown}
-					rows="1"
-					maxlength={MAX_TEXT_LENGTH}
-					placeholder="Mensagem"
-					aria-label="Mensagem"
-				></textarea>
-				{#if text.trim()}
-					<button class="round primary" type="submit" aria-label="Enviar"><Icon name="send" /></button>
-				{:else}
-					<button class="round primary" type="button" onclick={startAudio} aria-label="Gravar áudio"><Icon name="mic" /></button>
-				{/if}
-			</div>
-		{/if}
-	</form>
+	<Composer {conversationId} {closed} bind:error />
 </div>
 
 <style>
@@ -492,21 +334,6 @@
 		color: var(--muted);
 		font-size: 0.82rem;
 		width: fit-content;
-	}
-	.sender {
-		display: block;
-		font-size: 0.8rem;
-		font-weight: 700;
-		color: hsl(var(--h) 55% 38%);
-	}
-	@media (prefers-color-scheme: dark) {
-		.sender {
-			color: hsl(var(--h) 60% 70%);
-		}
-	}
-	.closed {
-		text-align: center;
-		margin: 0.4rem 0;
 	}
 	.area {
 		flex: 1;
@@ -624,163 +451,5 @@
 		color: var(--muted);
 		font-size: 0.8rem;
 		margin: 0.9rem 0 0.4rem;
-	}
-	.row {
-		display: flex;
-		margin-top: 2px;
-		--bubble: var(--surface);
-		--bubble-line: var(--line);
-	}
-	.row.first {
-		margin-top: 0.5rem;
-	}
-	.row.mine {
-		justify-content: flex-end;
-		--bubble: color-mix(in srgb, var(--accent) 18%, var(--surface));
-		--bubble-line: transparent;
-	}
-	.bubble {
-		position: relative;
-		max-width: 80%;
-		padding: 0.4rem 0.7rem 0.3rem;
-		border-radius: 12px;
-		background: var(--bubble);
-		border: 1px solid var(--bubble-line);
-	}
-	/* balões seguidos: o canto do lado de quem escreveu fica mais reto */
-	.row:not(.first) .bubble {
-		border-top-left-radius: 4px;
-	}
-	.row:not(.last) .bubble {
-		border-bottom-left-radius: 4px;
-	}
-	.row.last .bubble {
-		border-bottom-left-radius: 0;
-	}
-	.row.mine .bubble {
-		border-radius: 12px;
-	}
-	.row.mine:not(.first) .bubble {
-		border-top-right-radius: 4px;
-	}
-	.row.mine:not(.last) .bubble {
-		border-bottom-right-radius: 4px;
-	}
-	.row.mine.last .bubble {
-		border-bottom-right-radius: 0;
-	}
-	/* a pontinha passa 1px por cima da borda do balão para emendar sem risco */
-	.tail {
-		position: absolute;
-		bottom: -1px;
-		left: -10px;
-		width: 10px;
-		height: 12px;
-		overflow: visible;
-	}
-	.mine .tail {
-		left: auto;
-		right: -10px;
-		transform: scaleX(-1);
-	}
-	.tail-fill {
-		fill: var(--bubble);
-	}
-	.tail-line {
-		fill: none;
-		stroke: var(--bubble-line);
-		stroke-width: 1;
-	}
-	.bubble {
-		-webkit-touch-callout: none;
-		user-select: none;
-	}
-	.deleted-text {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-style: italic;
-		color: var(--muted);
-	}
-	.bubble p {
-		margin: 0;
-		white-space: pre-wrap;
-		overflow-wrap: anywhere;
-	}
-	.meta {
-		display: block;
-		text-align: right;
-		font-size: 0.7rem;
-		color: var(--muted);
-	}
-	.composer {
-		padding: 0.6rem 0.8rem calc(0.6rem + env(safe-area-inset-bottom));
-		border-top: 1px solid var(--line);
-		background: var(--surface);
-	}
-	.composer .error {
-		margin: 0 0 0.4rem;
-	}
-	.line {
-		display: flex;
-		gap: 0.5rem;
-		align-items: flex-end;
-	}
-	.recording {
-		align-items: center;
-	}
-	.elapsed {
-		flex: 1;
-		white-space: nowrap;
-		font-variant-numeric: tabular-nums;
-	}
-	.dot {
-		width: 0.7rem;
-		height: 0.7rem;
-		border-radius: 50%;
-		background: var(--danger);
-		animation: pulse 1s infinite alternate;
-	}
-	@keyframes pulse {
-		to {
-			opacity: 0.3;
-		}
-	}
-	.file {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		margin: 0;
-	}
-	.round {
-		width: 2.9rem;
-		height: 2.9rem;
-		border-radius: 50%;
-		padding: 0;
-		display: grid;
-		place-items: center;
-		flex-shrink: 0;
-	}
-	.round.ghost {
-		border-color: transparent;
-		background: transparent;
-		color: var(--muted);
-	}
-	.status {
-		display: inline-block;
-		vertical-align: -2px;
-	}
-	.sending {
-		margin: 0.4rem 0;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		gap: 0.4rem;
-	}
-	textarea {
-		flex: 1;
-		resize: none;
-		max-height: 8rem;
-		field-sizing: content;
 	}
 </style>

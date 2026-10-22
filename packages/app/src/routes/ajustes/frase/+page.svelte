@@ -4,7 +4,8 @@
 	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
 	import PhraseBackup from '#lib/components/PhraseBackup.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
-	import { friendlyError, session } from '#lib/session.svelte.ts';
+	import { friendlyError } from '#lib/errors.ts';
+	import { session } from '#lib/session.svelte.ts';
 
 	// pede o PIN de novo mesmo com o app aberto: a frase é a coisa mais sensível da conta
 	let pin = $state('');

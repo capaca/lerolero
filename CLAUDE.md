@@ -13,6 +13,8 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
 
 ## Comandos (na raiz)
 
+- `scripts/verificar.sh [check] [test] [build]`: roda como a CI e mostra só uma linha por etapa e os erros (log
+  completo em `$TMPDIR/lerolero-verificar/`). Prefira este aos comandos abaixo, que imprimem muito.
 - `pnpm check`: tsc + svelte-check (inclui o service worker). Um aviso no service worker é esperado.
 - `pnpm test`: vitest. O core testa com `FakeRelay`/`FakeBlossom` (`packages/core/src/testing`).
 - `BASE_PATH=/lerolero pnpm build`: build igual ao do GitHub Pages.

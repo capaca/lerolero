@@ -5,7 +5,7 @@
 	import { parseInvite } from '@lerolero/core';
 	import { onDestroy } from 'svelte';
 	import { startScanner } from '#lib/scanner.ts';
-	import { friendlyError } from '#lib/session.svelte.ts';
+	import { friendlyError } from '#lib/errors.ts';
 
 	let video = $state<HTMLVideoElement>();
 	let scanning = $state(false);

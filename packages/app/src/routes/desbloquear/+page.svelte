@@ -4,7 +4,8 @@
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
-	import { friendlyError, session } from '#lib/session.svelte.ts';
+	import { friendlyError } from '#lib/errors.ts';
+	import { session } from '#lib/session.svelte.ts';
 
 	let pin = $state('');
 	let busy = $state(false);
