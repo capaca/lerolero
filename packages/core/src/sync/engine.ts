@@ -146,13 +146,18 @@ export class SyncEngine {
 		clearTimeout(this.retryTimer);
 		for (const item of await this.storage.outbox.due(this.now())) {
 			const pending = item.relays.filter((r) => !item.acceptedBy.includes(r));
-			const results = await this.pool.publish(pending, item.event);
+			// "enviada" assim que o primeiro relay aceita, sem esperar o mais lento (a tela mostra antes)
+			let firstAccept: Promise<void> | undefined;
+			const results = await this.pool.publish(pending, item.event, (_, result) => {
+				if (result.ok && item.acceptedBy.length === 0 && !firstAccept) {
+					firstAccept = this.events.onSent?.({ ...item, acceptedBy: [] }) ?? Promise.resolve();
+				}
+			});
+			await firstAccept;
 			const newlyAccepted = pending.filter((r) => results[r]?.ok);
 			const acceptedBy = [...item.acceptedBy, ...newlyAccepted];
 			const attempts = item.attempts + 1;
 			const updated: OutboxRecord = { ...item, acceptedBy, attempts, nextAttemptAt: this.now() + this.retryDelay(attempts) };
-
-			if (item.acceptedBy.length === 0 && acceptedBy.length > 0) await this.events.onSent?.(updated);
 
 			const allAccepted = acceptedBy.length === item.relays.length;
 			const enoughExtra = item.acceptedBy.length > 0 && attempts >= EXTRA_ATTEMPTS_AFTER_ACCEPTED;

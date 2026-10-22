@@ -19,7 +19,9 @@
 				return;
 			}
 			invite = parsed;
-			existing = await session.getContact(parsed.publicKey);
+			// quem só escreveu sem ser contato ("pedido") ainda não está nos contatos
+			const known = await session.getContact(parsed.publicKey);
+			existing = known?.state === 'aceito' ? known : undefined;
 			localName = existing?.localName ?? invite.name ?? '';
 		} catch (err) {
 			invite = undefined;

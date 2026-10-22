@@ -3,7 +3,7 @@
 
 import { finalizeEvent, getEventHash, getPublicKey, type EventTemplate, type NostrEvent } from 'nostr-tools/pure';
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06';
-import { unwrapEvent } from 'nostr-tools/nip59';
+import { createRumor, createSeal, createWrap, unwrapEvent } from 'nostr-tools/nip59';
 import { DEFAULT_KDF, seal, unseal, type KdfParams, type Sealed } from '../crypto/seal.ts';
 import { generatePhrase, parsePhrase } from './phrase.ts';
 
@@ -62,6 +62,11 @@ const keyFromWords = (words: string[]) => privateKeyFromSeedWords(words.join(' '
 const sealWords = (words: string[], pin: string, kdf: KdfParams) => seal(encoder.encode(words.join(' ')), pin, kdf);
 
 export type NewIdentity = { publicKey: string; phrase: Sealed; words: string[] };
+
+/** Mensagem embrulhada (NIP-17): o rumor guardado localmente e os dois gift wraps a publicar. */
+export type WrappedMessage = { rumor: Rumor; toRecipient: NostrEvent; toSelf: NostrEvent };
+
+export const MAX_TEXT_LENGTH = 4000;
 
 export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 	let secretKey: Uint8Array | undefined;
@@ -134,6 +139,24 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 			}
 			if (getEventHash(rumor) !== rumor.id) throw new InvalidWrapError('id do rumor não confere com o conteúdo');
 			return rumor;
+		},
+
+		/**
+		 * Embrulha uma mensagem de texto 1:1 (NIP-17, kind 14): um gift wrap para o
+		 * destinatário e outro para mim, que vira minha cópia em outros aparelhos.
+		 * `extraTags` leva as tags próprias do app (ex.: ["nome", …] na primeira mensagem).
+		 */
+		wrapDirectMessage(recipient: string, text: string, extraTags: string[][] = []): WrappedMessage {
+			if (!secretKey) throw new LockedError();
+			if (!/^[0-9a-f]{64}$/.test(recipient)) throw new Error('destinatário inválido');
+			if (!text.trim() || text.length > MAX_TEXT_LENGTH) throw new Error('mensagem vazia ou longa demais');
+			const rumor = createRumor({ kind: 14, content: text, tags: [['p', recipient], ...extraTags] }, secretKey) as Rumor;
+			const me = getPublicKey(secretKey);
+			return {
+				rumor,
+				toRecipient: createWrap(createSeal(rumor, secretKey, recipient), recipient),
+				toSelf: createWrap(createSeal(rumor, secretKey, me), me)
+			};
 		},
 
 		lock() {

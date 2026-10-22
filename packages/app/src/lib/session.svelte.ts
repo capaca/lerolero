@@ -4,18 +4,27 @@
 import {
 	addContact,
 	connect,
+	directConversationId,
 	dmRelayListTemplate,
+	fetchDmRelays,
+	markRead,
+	markSent,
+	nameTagFor,
 	listContacts,
 	NO_FAILURES,
 	openStorage,
 	recordFailure,
 	RelayPool,
 	renameContact,
+	storeIncoming,
+	storeOutgoing,
 	SyncEngine,
 	waitTime,
 	type AttemptState,
 	type ContactRecord,
+	type ConversationRecord,
 	type IdentityRecord,
+	type MessageRecord,
 	type Invite,
 	type Vault
 } from '@lerolero/core';
@@ -24,6 +33,14 @@ import { relayList } from './relays.ts';
 export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
 
 const ATTEMPTS_KEY = 'tentativasPin';
+
+/** O contato não publicou onde recebe mensagens e o convite não trouxe: não há para onde enviar. */
+export class NoRelaysError extends Error {
+	constructor() {
+		super('Não sei onde entregar mensagens para esta pessoa');
+		this.name = 'NoRelaysError';
+	}
+}
 
 /** Muitos PINs errados: precisa esperar `waitMs` para tentar de novo. */
 export class PinLockedError extends Error {
@@ -51,6 +68,10 @@ const DM_LIST_ID = 'relays-dm';
 class Session {
 	status = $state<Status>('carregando');
 	private network?: { pool: RelayPool; engine: SyncEngine };
+	/** muda a cada mensagem ou conversa alterada: as telas observam e recarregam */
+	version = $state(0);
+	/** conversa na tela agora: mensagens dela não contam como não lidas */
+	openConversationId: string | undefined;
 	// $state.raw: o registro tem bytes que vão para o worker e para o IndexedDB, que não aceitam proxies
 	identity = $state.raw<IdentityRecord | undefined>();
 
@@ -140,11 +161,7 @@ class Session {
 
 	// ---------- rede ----------
 
-	/**
-	 * Conecta aos relays, envia o que ficou na fila e publica onde recebo mensagens.
-	 * A recepção só liga na etapa 5, junto com a tela de conversa: ligada antes,
-	 * as mensagens seriam marcadas como vistas sem ter onde ficar guardadas.
-	 */
+	/** Conecta aos relays, passa a receber, envia o que ficou na fila e publica onde recebo mensagens. */
 	private async startNetwork() {
 		if (this.network) return;
 		const pool = new RelayPool({ signer: (template) => vault.sign(template) });
@@ -153,14 +170,18 @@ class Session {
 			pool,
 			myPublicKey: this.current.publicKey,
 			events: {
-				onWrap: async () => {},
+				onWrap: (wrap) => this.receive(wrap),
 				onSent: async (item) => {
 					if (item.messageId === DM_LIST_ID) await storage.settings.set('relaysDmPublicados', relaysOf(item.event.tags));
+					else if (item.messageId) {
+						await markSent(storage, item.messageId);
+						this.version++;
+					}
 				}
 			}
 		});
 		this.network = { pool, engine };
-		void engine.flush();
+		await engine.start(await this.myDmRelays());
 		await this.publishDmRelays();
 	}
 
@@ -183,6 +204,58 @@ class Session {
 		const event = await vault.sign(dmRelayListTemplate(relays));
 		const general = (await relayList()).geral;
 		await this.network?.engine.enqueue(event, [...general, ...relays], DM_LIST_ID);
+	}
+
+	// ---------- conversas ----------
+
+	private async receive(wrap: Parameters<Vault['unwrap']>[0]) {
+		const rumor = await vault.unwrap(wrap);
+		const stored = await storeIncoming(storage, this.current.publicKey, rumor, { openConversationId: this.openConversationId });
+		if (stored?.isNew) this.version++;
+	}
+
+	/**
+	 * Envia texto para um contato. A mensagem aparece na hora como "enviando" (RNF-12)
+	 * e segue pela fila; sem internet, sai quando a conexão voltar.
+	 */
+	async sendText(recipient: string, text: string) {
+		const network = this.network;
+		if (!network) throw new Error('Sem conexão com a rede');
+		const relays = await this.deliveryRelays(recipient);
+		const tags = await nameTagFor(storage, recipient, this.current.displayName);
+		const wrapped = await vault.wrapDirectMessage(recipient, text.trim(), tags);
+		await storeOutgoing(storage, wrapped.rumor, recipient);
+		this.version++;
+		// a fila guarda e tenta de novo sozinha: a tela não espera a rede
+		void network.engine.enqueue(wrapped.toRecipient, relays, wrapped.rumor.id);
+		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+	}
+
+	/** Onde o contato recebe: o que veio no convite; senão o kind 10050 dele na rede. */
+	private async deliveryRelays(publicKey: string): Promise<string[]> {
+		const contact = await storage.contacts.get(publicKey);
+		if (contact?.dmRelays.length) return contact.dmRelays;
+		const found = await fetchDmRelays(this.network!.pool, (await relayList()).geral, publicKey);
+		if (!found.length) throw new NoRelaysError();
+		if (contact) await storage.contacts.put({ ...contact, dmRelays: found });
+		return found;
+	}
+
+	listConversations(): Promise<ConversationRecord[]> {
+		return storage.conversations.listByRecent();
+	}
+
+	getConversation(publicKey: string) {
+		return storage.conversations.get(directConversationId(publicKey));
+	}
+
+	getMessages(publicKey: string, limit: number, before?: number): Promise<MessageRecord[]> {
+		return storage.messages.listByConversation(directConversationId(publicKey), limit, before);
+	}
+
+	async markRead(publicKey: string) {
+		await markRead(storage, directConversationId(publicKey));
+		this.version++;
 	}
 
 	connectedRelays(): string[] {
@@ -252,6 +325,8 @@ export function friendlyError(err: unknown): string {
 			return `${e.message ?? 'Convite inválido'}.`;
 		case 'SelfInviteError':
 			return 'Este é o seu próprio convite.';
+		case 'NoRelaysError':
+			return 'Não sei onde entregar mensagens para esta pessoa. Peça a ela um convite novo.';
 		default:
 			return 'Algo deu errado. Tente de novo.';
 	}

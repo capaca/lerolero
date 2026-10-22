@@ -44,7 +44,7 @@ kind 1059  Gift wrap — assinado por chave descartável; tag ["p", <destinatár
 
 | Uso | Kind | Padrão | Observações |
 |---|---|---|---|
-| Mensagem de texto | `14` | NIP-17 | Resposta: tag `["e", <id do rumor citado>]`. Tags próprias: `seq`, `g` (ver abaixo) |
+| Mensagem de texto | `14` | NIP-17 | Resposta: tag `["e", <id do rumor citado>]`. Tags próprias: `seq`, `g` (ver abaixo) e `["nome", <nome>]` na primeira mensagem de cada conversa: como o nome é privado, ele chega ao contato só dentro da mensagem cifrada |
 | Mídia (foto, áudio) | `15` | NIP-17 | Tags do NIP-17 para arquivos: `file-type`, `encryption-algorithm` (`aes-gcm`), `decryption-key`, `decryption-nonce`, `x` (hash do arquivo cifrado), `ox` (hash do original), `size`, `dim`, `blurhash`/`thumb` (prévia), URLs do Blossom |
 | Reação | `7` | NIP-25 | Tag `["e", <id do rumor>]`; conteúdo = emoji |
 | Apagar para todos | `5` | NIP-09 | Pedido de apagamento; outros apps podem ignorar (RF-25) |
@@ -155,3 +155,4 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 | Q-P2 | Formato da figurinha sonora (v1): provavelmente kind `15` com imagem + áudio Opus curto, e `alt` "figurinha sonora" para outros apps (Q-F5) | Pedro (v1) |
 | Q-P3 | Janela de espera antes de pedir reenvio por buraco na numeração | Implementação |
 | Q-P4 | ✅ Português. Interoperabilidade da identidade via exportação da chave privada | — |
+| Q-P5 | **Cartão de perfil privado:** trocar a tag `nome` por um evento próprio, cifrado e embrulhado como uma mensagem, enviado a cada contato na primeira conversa e sempre que algo mudar. Candidatos: nome, foto de perfil (RF-02, cifrada no Blossom), relays de DM, versão e recursos do app (RNF-93), aviso de chave nova (Q-A4). Proposta: fazer no M2, junto com a foto | Pedro + implementação (M2) |

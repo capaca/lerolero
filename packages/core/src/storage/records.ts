@@ -36,6 +36,8 @@ export type ConversationRecord = {
 	lastMessageAt: number;
 	lastMessagePreview?: string;
 	unread: number;
+	/** já mandei meu nome nesta conversa (tag "nome" na primeira mensagem) */
+	nameSent?: boolean;
 };
 
 export type MessageStatus = 'pendente' | 'enviada' | 'recebida';

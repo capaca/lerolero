@@ -76,15 +76,27 @@ export class RelayPool {
 		};
 	}
 
-	/** Publica em vários relays ao mesmo tempo; devolve o resultado de cada um (nunca rejeita). */
-	async publish(urls: string[], event: NostrEvent): Promise<Record<string, PublishResult>> {
+	/**
+	 * Publica em vários relays ao mesmo tempo; devolve o resultado de cada um (nunca rejeita).
+	 * `onResult` avisa cada relay assim que ele responde, sem esperar o mais lento.
+	 */
+	async publish(
+		urls: string[],
+		event: NostrEvent,
+		onResult?: (url: string, result: PublishResult) => void
+	): Promise<Record<string, PublishResult>> {
 		const results = await Promise.all(
 			urls.map(async (url): Promise<[string, PublishResult]> => {
+				let result: PublishResult;
 				try {
 					const conn = await this.ready(url);
-					return [url, await conn.publish(event)];
+					result = await conn.publish(event);
 				} catch (err) {
-					return [url, { ok: false, message: err instanceof Error ? err.message : String(err) }];
+					result = { ok: false, message: err instanceof Error ? err.message : String(err) };
+				}
+				try {
+					onResult?.(url, result);
+					return [url, result];
 				} finally {
 					this.closeWhenIdle(this.relays.get(url));
 				}

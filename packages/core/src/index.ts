@@ -18,10 +18,12 @@ export {
 	InvalidPinError,
 	InvalidWrapError,
 	LockedError,
+	MAX_TEXT_LENGTH,
 	PhraseMismatchError,
 	type NewIdentity,
 	type Rumor,
-	type Vault
+	type Vault,
+	type WrappedMessage
 } from './identity/vault.ts';
 export { toNpub } from './identity/npub.ts';
 export { DELAYS_MS, FREE_ATTEMPTS, NO_FAILURES, recordFailure, waitTime, type AttemptState } from './identity/attempts.ts';
@@ -30,3 +32,13 @@ export { addContact, contactName, listContacts, renameContact, SelfInviteError }
 export { RelayConnection, RelayError, type PublishResult, type Signer, type SocketFactory } from './net/connection.ts';
 export { IDLE_CLOSE_MS, RECONNECT_DELAYS_MS, RelayPool, type PoolOptions } from './net/pool.ts';
 export { dmRelayListTemplate, fetchDmRelays, SyncEngine, type SyncEvents, type SyncOptions } from './sync/engine.ts';
+export {
+	directConversationId,
+	markRead,
+	markSent,
+	NAME_TAG,
+	nameTagFor,
+	storeIncoming,
+	storeOutgoing,
+	type StoredMessage
+} from './conversations/messaging.ts';

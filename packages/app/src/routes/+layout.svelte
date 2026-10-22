@@ -24,7 +24,8 @@
 			'/contatos/meu-convite',
 			'/contatos/ler',
 			'/contatos/[chave]',
-			'/convite'
+			'/convite',
+			'/conversa/[chave]'
 		]
 	};
 

@@ -44,13 +44,22 @@
 			</div>
 		</form>
 
-		<div class="card">
-			<p class="hint">Conversar com {contactName(contact)} chega na etapa de mensagens.</p>
+		<div class="actions">
+			<a class="primary-link" href={resolve('/conversa/[chave]', { chave: contact.publicKey })}>Conversar</a>
 		</div>
 	{/if}
 </main>
 
 <style>
+	.primary-link {
+		display: inline-block;
+		text-decoration: none;
+		font-weight: 600;
+		padding: 0.75rem 1.1rem;
+		border-radius: 10px;
+		background: var(--accent);
+		color: var(--accent-fg);
+	}
 	.key {
 		font-family: ui-monospace, monospace;
 		font-size: 0.8rem;
