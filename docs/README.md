@@ -1,5 +1,7 @@
 # Especificação — Lero-lero
 
+Para uma apresentação curta do projeto, veja o [README](../README.md) da raiz.
+
 Lero-lero é um app de mensagens com criptografia ponta a ponta, para o público geral, sem infraestrutura paga pelo autor.
 
 ## Documentos
