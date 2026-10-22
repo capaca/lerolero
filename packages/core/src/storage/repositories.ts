@@ -53,6 +53,7 @@ export interface OutboxRepository {
 export interface SyncRepository {
 	getCursor(relay: string): Promise<number | undefined>;
 	setCursor(relay: string, cursor: number): Promise<void>;
+	clear(): Promise<void>;
 }
 
 export interface SeenWrapRepository {
@@ -60,6 +61,7 @@ export interface SeenWrapRepository {
 	add(wrap: SeenWrapRecord): Promise<void>;
 	/** apaga os registros recebidos antes de `before` (segundos); devolve quantos */
 	prune(before: number): Promise<number>;
+	clear(): Promise<void>;
 }
 
 export interface MediaRepository {
@@ -123,12 +125,14 @@ export function openStorage(name?: string): Storage {
 		},
 		sync: {
 			getCursor: async (relay) => (await db.sync.get(relay))?.cursor,
-			setCursor: async (relay, cursor) => void (await db.sync.put({ relay, cursor }))
+			setCursor: async (relay, cursor) => void (await db.sync.put({ relay, cursor })),
+			clear: () => db.sync.clear()
 		},
 		seenWraps: {
 			has: async (id) => (await db.seen_wraps.get(id)) !== undefined,
 			add: async (wrap) => void (await db.seen_wraps.put(wrap)),
-			prune: (before) => db.seen_wraps.where('receivedAt').below(before).delete()
+			prune: (before) => db.seen_wraps.where('receivedAt').below(before).delete(),
+			clear: () => db.seen_wraps.clear()
 		},
 		media: {
 			get: (ox) => db.media.get(ox),

@@ -9,7 +9,7 @@ import { RelayConnection, type SocketFactory } from '../net/connection.ts';
 import { RelayPool } from '../net/pool.ts';
 import { openStorage, type Storage } from '../storage/repositories.ts';
 import { FakeRelay } from '../testing/fake-relay.ts';
-import { CURSOR_MARGIN_S, dmRelayListTemplate, fetchDmRelays, SyncEngine } from './engine.ts';
+import { CURSOR_MARGIN_S, dmRelayListTemplate, fetchDmRelays, SYNC_GENERATION, SyncEngine, upgradeSyncGeneration } from './engine.ts';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 const socket: SocketFactory = (url) => new NodeWebSocket(url) as unknown as WebSocket;
@@ -216,6 +216,33 @@ describe('motor de sincronização', () => {
 		expect(bad.events.map((e) => e.id)).toContain(wrap.id);
 		expect(await alice.storage.outbox.due(Infinity)).toHaveLength(0);
 		expect(sent).toHaveLength(1); // "enviada" não é avisado de novo
+	});
+});
+
+describe('geração da sincronização', () => {
+	it('depois de atualizar, reprocessa o que uma versão antiga ignorou e marcou como visto', async () => {
+		const r = await relay();
+		const bob = await person();
+		// versão antiga: recebe, não entende (ignora) e marca como visto
+		const ignored: string[] = [];
+		const old = new SyncEngine({ storage: bob.storage, pool: bob.pool, myPublicKey: bob.publicKey, events: { onWrap: async (w) => void ignored.push(w.id) } });
+		const wrap = wrapFor(bob.publicKey, 'áudio que a versão antiga não entendia');
+		r.events.push(wrap);
+		await old.start([r.url]);
+		await until(() => ignored.length === 1);
+		old.stop();
+		expect(await bob.storage.seenWraps.has(wrap.id)).toBe(true);
+
+		// versão nova: sobe a geração e recebe de novo
+		expect(await upgradeSyncGeneration(bob.storage)).toBe(true);
+		expect(await upgradeSyncGeneration(bob.storage)).toBe(false); // só uma vez
+		const received: string[] = [];
+		const fresh = new SyncEngine({ storage: bob.storage, pool: bob.pool, myPublicKey: bob.publicKey, events: { onWrap: async (w) => void received.push(w.id) } });
+		cleanup.push(() => fresh.stop());
+		await fresh.start([r.url]);
+		await until(() => received.length === 1);
+		expect(received).toEqual([wrap.id]);
+		expect(await bob.storage.settings.get('geracaoSync')).toBe(SYNC_GENERATION);
 	});
 });
 

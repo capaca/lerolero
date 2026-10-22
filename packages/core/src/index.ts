@@ -31,7 +31,15 @@ export { cleanName, InvalidInviteError, inviteLink, parseInvite, type Invite } f
 export { addContact, contactName, listContacts, renameContact, SelfInviteError } from './contacts/contacts.ts';
 export { RelayConnection, RelayError, type PublishResult, type Signer, type SocketFactory } from './net/connection.ts';
 export { IDLE_CLOSE_MS, RECONNECT_DELAYS_MS, RelayPool, type PoolOptions } from './net/pool.ts';
-export { dmRelayListTemplate, fetchDmRelays, SyncEngine, type SyncEvents, type SyncOptions } from './sync/engine.ts';
+export {
+	dmRelayListTemplate,
+	fetchDmRelays,
+	SYNC_GENERATION,
+	SyncEngine,
+	upgradeSyncGeneration,
+	type SyncEvents,
+	type SyncOptions
+} from './sync/engine.ts';
 export {
 	directConversationId,
 	markRead,

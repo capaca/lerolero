@@ -23,6 +23,7 @@ import {
 	storeIncoming,
 	storeOutgoing,
 	SyncEngine,
+	upgradeSyncGeneration,
 	waitTime,
 	type AttemptState,
 	type ContactRecord,
@@ -186,6 +187,8 @@ class Session {
 			}
 		});
 		this.network = { pool, engine };
+		// versão nova que entende tipos novos de mensagem: recupera o que a antiga ignorou
+		await upgradeSyncGeneration(storage);
 		await engine.start(await this.myDmRelays());
 		await this.publishDmRelays();
 	}

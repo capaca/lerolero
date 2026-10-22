@@ -30,6 +30,29 @@ export const RETRY_DELAYS_MS = [5_000, 15_000, 60_000, 5 * 60_000, 15 * 60_000];
  */
 export const EXTRA_ATTEMPTS_AFTER_ACCEPTED = 3;
 
+/**
+ * Geração da sincronização: sobe sempre que o app passa a entender um tipo novo de
+ * mensagem. Uma versão antiga ignora o que não entende, mas marca o embrulho como visto;
+ * sem isto, depois de atualizar, essas mensagens nunca apareceriam.
+ *   1: texto (kind 14)
+ *   2: áudio e arquivos (kind 15)
+ */
+export const SYNC_GENERATION = 2;
+
+/**
+ * Se o aparelho sincronizou com uma geração anterior, esquece cursores e embrulhos
+ * vistos para reprocessar tudo o que os relays ainda guardam. Mensagens já guardadas
+ * não se repetem (são identificadas pelo id). Devolve true se reprocessou.
+ */
+export async function upgradeSyncGeneration(storage: Storage): Promise<boolean> {
+	const current = (await storage.settings.get<number>('geracaoSync')) ?? 0;
+	if (current >= SYNC_GENERATION) return false;
+	await storage.seenWraps.clear();
+	await storage.sync.clear();
+	await storage.settings.set('geracaoSync', SYNC_GENERATION);
+	return true;
+}
+
 export type SyncEvents = {
 	/** um embrulho novo chegou (já sem repetidos). Erros aqui não travam a sincronização. */
 	onWrap: (wrap: NostrEvent, relay: string) => Promise<void>;
