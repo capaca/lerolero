@@ -130,12 +130,13 @@ describe('motor de sincronização', () => {
 			}
 		});
 		cleanup.push(() => engine.stop());
+		// o "quebrado" tem a assinatura invalidada pelo conteúdo trocado: injetado direto no relay,
+		// antes de assinar, para vir no histórico (o relay falso só repassa ao vivo o que é publicado)
+		const broken = { ...wrapFor(bob.publicKey, 'x'), content: 'lixo' };
+		r.events.push(broken);
 		await engine.start([r.url]);
 		const alice = await person();
-		const broken = { ...wrapFor(bob.publicKey, 'x'), content: 'lixo' };
 		const good = wrapFor(bob.publicKey, 'boa');
-		// o "quebrado" tem a assinatura invalidada pelo conteúdo trocado: injeta direto no relay
-		r.events.push(broken);
 		await alice.pool.publish([r.url], good);
 		await until(() => ok.includes(good.id));
 		expect(await bob.storage.seenWraps.has(broken.id)).toBe(true);
