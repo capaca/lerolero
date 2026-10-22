@@ -11,7 +11,7 @@ import { ensureIsolated, pageMemoryMB } from '../memory'
 
 type Mode = 'simples' | 'cv por mensagem' | 'cv em blocos' | 'janela' | 'virtualizada'
 type ChatExports = { element(): HTMLElement; scrollToBottom(): Promise<void> }
-type Run = { modo: Mode; mensagens: number; abrirMs: number; nosNoDom: number; heapMB?: number; memoriaMB?: number; rolagem: ScrollResult }
+type Run = { modo: Mode; mensagens: number; abrirMs: number; nosNoDom: number; heapMB?: number; memoriaBaseMB?: number; memoriaMB?: number; rolagem: ScrollResult }
 
 const MODES: Mode[] = ['simples', 'cv por mensagem', 'cv em blocos', 'janela', 'virtualizada']
 const SPEED = 2500 // px/s, um arrasto rápido
@@ -39,6 +39,13 @@ async function measure(mode: Mode, n: number): Promise<Run> {
   const messages = generateMessages(n)
   const [Chat, props] = component(mode)
 
+  // Medir a memória força uma coleta de lixo: limpa o que sobrou do modo anterior
+  // antes de começar, para não cair no meio desta rolagem, e dá a linha de base.
+  $('#status').textContent = `Preparando ${mode} (limpando a memória do modo anterior)…`
+  const memoriaBaseMB = await pageMemoryMB()
+  await afterPaint()
+  $('#status').textContent = `Medindo ${mode} com ${n} mensagens…`
+
   // abrir a conversa: do mount até a primeira pintura já posicionada no fim (RNF-11)
   const t0 = performance.now()
   const chat = mount(Chat, { target: stage, props: { messages, ...props } }) as ChatExports
@@ -52,6 +59,7 @@ async function measure(mode: Mode, n: number): Promise<Run> {
     abrirMs,
     nosNoDom: stage.getElementsByTagName('*').length,
     heapMB: heapMB(),
+    memoriaBaseMB,
     rolagem: await scrollUp(chat.element(), SPEED, DISTANCE),
   }
   // com a conversa ainda montada; o navegador mede no próximo GC (até ~20 s)
@@ -70,26 +78,28 @@ function render() {
     <td>${r.rolagem.droppedPct.toFixed(1)}%</td>
     <td class="${r.rolagem.janks === 0 ? 'good' : 'bad'}">${r.rolagem.janks}</td>
     <td>${ms(r.rolagem.frameTime.p95)}</td>
-    <td>${r.nosNoDom}</td><td>${r.memoriaMB ?? '—'}</td><td>${r.heapMB ?? '—'}</td></tr>`
+    <td>${r.nosNoDom}</td><td>${r.memoriaMB === undefined || r.memoriaBaseMB === undefined ? '—' : r.memoriaMB - r.memoriaBaseMB}</td><td>${r.memoriaMB ?? '—'}</td><td>${r.heapMB ?? '—'}</td></tr>`
   $('#results').innerHTML = `<table class="grid">
-    <tr><th>Modo</th><th>Msgs</th><th>Abrir</th><th>FPS</th><th>Quadros perdidos</th><th>Engasgos</th><th>p95 quadro</th><th>Nós DOM</th><th>Memória MB</th><th>Heap JS MB</th></tr>
+    <tr><th>Modo</th><th>Msgs</th><th>Abrir</th><th>FPS</th><th>Quadros perdidos</th><th>Engasgos</th><th>p95 quadro</th><th>Nós DOM</th><th>Memória da conversa MB</th><th>Memória total MB</th><th>Heap JS MB</th></tr>
     ${runs.map(fmt).join('')}</table>
-    <p class="hint">Metas: abrir &lt; 500 ms (RNF-11); rolagem a 60 fps sem engasgos (RNF-14). Engasgo = quadro acima de 50 ms; quadro perdido = acima de 25 ms. Memória = JavaScript + DOM da página, com a conversa aberta; Heap JS conta só o JavaScript.</p>`
+    <p class="hint">Metas: abrir &lt; 500 ms (RNF-11); rolagem a 60 fps sem engasgos (RNF-14). Engasgo = quadro acima de 50 ms; quadro perdido = acima de 25 ms. Memória = JavaScript + DOM, com a conversa aberta (total da página e quanto a conversa acrescentou); Heap JS conta só o JavaScript.</p>`
 }
 
 $<HTMLButtonElement>('#run-btn').addEventListener('click', async (e) => {
   const btn = e.currentTarget as HTMLButtonElement
   btn.disabled = true
   const n = Number($<HTMLSelectElement>('#count').value)
+  const choice = $<HTMLSelectElement>('#mode').value
+  const modes = choice === 'todos' ? MODES : MODES.filter((m) => m === choice)
   try {
-    for (const mode of MODES) {
-      $('#status').textContent = `Medindo ${mode} com ${n} mensagens…`
+    for (const mode of modes) {
       runs.push(await measure(mode, n))
       render()
     }
     $('#status').textContent = 'Pronto.'
   } catch (err) {
     $('#status').textContent = `Erro: ${err}`
+    ;((report.erros ??= []) as string[]).push(String(err))
   } finally {
     btn.disabled = false
   }
@@ -109,6 +119,10 @@ $<HTMLButtonElement>('#copy-btn').addEventListener('click', async () => {
     $('#status').textContent = 'Não deu para copiar automaticamente; copie do campo abaixo.'
   }
 })
+
+$('#mode').innerHTML = ['todos', ...MODES]
+  .map((m) => `<option value="${m}">${m === 'todos' ? 'Todos' : m}</option>`)
+  .join('')
 
 ensureIsolated().then((isolated) => {
   report.isolado = isolated

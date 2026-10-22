@@ -157,13 +157,14 @@ async function testPow() {
     budgetMs: 20_000,
   })
   report.pow = r
-  const under1s = r.levels.filter((l) => l.time.median < 1000).map((l) => l.difficulty)
+  // a prova de trabalho é sorteio: a mediana esconde os envios azarados, então a meta vale para o p95
+  const under1s = r.levels.filter((l) => l.time.p95 < 1000).map((l) => l.difficulty)
   renderChecks(
     el,
     r.levels.map((l) => [`Dificuldade ${l.difficulty}`, summaryText(l.time)]),
     [
       {
-        label: `Maior dificuldade com mediana < 1 s: ${under1s.length ? Math.max(...under1s) : 'nenhuma'}`,
+        label: `Maior dificuldade com p95 < 1 s: ${under1s.length ? Math.max(...under1s) : 'nenhuma'}`,
         target: '< 1 s (RNF-18)',
         pass: under1s.length > 0,
       },
@@ -215,6 +216,8 @@ async function guarded(btn: HTMLButtonElement, fn: () => Promise<void>, out: HTM
     await fn()
   } catch (err) {
     out.innerHTML = `<p class="err">Erro: ${escape(String(err))}</p>`
+    // fica no JSON copiado: sem isso, um teste que falha simplesmente some do relatório
+    ;((report.erros ??= {}) as Record<string, string>)[out.id.replace('-out', '')] = String(err)
   } finally {
     btn.disabled = false
   }
