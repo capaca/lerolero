@@ -11,7 +11,7 @@ import { ensureIsolated, pageMemoryMB } from '../memory'
 
 type Mode = 'simples' | 'cv por mensagem' | 'cv em blocos' | 'janela' | 'virtualizada'
 type ChatExports = { element(): HTMLElement; scrollToBottom(): Promise<void> }
-type Run = { modo: Mode; mensagens: number; abrirMs: number; nosNoDom: number; heapMB?: number; memoriaBaseMB?: number; memoriaMB?: number; rolagem: ScrollResult }
+type Run = { modo: Mode; repeticao: number; mensagens: number; abrirMs: number; nosNoDom: number; heapMB?: number; memoriaBaseMB?: number; memoriaMB?: number; rolagem: ScrollResult }
 
 const MODES: Mode[] = ['simples', 'cv por mensagem', 'cv em blocos', 'janela', 'virtualizada']
 const SPEED = 2500 // px/s, um arrasto rápido
@@ -34,7 +34,7 @@ function component(mode: Mode): [Component<any, any>, Record<string, unknown>] {
   return [ChatPlain, {}]
 }
 
-async function measure(mode: Mode, n: number): Promise<Run> {
+async function measure(mode: Mode, n: number, repetition: number, withMemory: boolean): Promise<Run> {
   const stage = $('#stage')
   const messages = generateMessages(n)
   const [Chat, props] = component(mode)
@@ -44,7 +44,7 @@ async function measure(mode: Mode, n: number): Promise<Run> {
   $('#status').textContent = `Preparando ${mode} (limpando a memória do modo anterior)…`
   const memoriaBaseMB = await pageMemoryMB()
   await afterPaint()
-  $('#status').textContent = `Medindo ${mode} com ${n} mensagens…`
+  $('#status').textContent = `Medindo ${mode} com ${n} mensagens (repetição ${repetition})…`
 
   // abrir a conversa: do mount até a primeira pintura já posicionada no fim (RNF-11)
   const t0 = performance.now()
@@ -55,6 +55,7 @@ async function measure(mode: Mode, n: number): Promise<Run> {
 
   const run: Run = {
     modo: mode,
+    repeticao: repetition,
     mensagens: n,
     abrirMs,
     nosNoDom: stage.getElementsByTagName('*').length,
@@ -62,27 +63,52 @@ async function measure(mode: Mode, n: number): Promise<Run> {
     memoriaBaseMB,
     rolagem: await scrollUp(chat.element(), SPEED, DISTANCE),
   }
-  // com a conversa ainda montada; o navegador mede no próximo GC (até ~20 s)
-  $('#status').textContent = `Medindo a memória de ${mode}…`
-  run.memoriaMB = await pageMemoryMB()
+  // com a conversa ainda montada; o navegador mede no próximo GC (até ~20 s).
+  // A memória não varia entre repetições: mede só na primeira, para poupar tempo.
+  if (withMemory) {
+    $('#status').textContent = `Medindo a memória de ${mode}…`
+    run.memoriaMB = await pageMemoryMB()
+  }
   unmount(chat)
   await afterPaint()
   return run
 }
 
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b)
+  return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2
+}
+
+// uma linha por modo e quantidade de mensagens, com a mediana das repetições
 function render() {
-  const fmt = (r: Run) => `<tr>
-    <td>${r.modo}</td><td>${r.mensagens}</td>
-    <td class="${r.abrirMs < 500 ? 'good' : 'bad'}">${ms(r.abrirMs)}</td>
-    <td class="${r.rolagem.fps >= 55 ? 'good' : 'bad'}">${r.rolagem.fps.toFixed(0)}</td>
-    <td>${r.rolagem.droppedPct.toFixed(1)}%</td>
-    <td class="${r.rolagem.janks === 0 ? 'good' : 'bad'}">${r.rolagem.janks}</td>
-    <td>${ms(r.rolagem.frameTime.p95)}</td>
-    <td>${r.nosNoDom}</td><td>${r.memoriaMB === undefined || r.memoriaBaseMB === undefined ? '—' : r.memoriaMB - r.memoriaBaseMB}</td><td>${r.memoriaMB ?? '—'}</td><td>${r.heapMB ?? '—'}</td></tr>`
+  const groups = new Map<string, Run[]>()
+  for (const r of runs) {
+    const key = `${r.modo}|${r.mensagens}`
+    groups.set(key, [...(groups.get(key) ?? []), r])
+  }
+  const rows = [...groups.values()].map((g) => {
+    const first = g[0]
+    const open = median(g.map((r) => r.abrirMs))
+    const smooth = median(g.map((r) => r.rolagem.smoothnessPct))
+    const janks = g.map((r) => r.rolagem.janks)
+    const worst = Math.max(...g.map((r) => r.rolagem.frameTime.max))
+    const hz = [...new Set(g.map((r) => r.rolagem.refreshHz))].join('/')
+    const mem = g.find((r) => r.memoriaMB !== undefined)
+    return `<tr>
+      <td>${first.modo}</td><td>${first.mensagens}</td><td>${g.length}</td>
+      <td class="${open < 500 ? 'good' : 'bad'}">${ms(open)}</td>
+      <td class="${smooth >= 95 ? 'good' : 'bad'}">${smooth.toFixed(1)}%</td>
+      <td class="${janks.every((j) => j === 0) ? 'good' : 'bad'}">${janks.join(' / ')}</td>
+      <td>${ms(worst)}</td><td>${hz}</td><td>${first.nosNoDom}</td>
+      <td>${mem?.memoriaMB === undefined || mem.memoriaBaseMB === undefined ? '—' : mem.memoriaMB - mem.memoriaBaseMB}</td>
+      <td>${mem?.memoriaMB ?? '—'}</td></tr>`
+  })
   $('#results').innerHTML = `<table class="grid">
-    <tr><th>Modo</th><th>Msgs</th><th>Abrir</th><th>FPS</th><th>Quadros perdidos</th><th>Engasgos</th><th>p95 quadro</th><th>Nós DOM</th><th>Memória da conversa MB</th><th>Memória total MB</th><th>Heap JS MB</th></tr>
-    ${runs.map(fmt).join('')}</table>
-    <p class="hint">Metas: abrir &lt; 500 ms (RNF-11); rolagem a 60 fps sem engasgos (RNF-14). Engasgo = quadro acima de 50 ms; quadro perdido = acima de 25 ms. Memória = JavaScript + DOM, com a conversa aberta (total da página e quanto a conversa acrescentou); Heap JS conta só o JavaScript.</p>`
+    <tr><th>Modo</th><th>Msgs</th><th>Rep.</th><th>Abrir</th><th>Fluidez</th><th>Engasgos</th><th>Pior quadro</th><th>Tela Hz</th><th>Nós DOM</th><th>Memória da conversa MB</th><th>Memória total MB</th></tr>
+    ${rows.join('')}</table>
+    <p class="hint">Abrir e fluidez: mediana das repetições. Metas: abrir &lt; 500 ms (RNF-11); rolagem sem engasgos (RNF-14).
+    Fluidez = quadros entregues ÷ quadros que a tela pediu, na frequência que a tela estava usando (telas com taxa variável mudam sozinhas entre 45 e 120 Hz).
+    Engasgos = quadros acima de 50 ms, em cada repetição. Memória = JavaScript + DOM com a conversa aberta.</p>`
 }
 
 $<HTMLButtonElement>('#run-btn').addEventListener('click', async (e) => {
@@ -91,10 +117,14 @@ $<HTMLButtonElement>('#run-btn').addEventListener('click', async (e) => {
   const n = Number($<HTMLSelectElement>('#count').value)
   const choice = $<HTMLSelectElement>('#mode').value
   const modes = choice === 'todos' ? MODES : MODES.filter((m) => m === choice)
+  const repetitions = Number($<HTMLSelectElement>('#reps').value)
   try {
-    for (const mode of modes) {
-      runs.push(await measure(mode, n))
-      render()
+    // alterna os modos a cada volta: se o aparelho esquentar, não prejudica sempre o mesmo
+    for (let rep = 1; rep <= repetitions; rep++) {
+      for (const mode of modes) {
+        runs.push(await measure(mode, n, rep, rep === 1))
+        render()
+      }
     }
     $('#status').textContent = 'Pronto.'
   } catch (err) {

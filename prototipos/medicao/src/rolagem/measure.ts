@@ -6,7 +6,15 @@ export type ScrollResult = {
   frames: number
   fps: number
   frameTime: Summary
-  /** quadros acima de 25 ms (perdeu pelo menos um quadro a 60 Hz) */
+  /**
+   * Frequência da tela: o menor período entre a tela parada (antes de rolar) e o
+   * 10º percentil dos quadros durante a rolagem. Só a rolagem engana quando quase
+   * todos os quadros atrasam; só a tela parada engana se a taxa variável subir ao rolar.
+   */
+  refreshHz: number
+  /** quadros entregues ÷ quadros que a tela pediu, em %: comparável entre frequências */
+  smoothnessPct: number
+  /** quadros que atrasaram pelo menos um ciclo da tela, em % */
   droppedPct: number
   /** quadros acima de 50 ms: engasgo perceptível */
   janks: number
@@ -37,6 +45,14 @@ export async function scrollUp(el: HTMLElement, pxPerSecond: number, maxDistance
     observer.observe({ type: 'longtask' })
   } catch {}
 
+  const idle: number[] = []
+  let prev = await nextFrame()
+  for (let i = 0; i < 30; i++) {
+    const t = await nextFrame()
+    idle.push(t - prev)
+    prev = t
+  }
+
   // relativo à posição atual: a lista virtualizada pode corrigir scrollTop entre quadros
   const deltas: number[] = []
   let last = await nextFrame()
@@ -48,7 +64,8 @@ export async function scrollUp(el: HTMLElement, pxPerSecond: number, maxDistance
     const dt = now - last
     last = now
     deltas.push(dt)
-    carry += (pxPerSecond * dt) / 1000
+    // uma pausa longa não pode pular metade da conversa de uma vez
+    carry += (pxPerSecond * Math.min(dt, 100)) / 1000
     const step = Math.floor(carry)
     carry -= step
     el.scrollTop -= step
@@ -57,13 +74,19 @@ export async function scrollUp(el: HTMLElement, pxPerSecond: number, maxDistance
   observer?.disconnect()
 
   const durationMs = last - t0
+  const frameTime = summarize(deltas)
+  const period = Math.min(summarize(idle).median, [...deltas].sort((a, b) => a - b)[Math.floor(deltas.length * 0.1)])
+  const missed = deltas.map((d) => Math.max(0, Math.round(d / period) - 1))
+  const totalMissed = missed.reduce((a, b) => a + b, 0)
   return {
     durationMs,
     distancePx: moved,
     frames: deltas.length,
     fps: deltas.length / (durationMs / 1000),
-    frameTime: summarize(deltas),
-    droppedPct: (100 * deltas.filter((d) => d > 25).length) / deltas.length,
+    frameTime,
+    refreshHz: Math.round(1000 / period),
+    smoothnessPct: (100 * deltas.length) / (deltas.length + totalMissed),
+    droppedPct: (100 * missed.filter((m) => m > 0).length) / deltas.length,
     janks: deltas.filter((d) => d > 50).length,
     longTasks,
   }
