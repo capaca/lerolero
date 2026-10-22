@@ -16,3 +16,5 @@ export {
 export { createVault, InvalidPinError, LockedError, PhraseMismatchError, type NewIdentity, type Vault } from './identity/vault.ts';
 export { toNpub } from './identity/npub.ts';
 export { DELAYS_MS, FREE_ATTEMPTS, NO_FAILURES, recordFailure, waitTime, type AttemptState } from './identity/attempts.ts';
+export { cleanName, InvalidInviteError, inviteLink, parseInvite, type Invite } from './contacts/invite.ts';
+export { addContact, contactName, listContacts, renameContact, SelfInviteError } from './contacts/contacts.ts';

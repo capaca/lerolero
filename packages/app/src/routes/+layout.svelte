@@ -4,6 +4,7 @@
 	import { asset, resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { savePendingInvite } from '#lib/pending-invite.ts';
 	import { session, type Status } from '#lib/session.svelte.ts';
 	import type { LayoutProps } from './$types';
 
@@ -14,7 +15,17 @@
 		'sem-identidade': ['/bem-vindo', '/cadastro', '/restaurar'],
 		bloqueado: ['/desbloquear', '/esqueci-pin'],
 		// /cadastro continua aberto: depois do PIN a pessoa ainda vê e confere a frase
-		desbloqueado: ['/', '/cadastro', '/ajustes', '/ajustes/frase']
+		desbloqueado: [
+			'/',
+			'/cadastro',
+			'/ajustes',
+			'/ajustes/frase',
+			'/contatos',
+			'/contatos/meu-convite',
+			'/contatos/ler',
+			'/contatos/[chave]',
+			'/convite'
+		]
 	};
 
 	onMount(() => void session.init());
@@ -22,7 +33,11 @@
 	$effect(() => {
 		if (session.status === 'carregando') return;
 		const allowed = ALLOWED[session.status];
-		if (!allowed.includes(page.route.id ?? '')) void goto(resolve(allowed[0] as '/'), { replaceState: true });
+		const route = page.route.id ?? '';
+		if (allowed.includes(route)) return;
+		// convite aberto sem estar dentro do app: retomado no início, depois de entrar
+		if (route === '/convite') savePendingInvite(location.hash);
+		void goto(resolve(allowed[0] as '/'), { replaceState: true });
 	});
 </script>
 

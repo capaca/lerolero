@@ -1,18 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { asset, resolve } from '$app/paths';
-	import { loadRelayList, toNpub } from '@lerolero/core';
+	import { resolve } from '$app/paths';
+	import { toNpub } from '@lerolero/core';
+	import { relayList } from '#lib/relays.ts';
 	import { session } from '#lib/session.svelte.ts';
-	import embedded from '../../../static/relays.json';
 
 	const npub = $derived(session.identity ? toNpub(session.identity.publicKey) : '');
 	let copied = $state(false);
 
-	const relays = loadRelayList(embedded, async () => {
-		const res = await fetch(asset('relays.json'), { cache: 'no-cache' });
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		return res.json();
-	});
+	const relays = relayList();
 
 	async function copy() {
 		await navigator.clipboard.writeText(npub);

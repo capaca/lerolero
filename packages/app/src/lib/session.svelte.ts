@@ -2,15 +2,21 @@
 // As telas chamam estas funções; a chave privada fica no worker, nunca aqui.
 
 import {
+	addContact,
 	connect,
+	listContacts,
 	NO_FAILURES,
 	openStorage,
 	recordFailure,
+	renameContact,
 	waitTime,
 	type AttemptState,
+	type ContactRecord,
 	type IdentityRecord,
+	type Invite,
 	type Vault
 } from '@lerolero/core';
+import { relayList } from './relays.ts';
 
 export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
 
@@ -121,6 +127,40 @@ class Session {
 		await this.save({ ...this.current, phraseConfirmed: true });
 	}
 
+	// ---------- contatos ----------
+
+	/**
+	 * Relays onde recebo mensagens: vão no meu convite e, na etapa 4, no kind 10050.
+	 * Escolhidos da lista padrão na primeira vez e guardados, para não mudarem sozinhos.
+	 */
+	async myDmRelays(): Promise<string[]> {
+		const saved = await storage.settings.get<string[]>('meusRelaysDm');
+		if (saved?.length) return saved;
+		const relays = (await relayList()).dm;
+		await storage.settings.set('meusRelaysDm', relays);
+		return relays;
+	}
+
+	async myInvite(): Promise<Invite> {
+		return { publicKey: this.current.publicKey, name: this.current.displayName, relays: await this.myDmRelays() };
+	}
+
+	addContact(invite: Invite, localName?: string): Promise<ContactRecord> {
+		return addContact(storage.contacts, invite, { myPublicKey: this.current.publicKey, localName });
+	}
+
+	getContact(publicKey: string) {
+		return storage.contacts.get(publicKey);
+	}
+
+	listContacts() {
+		return listContacts(storage.contacts);
+	}
+
+	renameContact(publicKey: string, localName: string) {
+		return renameContact(storage.contacts, publicKey, localName);
+	}
+
 	getSetting<T>(key: string) {
 		return storage.settings.get<T>(key);
 	}
@@ -146,6 +186,10 @@ export function friendlyError(err: unknown): string {
 			return 'Esta frase é de outra conta, não da que está neste aparelho.';
 		case 'InvalidPhraseError':
 			return e.message ?? 'Frase inválida.';
+		case 'InvalidInviteError':
+			return `${e.message ?? 'Convite inválido'}.`;
+		case 'SelfInviteError':
+			return 'Este é o seu próprio convite.';
 		default:
 			return 'Algo deu errado. Tente de novo.';
 	}

@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
+	import { takePendingInvite } from '#lib/pending-invite.ts';
 	import { highRiskOfDataLoss, isIOS } from '#lib/platform.ts';
 	import { session } from '#lib/session.svelte.ts';
 
@@ -8,10 +10,14 @@
 	const SNOOZE_KEY = 'lembreteFraseAdiadoAte';
 
 	let showPhraseReminder = $state(false);
+	let contactCount = $state(0);
 	let showInstallWarning = $state(false);
 	let highRisk = false;
 
 	onMount(async () => {
+		const pending = takePendingInvite();
+		if (pending) return void goto(resolve('/convite') + pending);
+		contactCount = (await session.listContacts()).length;
 		highRisk = highRiskOfDataLoss();
 		showInstallWarning = highRisk;
 		const snoozedUntil = (await session.getSetting<number>(SNOOZE_KEY)) ?? 0;
@@ -56,8 +62,23 @@
 	{/if}
 
 	<section class="card">
+		<h2>Contatos</h2>
+		<p>
+			{contactCount === 0
+				? 'Você ainda não tem contatos.'
+				: contactCount === 1
+					? '1 contato.'
+					: `${contactCount} contatos.`}
+		</p>
+		<div class="actions">
+			<a href={resolve('/contatos')}>Ver contatos</a>
+			<a href={resolve('/contatos/meu-convite')}>Convidar alguém</a>
+		</div>
+	</section>
+
+	<section class="card">
 		<h2>Conversas</h2>
-		<p class="hint">Em breve: adicionar contatos e conversar chega nas próximas etapas.</p>
+		<p class="hint">Em breve: conversar chega nas próximas etapas.</p>
 	</section>
 </main>
 
