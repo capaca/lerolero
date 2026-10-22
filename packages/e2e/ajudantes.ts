@@ -95,19 +95,19 @@ export const vencerSessao = (page: Page) =>
 	);
 
 type Fixtures = {
-	/** aparelho sem conta: um contexto novo do navegador */
-	novoAparelho: () => Promise<Page>;
+	/** aparelho sem conta: um contexto novo do navegador (`baseURL` para outro servidor do app) */
+	novoAparelho: (baseURL?: string) => Promise<Page>;
 	/** aparelho com conta criada, já no início */
 	novaPessoa: (nome: string) => Promise<Pessoa>;
 };
 
 export const test = base.extend<Fixtures>({
-	novoAparelho: async ({ browser }: { browser: Browser }, use, info) => {
+	novoAparelho: async ({ browser, serviceWorkers }: { browser: Browser; serviceWorkers: 'allow' | 'block' }, use, info) => {
 		const erros: string[] = [];
 		const contextos: BrowserContext[] = [];
-		await use(async () => {
-			const { baseURL, viewport, locale, ignoreHTTPSErrors } = info.project.use;
-			const contexto = await browser.newContext({ baseURL, viewport, locale, ignoreHTTPSErrors });
+		await use(async (baseURL = info.project.use.baseURL) => {
+			const { viewport, locale, ignoreHTTPSErrors } = info.project.use;
+			const contexto = await browser.newContext({ baseURL, viewport, locale, ignoreHTTPSErrors, serviceWorkers });
 			await contexto.grantPermissions(['clipboard-read', 'clipboard-write', 'microphone']);
 			contextos.push(contexto);
 			const page = await contexto.newPage();

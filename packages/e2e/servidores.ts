@@ -32,7 +32,8 @@ async function isFile(path: string) {
 	);
 }
 
-function pagesServer(relays: string) {
+/** O app como no GitHub Pages; `versao` muda o service worker, como uma publicação nova (atualizacao.spec.ts). */
+export function pagesServer(relays: string, opcoes: { versao?: () => string | undefined } = {}) {
 	return createServer(async (req, res) => {
 		const path = decodeURIComponent(new URL(req.url!, 'http://x').pathname);
 		if (path === '/lerolero/relays.json') {
@@ -45,7 +46,11 @@ function pagesServer(relays: string) {
 		}
 		if (path.startsWith('/lerolero') && (await isFile(file))) {
 			res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });
-			return res.end(await readFile(file));
+			let body = await readFile(file);
+			// "versão nova publicada": o service worker muda um byte e o navegador o instala
+			const versao = opcoes.versao?.();
+			if (versao && path === '/lerolero/service-worker.js') body = Buffer.concat([body, Buffer.from(`\n// ${versao}\n`)]);
+			return res.end(body);
 		}
 		res.writeHead(404, { 'content-type': 'text/html' });
 		res.end(await readFile(join(BUILD, '404.html')));

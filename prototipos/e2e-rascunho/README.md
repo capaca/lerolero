@@ -8,8 +8,7 @@ rodam como estão (caminhos de uma pasta temporária, Chrome do macOS, relays re
 |---|---|
 | `identidade.mjs` | cadastro, PIN errado, bloquear, esqueci o PIN, ver a frase, restaurar, lembrete, limite de tentativas |
 | `conversa.mjs` | conversa entre duas pessoas pela rede real, não lidas, pedido de contato |
-| `update.mjs`, `upgrade.mjs`, `branca.mjs`, `laco.mjs` | atualização do app, service worker, tela branca e autocorreção |
+| `upgrade.mjs`, `branca.mjs` | publicação nova por cima de um app antigo com o cache do Pages (precisam de dois builds; o aviso de versão nova e a autocorreção já estão na suíte) |
 | `pin.mjs` | PIN em bolinhas: pular para a confirmação, PINs diferentes, PIN errado, ver a frase |
-| `copiar-mensagem.mjs` | "Copiar" no menu da mensagem (botão direito e toque longo), aviso "Mensagem copiada", vibração |
-| `comentario.mjs`, `rede.mjs`, `copiar.mjs` | enviar comentário, kind 10050 na rede, copiar a frase |
+| `rede.mjs`, `copiar.mjs` | kind 10050 na rede, copiar a frase |
 | `pages-server.mjs` | servidor estático que imita o GitHub Pages (404.html, `.html`, cache opcional) |

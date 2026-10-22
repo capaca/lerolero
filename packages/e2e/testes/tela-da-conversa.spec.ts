@@ -206,3 +206,36 @@ test('a data do dia aparece no topo ao rolar e some ao parar e no fim', async ({
 	await expect(etiqueta).toHaveClass(/visible/);
 	await expect(etiqueta).toHaveText('Ontem');
 });
+
+test('"Copiar" no menu da mensagem, por botão direito e toque longo, com vibração', async ({ novaPessoa }) => {
+	const { page } = await novaPessoa('Maria');
+	// o Chrome do computador não vibra: registra as chamadas
+	await page.addInitScript(() => {
+		(window as unknown as { vibrou: unknown[] }).vibrou = [];
+		navigator.vibrate = (p) => ((window as unknown as { vibrou: unknown[] }).vibrou.push(p), true);
+	});
+	await page.goto(`./conversa/${OUTRO}`);
+	const vibracoes = () => page.evaluate(() => (window as unknown as { vibrou: unknown[] }).vibrou.length);
+	const texto = 'Endereço: Rua das Flores, 123\nApto 45';
+	await enviar(page, texto);
+	const balao = page.locator('.row .bubble').first();
+	const menu = page.getByRole('dialog', { name: 'Opções da mensagem' });
+
+	await balao.click({ button: 'right' });
+	await expect(menu.locator('.item').first()).toHaveText('Copiar');
+	expect(await vibracoes()).toBe(1);
+	await menu.getByRole('button', { name: 'Copiar' }).click();
+	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(texto);
+	await expect(menu).toHaveCount(0);
+	await expect(page.getByRole('status').filter({ hasText: 'Mensagem copiada' })).toBeVisible();
+	await expect(page.getByText('Mensagem copiada')).toHaveCount(0, { timeout: 5000 });
+
+	// toque longo, como no celular
+	const caixa = (await balao.boundingBox())!;
+	await page.mouse.move(caixa.x + 20, caixa.y + 15);
+	await page.mouse.down();
+	await page.waitForTimeout(700);
+	await page.mouse.up();
+	await expect(menu).toBeVisible();
+	expect(await vibracoes()).toBe(2);
+});
