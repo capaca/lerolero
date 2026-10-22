@@ -432,8 +432,11 @@
 	.messages > :first-child {
 		margin-top: auto;
 	}
-	/* o padding dá espaço para a pontinha: content-visibility corta o que passa da borda */
+	/* o padding dá espaço para a pontinha: content-visibility corta o que passa da borda.
+	   Sem flex-shrink: 0, o bloco ainda não desenhado encolhe para caber na área e, ao abrir, não há
+	   altura para rolar até "Mensagens novas" (a conversa abria às vezes no topo). */
 	.block {
+		flex-shrink: 0;
 		padding: 0 0.5rem;
 		content-visibility: auto;
 		contain-intrinsic-size: auto var(--block-estimate);

@@ -19,6 +19,13 @@ export const noInicio = (page: Page) => expect(page.getByRole('button', { name: 
 /** Cria a conta pela interface, guarda a frase e deixa a conferência para depois (fica no início). */
 export async function criarConta(page: Page, nome: string, pin = PIN): Promise<string[]> {
 	await page.goto('./');
+	const frase = await cadastrar(page, nome, pin);
+	await noInicio(page);
+	return frase;
+}
+
+/** O cadastro a partir das boas-vindas, até deixar a conferência da frase para depois. */
+export async function cadastrar(page: Page, nome: string, pin = PIN): Promise<string[]> {
 	await page.getByRole('link', { name: 'Criar minha conta' }).or(page.getByRole('button', { name: 'Criar minha conta' })).click();
 	await page.locator('#nome').fill(nome);
 	await page.getByRole('button', { name: 'Continuar' }).click();
@@ -29,17 +36,21 @@ export async function criarConta(page: Page, nome: string, pin = PIN): Promise<s
 	await page.getByLabel('Guardei as 12 palavras').check();
 	await page.getByRole('button', { name: 'Continuar' }).click();
 	await page.getByRole('button', { name: 'Fazer depois' }).click();
-	await noInicio(page);
 	return frase;
+}
+
+/** O link do convite, copiado pelo botão em "Meu convite" (a página fica lá). */
+export async function meuConvite(page: Page): Promise<string> {
+	await page.goto('./contatos/meu-convite');
+	await page.getByRole('button', { name: 'Copiar link' }).click();
+	const convite = await page.evaluate(() => navigator.clipboard.readText());
+	expect(convite).toContain('/convite#npub1');
+	return convite;
 }
 
 /** `quem` abre o convite de `de`, adiciona e fica na conversa com ele, ainda vazia. */
 export async function adicionarPeloConvite(de: Pessoa, quem: Pessoa) {
-	await de.page.goto('./contatos/meu-convite');
-	await de.page.getByRole('button', { name: 'Copiar link' }).click();
-	const convite = await de.page.evaluate(() => navigator.clipboard.readText());
-	expect(convite).toContain('/convite#npub1');
-	await quem.page.goto(convite);
+	await quem.page.goto(await meuConvite(de.page));
 	await expect(quem.page.getByText(`Se apresenta como: ${de.nome}`)).toBeVisible();
 	await quem.page.getByRole('button', { name: 'Adicionar' }).click();
 	await quem.page.getByRole('link', { name: 'Conversar' }).click();
