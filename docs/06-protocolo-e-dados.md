@@ -17,7 +17,7 @@ Formatos concretos das mensagens na rede e dos dados guardados no aparelho. Base
 | Item | Especificação |
 |---|---|
 | Par de chaves | secp256k1 (padrão Nostr) |
-| Frase de recuperação | BIP-39, 12 palavras, **lista oficial em português**. Atenção: no BIP-39 a chave é derivada das próprias palavras, então a mesma frase em outra língua gera **outra chave**. Para usar a identidade em outro app Nostr, o caminho é exportar a chave privada (opção avançada) |
+| Frase de recuperação | BIP-39, 12 palavras **sorteadas pelo app** (nunca escolhidas pela pessoa: frases inventadas são previsíveis e podem ser quebradas em massa, sem precisar do aparelho; decidido em 2026-10-22), **lista oficial em português**. O app orienta guardar num papel em lugar seguro ou num gerenciador de senhas, e oferece copiar com aviso sobre o histórico do teclado e a nuvem, limpando a cópia após 1 minuto. Atenção: no BIP-39 a chave é derivada das próprias palavras, então a mesma frase em outra língua gera **outra chave**. Para usar a identidade em outro app Nostr, o caminho é exportar a chave privada (opção avançada) |
 | Derivação | NIP-06: caminho `m/44'/1237'/0'/0/0` |
 | Proteção no PWA | Chave privada cifrada com AES-GCM; a chave de cifra vem do **PIN** via **Argon2id** (parâmetros mínimos recomendados pela OWASP: 19 MiB de memória, 2 iterações, paralelismo 1; ajustar para ~1 s no aparelho de referência) |
 | Proteção no nativo | Cofre do sistema (Android Keystore, Keychain etc.); PIN opcional |

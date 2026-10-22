@@ -12,12 +12,12 @@
 		event.preventDefault();
 		const ok = positions.every((p, i) => matchWord(answers[i]) === words[p]);
 		if (ok) onconfirmed();
-		else error = 'Alguma palavra não confere. Olhe o papel onde você anotou e tente de novo.';
+		else error = 'Alguma palavra não confere. Confira onde você guardou a frase e tente de novo.';
 	}
 </script>
 
 <form onsubmit={check}>
-	<p>Para ter certeza de que você anotou certo, digite estas palavras da sua frase:</p>
+	<p>Para ter certeza de que você guardou certo, digite estas palavras da sua frase:</p>
 	{#each positions as p, i (p)}
 		<label for={`palavra-${p}`}>{p + 1}ª palavra</label>
 		<input

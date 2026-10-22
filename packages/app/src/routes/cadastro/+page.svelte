@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
-	import PhraseGrid from '#lib/components/PhraseGrid.svelte';
+	import PhraseBackup from '#lib/components/PhraseBackup.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError, session } from '#lib/session.svelte.ts';
 
@@ -74,16 +74,8 @@
 		</form>
 	{:else if step === 'frase'}
 		<h1>Sua frase de recuperação</h1>
-		<div class="banner">
-			<p><strong>Anote estas 12 palavras num papel, na ordem, e guarde bem.</strong></p>
-			<p>
-				Se você perder o celular ou esquecer o PIN, só esta frase recupera sua conta. Ninguém mais consegue
-				recuperar para você, nem a equipe do Lero-lero.
-			</p>
-			<p>Não tire print e não mande para ninguém: quem tem a frase vira você.</p>
-		</div>
-		<PhraseGrid {words} />
-		<label class="check"><input type="checkbox" bind:checked={wroteItDown} /> Anotei as 12 palavras</label>
+		<PhraseBackup {words} />
+		<label class="check"><input type="checkbox" bind:checked={wroteItDown} /> Guardei as 12 palavras</label>
 		<div class="actions">
 			<button class="primary" disabled={!wroteItDown} onclick={() => (step = 'teste')}>Continuar</button>
 		</div>

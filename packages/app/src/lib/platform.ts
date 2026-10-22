@@ -12,6 +12,6 @@ export function isInstalled(): boolean {
 
 /**
  * No iPhone, o Safari pode apagar os dados de sites não instalados depois de alguns
- * dias sem uso. Sem a frase anotada, isso é perder a identidade sem perder o celular.
+ * dias sem uso. Sem a frase guardada, isso é perder a identidade sem perder o celular.
  */
 export const highRiskOfDataLoss = () => isIOS() && !isInstalled();

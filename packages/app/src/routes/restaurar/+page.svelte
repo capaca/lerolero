@@ -32,7 +32,7 @@
 
 <main>
 	<h1>Recuperar minha conta</h1>
-	<p class="hint">Digite as 12 palavras que você anotou quando criou a conta.</p>
+	<p class="hint">Digite as 12 palavras que você guardou quando criou a conta. Se estiverem num gerenciador de senhas, pode colar.</p>
 	<form onsubmit={submit}>
 		<PhraseInput id="frase" bind:value={phrase} />
 		<label for="nome">Seu nome</label>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
-	import PhraseGrid from '#lib/components/PhraseGrid.svelte';
+	import PhraseBackup from '#lib/components/PhraseBackup.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError, session } from '#lib/session.svelte.ts';
 
@@ -46,14 +46,11 @@
 	{:else if checking}
 		<PhraseCheck {words} onconfirmed={confirmed} />
 	{:else}
-		<div class="banner">
-			<p>Anote num papel, na ordem. Não tire print e não mande para ninguém.</p>
-		</div>
-		<PhraseGrid {words} />
+		<PhraseBackup {words} />
 		{#if done}
-			<p role="status"><strong>Frase conferida.</strong> Guarde o papel num lugar seguro.</p>
+			<p role="status"><strong>Frase conferida.</strong> Mantenha-a guardada num lugar seguro.</p>
 		{:else if !session.identity?.phraseConfirmed}
-			<div class="actions"><button class="primary" onclick={() => (checking = true)}>Já anotei, conferir</button></div>
+			<div class="actions"><button class="primary" onclick={() => (checking = true)}>Já guardei, conferir</button></div>
 		{/if}
 	{/if}
 </main>
