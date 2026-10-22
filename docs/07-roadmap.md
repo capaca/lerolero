@@ -63,6 +63,7 @@ Somando: **~33 semanas de desenvolvimento + 6 de beta** → MVP público por vol
 - Expiração de mídia (30 dias, "guardar") e painel de armazenamento (RF-72, 73).
 - **Suite de testes de ponta a ponta** (`packages/e2e`, Playwright): cadastro e PIN, restauração, convite e QR, conversa entre duas pessoas, áudio, atualização do app e comentário. Roda na CI a cada push contra o relay e o Blossom falsos (sem internet) e, uma vez por dia ou sob demanda, contra a rede real. Daqui em diante, cada funcionalidade nova entra com o seu teste.
 - Cartão de perfil privado com nome e foto (Q-P5, RF-02).
+- **Excluir áudio e mídia:** apagar para mim (mensagem e arquivo no aparelho) e apagar para todos (pedido cifrado ao contato, como no RF-25, e remoção do arquivo dos servidores Blossom por quem enviou).
 
 **Andamento (2026-10-22):** Blossom e áudio prontos (Opus a ~17 kbps, Q-R2 resolvida). Ordem combinada a seguir: suite e2e, fotos, cartão de perfil, expiração.
 
@@ -105,7 +106,7 @@ Revisão do app inteiro com olhar de operação. Como não há servidor do proje
 | Escalabilidade | Limites e capacidade dos relays e servidores Blossom de terceiros (taxa de envio, tamanho, retenção); dependência de poucos operadores; desempenho do app com muitas conversas e mensagens no aparelho de referência |
 | Resiliência | Recuperação de falhas: reconexão, troca de relays, lista padrão atualizável (RNF-36), dados locais apagados pelo navegador, restauração pela frase |
 | Segurança | Auditoria externa da criptografia e do cofre; dependências e cadeia de suprimentos (npm, CI); política de segurança de conteúdo (CSP) do PWA; tratamento de dados vindos de fora; canal para relatar vulnerabilidades |
-| Monitoramento | Sem coletar dados de quem usa: sondas sintéticas (contas de teste trocando mensagens pela rede real, a partir da CI), painel de saúde dos relays e servidores Blossom, diagnóstico local enviado pela própria pessoa (Enviar comentário) |
+| Monitoramento | Sondas sintéticas (contas de teste trocando mensagens pela rede real, a partir da CI), painel de saúde dos relays e servidores Blossom, diagnóstico local enviado pela própria pessoa (Enviar comentário); decidir a Q-N6 (dados técnicos de uso com consentimento) |
 | Lançamento e volta atrás | Processo de publicação, como reverter uma versão ruim (service worker, cache), migrações do banco local sem perder dados, comunicação de incidentes a quem usa |
 
 **Pronto quando:** cada tema tem os riscos listados com mitigação ou aceite documentado, e os itens críticos estão resolvidos.
