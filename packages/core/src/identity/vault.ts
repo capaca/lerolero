@@ -222,6 +222,19 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 			};
 		},
 
+		/**
+		 * Embrulha de novo um aviso de grupo que eu mesmo fiz, para quem não o recebeu
+		 * (repasse, groups.ts). O rumor é o original: o horário e o id não mudam.
+		 */
+		rewrapGroupControl(rumor: Rumor, recipients: string[]): { recipient: string; wrap: NostrEvent }[] {
+			if (!secretKey) throw new LockedError();
+			if (rumor.pubkey !== getPublicKey(secretKey) || rumor.kind !== 4440 || getEventHash(rumor) !== rumor.id) {
+				throw new Error('só repasso avisos de grupo meus');
+			}
+			if (!recipients.every(isPublicKey)) throw new Error('destinatários inválidos');
+			return recipients.map((recipient) => ({ recipient, wrap: createWrap(createSeal(rumor, secretKey!, recipient), recipient) }));
+		},
+
 		/** Guarda a chave desbloqueada numa sessão (ver OpenSession). */
 		async openSession(now: number): Promise<OpenSession> {
 			if (!secretKey) throw new LockedError();

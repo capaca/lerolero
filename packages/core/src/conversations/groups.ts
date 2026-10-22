@@ -1,11 +1,15 @@
 // Grupos (RF-30..33, docs/06 §3.3). Não há servidor que decida quem manda: cada aparelho
 // guarda os avisos de grupo (kind 4440) e refaz o estado sozinho, aceitando só o que o
 // autor tinha permissão de fazer. Todos chegam ao mesmo resultado pela mesma regra.
+//
+// Cada aviso leva só a mudança ("adicionou Dave"), não a lista inteira: dois
+// administradores mexendo ao mesmo tempo têm as duas mudanças somadas, em vez de uma
+// apagar a outra. A lista completa vai junto só para quem entra, que não tem de onde partir.
 
 import type { Rumor } from '../identity/vault.ts';
 import { cleanName } from '../contacts/invite.ts';
 import type { Storage } from '../storage/repositories.ts';
-import type { ConversationRecord, GroupEventRecord, MessageRecord, GroupInfo, GroupMember, GroupState } from '../storage/records.ts';
+import type { ConversationRecord, GroupEventRecord, GroupInfo, GroupMember, GroupState, MessageRecord } from '../storage/records.ts';
 import { toHex } from '../media/crypto.ts';
 import { kindOf, NAME_TAG, preview as previewOf } from './messaging.ts';
 
@@ -13,12 +17,15 @@ import { kindOf, NAME_TAG, preview as previewOf } from './messaging.ts';
 export const GROUP_CONTROL_KIND = 4440;
 export const GROUP_TAG = 'g';
 export const ACTION_TAG = 'acao';
+const TARGET_TAG = 'alvo';
 const MEMBER_TAG = 'membro';
 export const MAX_GROUP_MEMBERS = 20;
 const MAX_GROUP_NAME = 60;
 
 export type GroupAction = 'criar' | 'adicionar' | 'remover' | 'sair' | 'renomear' | 'promover' | 'rebaixar' | 'apresentar';
 const ACTIONS = new Set<string>(['criar', 'adicionar', 'remover', 'sair', 'renomear', 'promover', 'rebaixar', 'apresentar']);
+/** ações sobre uma pessoa só */
+const SINGLE_TARGET = new Set<string>(['remover', 'promover', 'rebaixar']);
 
 type Role = 'criador' | 'admin' | 'membro';
 
@@ -52,6 +59,8 @@ export function successor(state: GroupState, leaving: string): string | undefine
 	return (others.find((m) => state.admins.includes(m.publicKey)) ?? others[0])?.publicKey;
 }
 
+const cleanGroupName = (name: string) => cleanName(name).slice(0, MAX_GROUP_NAME);
+
 // ---------- formato do aviso ----------
 
 function roleOf(state: GroupState, publicKey: string): Role {
@@ -59,25 +68,26 @@ function roleOf(state: GroupState, publicKey: string): Role {
 	return state.admins.includes(publicKey) ? 'admin' : 'membro';
 }
 
-/** Tags de um aviso de grupo: o estado completo vai em todos, para um aviso perdido não deixar o grupo errado. */
-export function controlTags(groupId: string, action: GroupAction, state: GroupState | undefined, myName?: string): string[][] {
+export type ControlContent = { targets?: string[]; subject?: string; state?: GroupState };
+
+export function controlTags(groupId: string, action: GroupAction, content: ControlContent, myName?: string): string[][] {
 	const tags = [
 		[GROUP_TAG, groupId],
 		[ACTION_TAG, action],
 		['v', '1'],
 		['alt', 'Aviso de grupo do Lero-lero']
 	];
-	if (state) {
-		tags.push(['subject', state.name]);
-		for (const m of state.members) tags.push([MEMBER_TAG, m.publicKey, String(m.joinedAt), roleOf(state, m.publicKey)]);
-	}
+	for (const target of content.targets ?? []) tags.push([TARGET_TAG, target]);
+	const subject = content.state?.name ?? content.subject;
+	if (subject !== undefined) tags.push(['subject', subject]);
+	for (const m of content.state?.members ?? []) tags.push([MEMBER_TAG, m.publicKey, String(m.joinedAt), roleOf(content.state!, m.publicKey)]);
 	const name = myName && cleanName(myName);
 	if (name) tags.push([NAME_TAG, name]);
 	return tags;
 }
 
-/** Lê o estado de um aviso; undefined se algo não confere (membro repetido, mais de 20, sem criador…). */
-function parseState(rumor: Rumor, action: string): GroupState | undefined {
+/** Lê a lista completa (criar, adicionar); undefined se algo não confere (membro repetido, mais de 20, sem criador…). */
+function parseState(rumor: Rumor): GroupState | undefined {
 	const members: GroupMember[] = [];
 	const admins: string[] = [];
 	let creator = '';
@@ -93,11 +103,8 @@ function parseState(rumor: Rumor, action: string): GroupState | undefined {
 			creator = publicKey;
 		}
 	}
-	if (members.length > MAX_GROUP_MEMBERS) return undefined;
-	// o último membro saindo deixa o grupo vazio, sem criador
-	if (!creator && !(action === 'sair' && members.length === 0)) return undefined;
-	const name = cleanName(rumor.tags.find((t) => t[0] === 'subject')?.[1] ?? '').slice(0, MAX_GROUP_NAME);
-	return { name, members, admins, creator };
+	if (!creator || members.length > MAX_GROUP_MEMBERS) return undefined;
+	return { name: cleanGroupName(rumor.tags.find((t) => t[0] === 'subject')?.[1] ?? ''), members, admins, creator };
 }
 
 /** Confere o formato de um aviso recebido; o que não confere é descartado. */
@@ -106,10 +113,19 @@ export function parseControl(rumor: Rumor, receivedAt: number): GroupEventRecord
 	const groupId = groupIdOf(rumor);
 	const action = rumor.tags.find((t) => t[0] === ACTION_TAG)?.[1];
 	if (!groupId || !action || !ACTIONS.has(action)) return undefined;
+	const targets = [...new Set(rumor.tags.filter((t) => t[0] === TARGET_TAG).map((t) => t[1]))];
+	if (!targets.every(isPublicKey)) return undefined;
+	if (SINGLE_TARGET.has(action) ? targets.length !== 1 : action === 'adicionar' ? targets.length === 0 : targets.length > 0) return undefined;
+
 	let state: GroupState | undefined;
-	if (action !== 'apresentar') {
-		state = parseState(rumor, action);
+	if (action === 'criar' || action === 'adicionar') {
+		state = parseState(rumor);
 		if (!state) return undefined;
+	}
+	let subject: string | undefined;
+	if (action === 'renomear') {
+		subject = cleanGroupName(rumor.tags.find((t) => t[0] === 'subject')?.[1] ?? '');
+		if (!subject) return undefined;
 	}
 	const sentName = rumor.tags.find((t) => t[0] === NAME_TAG)?.[1];
 	const name = sentName ? cleanName(sentName) || undefined : undefined;
@@ -120,95 +136,142 @@ export function parseControl(rumor: Rumor, receivedAt: number): GroupEventRecord
 		createdAt: rumor.created_at,
 		receivedAt,
 		action,
+		targets,
+		recipients: rumor.tags.filter((t) => t[0] === 'p' && isPublicKey(t[1])).map((t) => t[1]),
 		...(state ? { state } : {}),
+		...(subject ? { subject } : {}),
 		...(name ? { name } : {})
 	};
 }
 
 // ---------- permissões ----------
 
-const keys = (state: GroupState) => new Set(state.members.map((m) => m.publicKey));
+export type GroupOp = Pick<GroupEventRecord, 'action' | 'author' | 'createdAt' | 'targets' | 'subject'>;
+
+function without(state: GroupState, publicKey: string): GroupState {
+	return {
+		...state,
+		members: state.members.filter((m) => m.publicKey !== publicKey),
+		admins: state.admins.filter((k) => k !== publicKey)
+	};
+}
+
+/** Sair é livre; se quem sai é o criador, o título passa ao sucessor, calculado aqui e não escolhido por ele. */
+function leave(state: GroupState, who: string): GroupState {
+	const after = without(state, who);
+	if (state.creator !== who) return after;
+	const heir = successor(state, who);
+	return { ...after, creator: heir ?? '', admins: heir && !after.admins.includes(heir) ? [...after.admins, heir] : after.admins };
+}
 
 /**
- * O autor podia levar o grupo de `before` para `after`? Olha a diferença entre os dois
- * estados, não o nome da ação: um aviso não ganha poder por se dizer outra coisa.
+ * Aplica uma mudança, ou devolve undefined se o autor não podia fazê-la.
  * Regras do Pedro (2026-10-22): administradores adicionam, renomeiam, promovem e
  * removem membros comuns; só o criador remove ou rebaixa administradores; ninguém
  * remove o criador; quando ele sai, o título vai para o sucessor (`successor`).
+ * Quem entra entra no horário do aviso: a antiguidade não pode ser escolhida.
  */
-export function permitted(before: GroupState, author: string, after: GroupState, createdAt: number): boolean {
-	if (!isMember(before, author)) return false;
-	const isAdmin = before.admins.includes(author);
-	const isCreator = before.creator === author;
-	const beforeKeys = keys(before);
-	const afterKeys = keys(after);
-
-	for (const m of after.members) {
-		const old = before.members.find((b) => b.publicKey === m.publicKey);
-		// a antiguidade decide a sucessão: não pode ser mexida, e quem entra entra agora
-		if (old ? old.joinedAt !== m.joinedAt : !isAdmin || m.joinedAt !== createdAt) return false;
+export function applyOp(state: GroupState, op: GroupOp): GroupState | undefined {
+	const { author } = op;
+	if (!isMember(state, author)) return undefined;
+	const isAdmin = state.admins.includes(author);
+	const isCreator = state.creator === author;
+	const [target] = op.targets;
+	switch (op.action) {
+		case 'adicionar': {
+			const fresh = op.targets.filter((k) => !isMember(state, k));
+			if (!isAdmin || fresh.length === 0 || state.members.length + fresh.length > MAX_GROUP_MEMBERS) return undefined;
+			return { ...state, members: [...state.members, ...fresh.map((publicKey) => ({ publicKey, joinedAt: op.createdAt }))] };
+		}
+		case 'remover':
+			if (target === author) return leave(state, author);
+			if (!isMember(state, target) || target === state.creator) return undefined;
+			if (state.admins.includes(target) ? !isCreator : !isAdmin) return undefined;
+			return without(state, target);
+		case 'sair':
+			return leave(state, author);
+		case 'renomear':
+			return isAdmin && op.subject ? { ...state, name: op.subject } : undefined;
+		case 'promover':
+			if (!isAdmin || !isMember(state, target) || state.admins.includes(target)) return undefined;
+			return { ...state, admins: [...state.admins, target] };
+		case 'rebaixar':
+			if (!isCreator || !state.admins.includes(target) || target === state.creator) return undefined;
+			return { ...state, admins: state.admins.filter((k) => k !== target) };
+		default:
+			return undefined;
 	}
-	if (after.name !== before.name && !isAdmin) return false;
-
-	for (const removed of beforeKeys) {
-		if (afterKeys.has(removed) || removed === author) continue; // sair é livre
-		if (removed === before.creator) return false;
-		if (before.admins.includes(removed) ? !isCreator : !isAdmin) return false;
-	}
-
-	const creatorLeft = isCreator && !afterKeys.has(author);
-	if (after.creator !== before.creator) {
-		if (!creatorLeft || after.creator !== (successor(before, author) ?? '')) return false;
-	} else if (creatorLeft && after.members.length > 0) {
-		return false;
-	}
-
-	for (const admin of after.admins) {
-		if (!before.admins.includes(admin) && !isAdmin && admin !== after.creator) return false;
-	}
-	for (const admin of before.admins) {
-		// tirar da função quem continua no grupo: só o criador, e nunca a si mesmo
-		if (afterKeys.has(admin) && !after.admins.includes(admin) && (!isCreator || admin === author)) return false;
-	}
-	return true;
 }
 
 // ---------- estado a partir dos avisos ----------
 
 export type ReplayResult = { state?: GroupState; everMembers: string[]; names: Record<string, string> };
 
+/** Alguém perdeu o papel de administrador (removido, rebaixado ou saiu), com o aviso que fez isso. */
+type Loss = { who: string; event: GroupEventRecord };
+
 /**
- * Refaz o estado do grupo. O ponto de partida é a criação (feita por quem se diz criador)
- * ou, para quem entrou depois, o primeiro aviso **que chegou** e me inclui: um ex-membro
- * não consegue impor um estado falso com um horário mais antigo a quem acabou de entrar.
- * Daí em diante, em ordem de horário (empate: menor id), só vale o que era permitido.
+ * Refaz o estado do grupo, em ordem de horário (empate: menor id), só com o que era permitido.
+ *
+ * Contra avisos com horário falso (T17): o aviso de quem perdeu o papel não vale se tem
+ * horário de antes da perda mas **chegou** depois dela. Quem foi removido não consegue
+ * mais "voltar no tempo" para mexer no grupo.
  */
 export function replay(events: GroupEventRecord[], me: string): ReplayResult {
-	const ordered = [...events].sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1));
-	const base = [...events]
-		.filter((e) => e.state && startsGroup(e, me))
-		.sort((a, b) => a.receivedAt - b.receivedAt || a.createdAt - b.createdAt)[0];
-	const ever = new Set<string>();
-	if (!base?.state) return { everMembers: [], names: {} };
+	const first = run(events, me, new Set());
+	const rejected = new Set<string>();
+	for (const e of events) {
+		const lost = first.losses.some(
+			(l) => l.who === e.author && l.event.id !== e.id && e.createdAt < l.event.createdAt && e.receivedAt > l.event.receivedAt
+		);
+		if (lost) rejected.add(e.id);
+	}
+	const { state, everMembers, names } = rejected.size ? run(events, me, rejected) : first;
+	return { state, everMembers, names };
+}
 
-	let state: GroupState = base.state;
-	state.members.forEach((m) => ever.add(m.publicKey));
-	for (const e of ordered) {
-		if (!e.state || e === base || e.createdAt < base.createdAt) continue;
-		if (permitted(state, e.author, e.state, e.createdAt)) {
-			state = e.state;
-			state.members.forEach((m) => ever.add(m.publicKey));
+function run(events: GroupEventRecord[], me: string, rejected: Set<string>): ReplayResult & { losses: Loss[] } {
+	const valid = events.filter((e) => !rejected.has(e.id));
+	const ordered = [...valid].sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : 1));
+	// ponto de partida: a criação ou, para quem entrou depois, o primeiro aviso que **chegou**
+	// e me inclui; um ex-membro não impõe um estado falso com horário antigo a quem acabou de entrar
+	const base = valid.filter((e) => startsGroup(e, me)).sort((a, b) => a.receivedAt - b.receivedAt)[0];
+	if (!base?.state) return { everMembers: [], names: {}, losses: [] };
+
+	let state = base.state;
+	const ever = new Set(state.members.map((m) => m.publicKey));
+	const losses: Loss[] = [];
+	// avisos mais antigos que o ponto de partida só chegam por repasse: são mudanças que quem
+	// me adicionou ainda não conhecia (feitas ao mesmo tempo), então entram logo depois dele
+	const older = ordered.filter((e) => e.createdAt < base.createdAt);
+	const newer = ordered.filter((e) => e.createdAt >= base.createdAt);
+	for (const e of [...older, ...newer]) {
+		if (e === base || e.action === 'criar' || e.action === 'apresentar') continue;
+		// o nome que veio na lista de quem me adicionou é mais novo que qualquer renomear anterior
+		if (e.createdAt < base.createdAt && e.action === 'renomear') continue;
+		// fui readicionado: enquanto estava fora não recebi os avisos, então parto da lista que veio junto
+		if (!isMember(state, me) && startsGroup(e, me)) {
+			state = e.state!;
+		} else {
+			const next = applyOp(state, e);
+			if (!next) continue;
+			for (const admin of state.admins) if (!next.admins.includes(admin)) losses.push({ who: admin, event: e });
+			state = next;
 		}
+		state.members.forEach((m) => ever.add(m.publicKey));
 	}
 	const names: Record<string, string> = {};
 	for (const e of ordered) if (e.name && ever.has(e.author)) names[e.author] = e.name;
-	return { state, everMembers: [...ever], names };
+	return { state, everMembers: [...ever], names, losses };
 }
 
+/** Aviso que serve de ponto de partida: a criação, ou um aviso de um administrador que me adiciona. */
 function startsGroup(e: GroupEventRecord, me: string): boolean {
-	const state = e.state!;
+	const state = e.state;
+	if (!state) return false;
 	if (e.action === 'criar') return state.creator === e.author && state.members.every((m) => m.joinedAt === e.createdAt);
-	return isMember(state, me) && state.admins.includes(e.author);
+	const mine = state.members.find((m) => m.publicKey === me);
+	return e.action === 'adicionar' && e.targets.includes(me) && mine?.joinedAt === e.createdAt && state.admins.includes(e.author);
 }
 
 // ---------- guardar um aviso recebido ----------
@@ -239,9 +302,13 @@ export async function storeGroupControl(
 	if (await storage.groupEvents.get(parsed.id)) {
 		return existing && { conversation: existing, isNew: false, joined: false, newMembers: [] };
 	}
-	// a ordem de chegada decide o ponto de partida (replay): nunca dois avisos no mesmo instante
+	// a ordem de chegada conta (replay): nunca dois avisos no mesmo instante
 	const known = await storage.groupEvents.listByGroup(parsed.groupId);
-	const event = { ...parsed, receivedAt: Math.max(now, ...known.map((e) => e.receivedAt + 1)) };
+	const event: GroupEventRecord = {
+		...parsed,
+		receivedAt: Math.max(now, ...known.map((e) => e.receivedAt + 1)),
+		...(rumor.pubkey === me ? { rumor } : {})
+	};
 	await storage.groupEvents.put(event);
 
 	const { state, everMembers, names } = replay([...known, event], me);
@@ -291,13 +358,44 @@ async function adoptHeldMessages(storage: Storage, conversation: ConversationRec
 		latest = message;
 	}
 	if (!latest) return;
+	const isLatest = latest.createdAt >= conversation.lastMessageAt;
 	await storage.conversations.put({
 		...conversation,
 		unread: conversation.unread + unread,
 		lastMessageAt: Math.max(conversation.lastMessageAt, latest.createdAt),
-		lastMessagePreview: latest.createdAt >= conversation.lastMessageAt ? previewOf(latest) : conversation.lastMessagePreview,
-		lastMessageKind: latest.createdAt >= conversation.lastMessageAt ? kindOf(latest) : conversation.lastMessageKind
+		lastMessagePreview: isLatest ? previewOf(latest) : conversation.lastMessagePreview,
+		lastMessageKind: isLatest ? kindOf(latest) : conversation.lastMessageKind
 	});
+}
+
+// ---------- repasse ----------
+
+/** Só os avisos que mudam o grupo; a criação e as apresentações não precisam de repasse. */
+const FORWARDABLE = new Set<string>(['adicionar', 'remover', 'sair', 'promover', 'rebaixar']);
+/**
+ * Só repasso o que fiz pouco antes de a pessoa entrar (mudanças ao mesmo tempo); o que é
+ * mais antigo já estava na lista que ela recebeu ao entrar.
+ */
+export const FORWARD_WINDOW_S = 24 * 60 * 60;
+
+/**
+ * Avisos meus que algum membro atual não recebeu, porque eu ainda não sabia que ele
+ * estava no grupo (ex.: removi Carol enquanto Alice adicionava Dave). Sem o repasse,
+ * Dave continuaria vendo Carol no grupo e mandando mensagens a ela (RF-32). Já marca
+ * como repassados: quem envia é a fila, que tenta até conseguir.
+ */
+export async function takeForwards(storage: Storage, conversation: ConversationRecord, me: string): Promise<{ rumor: Rumor; to: string[] }[]> {
+	if (!conversation.group?.amMember) return [];
+	const forwards: { rumor: Rumor; to: string[] }[] = [];
+	for (const event of await storage.groupEvents.listByGroup(groupIdFrom(conversation))) {
+		if (event.author !== me || !event.rumor || !FORWARDABLE.has(event.action)) continue;
+		const joinedAt = (k: string) => conversation.group!.state.members.find((m) => m.publicKey === k)?.joinedAt ?? 0;
+		const to = conversation.members.filter((k) => !event.recipients.includes(k) && event.createdAt >= joinedAt(k) - FORWARD_WINDOW_S);
+		if (to.length === 0) continue;
+		await storage.groupEvents.put({ ...event, recipients: [...event.recipients, ...to] });
+		forwards.push({ rumor: event.rumor, to });
+	}
+	return forwards;
 }
 
 // ---------- mudanças feitas por mim ----------
@@ -314,24 +412,32 @@ export type GroupChange = {
 
 const seconds = (now: number) => Math.floor(now / 1000);
 
-function change(
-	groupId: string,
-	action: GroupAction,
-	me: string,
-	before: GroupState | undefined,
-	after: GroupState,
-	createdAt: number,
-	myName: string
-): GroupChange {
-	if (before && !permitted(before, me, after, createdAt)) throw new GroupPermissionError();
-	const recipients = new Set([...(before?.members ?? []), ...after.members].map((m) => m.publicKey));
-	recipients.delete(me);
-	return { groupId, action, createdAt, tags: controlTags(groupId, action, after, myName), recipients: [...recipients] };
-}
-
 function stateOf(conversation: ConversationRecord): GroupState {
 	if (!conversation.group) throw new Error('não é um grupo');
 	return conversation.group.state;
+}
+
+const groupIdFrom = (conversation: ConversationRecord) => conversation.id.slice('grupo:'.length);
+
+/** Confere a mudança com as mesmas regras de quem recebe e monta o aviso. */
+function change(
+	conversation: ConversationRecord,
+	me: string,
+	action: GroupAction,
+	content: { targets?: string[]; subject?: string },
+	myName: string,
+	now: number
+): GroupChange {
+	const before = stateOf(conversation);
+	const createdAt = seconds(now);
+	const after = applyOp(before, { action, author: me, createdAt, targets: content.targets ?? [], subject: content.subject });
+	if (!after) throw new GroupPermissionError();
+	const groupId = groupIdFrom(conversation);
+	const recipients = new Set([...before.members, ...after.members].map((m) => m.publicKey));
+	recipients.delete(me);
+	// quem entra recebe a lista completa, para ter de onde partir
+	const tags = controlTags(groupId, action, { ...content, ...(action === 'adicionar' ? { state: after } : {}) }, myName);
+	return { groupId, action, createdAt, tags, recipients: [...recipients] };
 }
 
 /** Cria um grupo comigo como criador (RF-31). */
@@ -340,7 +446,7 @@ export function createGroup(me: string, name: string, members: string[], myName:
 	const others = [...new Set(members)].filter((k) => k !== me);
 	if (!others.every(isPublicKey)) throw new Error('membro inválido');
 	if (others.length + 1 > MAX_GROUP_MEMBERS) throw new Error(`O grupo pode ter até ${MAX_GROUP_MEMBERS} pessoas`);
-	const groupName = cleanName(name).slice(0, MAX_GROUP_NAME);
+	const groupName = cleanGroupName(name);
 	if (!groupName) throw new Error('Dê um nome ao grupo');
 	const state: GroupState = {
 		name: groupName,
@@ -348,55 +454,34 @@ export function createGroup(me: string, name: string, members: string[], myName:
 		admins: [me],
 		creator: me
 	};
-	return change(newGroupId(), 'criar', me, undefined, state, createdAt, myName);
+	const groupId = newGroupId();
+	return { groupId, action: 'criar', createdAt, tags: controlTags(groupId, 'criar', { state }, myName), recipients: others };
 }
-
-const groupIdFrom = (conversation: ConversationRecord) => conversation.id.slice('grupo:'.length);
 
 export function addMembers(conversation: ConversationRecord, me: string, publicKeys: string[], myName: string, now = Date.now()): GroupChange {
-	const before = stateOf(conversation);
-	const createdAt = seconds(now);
-	const fresh = [...new Set(publicKeys)].filter((k) => isPublicKey(k) && !isMember(before, k));
-	if (before.members.length + fresh.length > MAX_GROUP_MEMBERS) throw new Error(`O grupo pode ter até ${MAX_GROUP_MEMBERS} pessoas`);
-	const after = { ...before, members: [...before.members, ...fresh.map((publicKey) => ({ publicKey, joinedAt: createdAt }))] };
-	return change(groupIdFrom(conversation), 'adicionar', me, before, after, createdAt, myName);
+	const fresh = [...new Set(publicKeys)].filter((k) => isPublicKey(k) && !isMember(stateOf(conversation), k));
+	if (stateOf(conversation).members.length + fresh.length > MAX_GROUP_MEMBERS) throw new Error(`O grupo pode ter até ${MAX_GROUP_MEMBERS} pessoas`);
+	return change(conversation, me, 'adicionar', { targets: fresh }, myName, now);
 }
 
-export function removeMember(conversation: ConversationRecord, me: string, publicKey: string, myName: string, now = Date.now()): GroupChange {
-	const before = stateOf(conversation);
-	const after = without(before, publicKey);
-	return change(groupIdFrom(conversation), 'remover', me, before, after, seconds(now), myName);
-}
+export const removeMember = (conversation: ConversationRecord, me: string, publicKey: string, myName: string, now = Date.now()) =>
+	change(conversation, me, 'remover', { targets: [publicKey] }, myName, now);
 
-/** Sair do grupo; se eu era o criador, o título passa ao sucessor. */
-export function leaveGroup(conversation: ConversationRecord, me: string, myName: string, now = Date.now()): GroupChange {
-	const before = stateOf(conversation);
-	let after = without(before, me);
-	if (before.creator === me) {
-		const heir = successor(before, me);
-		after = { ...after, creator: heir ?? '', admins: heir && !after.admins.includes(heir) ? [...after.admins, heir] : after.admins };
-	}
-	return change(groupIdFrom(conversation), 'sair', me, before, after, seconds(now), myName);
-}
+/** Sair do grupo; se eu era o criador, cada aparelho passa o título ao sucessor. */
+export const leaveGroup = (conversation: ConversationRecord, me: string, myName: string, now = Date.now()) =>
+	change(conversation, me, 'sair', {}, myName, now);
 
 export function renameGroup(conversation: ConversationRecord, me: string, name: string, myName: string, now = Date.now()): GroupChange {
-	const before = stateOf(conversation);
-	const groupName = cleanName(name).slice(0, MAX_GROUP_NAME);
-	if (!groupName) throw new Error('Dê um nome ao grupo');
-	return change(groupIdFrom(conversation), 'renomear', me, before, { ...before, name: groupName }, seconds(now), myName);
+	const subject = cleanGroupName(name);
+	if (!subject) throw new Error('Dê um nome ao grupo');
+	return change(conversation, me, 'renomear', { subject }, myName, now);
 }
 
-export function promoteAdmin(conversation: ConversationRecord, me: string, publicKey: string, myName: string, now = Date.now()): GroupChange {
-	const before = stateOf(conversation);
-	if (!isMember(before, publicKey) || before.admins.includes(publicKey)) throw new Error('Não é um membro comum');
-	return change(groupIdFrom(conversation), 'promover', me, before, { ...before, admins: [...before.admins, publicKey] }, seconds(now), myName);
-}
+export const promoteAdmin = (conversation: ConversationRecord, me: string, publicKey: string, myName: string, now = Date.now()) =>
+	change(conversation, me, 'promover', { targets: [publicKey] }, myName, now);
 
-export function demoteAdmin(conversation: ConversationRecord, me: string, publicKey: string, myName: string, now = Date.now()): GroupChange {
-	const before = stateOf(conversation);
-	const after = { ...before, admins: before.admins.filter((k) => k !== publicKey) };
-	return change(groupIdFrom(conversation), 'rebaixar', me, before, after, seconds(now), myName);
-}
+export const demoteAdmin = (conversation: ConversationRecord, me: string, publicKey: string, myName: string, now = Date.now()) =>
+	change(conversation, me, 'rebaixar', { targets: [publicKey] }, myName, now);
 
 /**
  * Meu nome para o grupo (ação `apresentar`): a todos quando entro, ou só a quem acabou
@@ -408,15 +493,7 @@ export function introduce(conversation: ConversationRecord, myName: string, to?:
 		groupId,
 		action: 'apresentar',
 		createdAt: seconds(now),
-		tags: controlTags(groupId, 'apresentar', undefined, myName),
+		tags: controlTags(groupId, 'apresentar', {}, myName),
 		recipients: to ?? conversation.members
-	};
-}
-
-function without(state: GroupState, publicKey: string): GroupState {
-	return {
-		...state,
-		members: state.members.filter((m) => m.publicKey !== publicKey),
-		admins: state.admins.filter((k) => k !== publicKey)
 	};
 }

@@ -79,13 +79,16 @@ O NIP-17 define uma conversa pelo **conjunto de participantes** (tags `p`), com 
 
 **Eventos de controle** (rumor kind `4440`, tag `g`, `["v", "1"]` e `alt`):
 
-- Ação na tag `["acao", <ação>]`: `criar`, `adicionar`, `remover`, `sair`, `renomear`, `promover`, `rebaixar`, `apresentar`.
-- Todo evento leva o **estado completo** depois da ação: nome do grupo (`subject`), membros (`p`, com o horário de entrada), administradores e criador. Quem entra recebe tudo de uma vez.
-- O autor é o do selo (assinado). Cada aparelho guarda os avisos e refaz o estado aplicando-os em ordem de horário do rumor (empate: menor id), e **só aceita a mudança se o autor tinha permissão** no estado anterior; senão, descarta. A permissão é conferida pela diferença entre os dois estados, não pelo nome da ação.
-- O ponto de partida é a criação ou, para quem entrou depois, o **primeiro aviso que chegou** ao aparelho e o inclui, feito por um administrador. Assim um ex-membro não impõe um estado falso com horário antigo a quem acabou de entrar ([T17](02-modelo-de-ameacas.md)).
-- O horário de entrada de quem já está no grupo não muda; o de quem entra é o horário do próprio aviso. Assim ninguém forja antiguidade para herdar o título.
+- Ação na tag `["acao", <ação>]`: `criar`, `adicionar`, `remover`, `sair`, `renomear`, `promover`, `rebaixar`, `apresentar`. Quem é afetado vai em `["alvo", <chave>]`; o novo nome, em `subject`.
+- Cada aviso leva **só a mudança**, não a lista inteira (decidido em 2026-10-22, depois de achar o problema): se dois administradores mexem ao mesmo tempo (Alice adiciona Dave enquanto Bob remove Carol), as duas mudanças se somam. Com a lista inteira em cada aviso, uma apagava a outra em silêncio.
+- A **lista completa** (nome, membros com horário de entrada e papel) vai só na criação e no aviso que adiciona alguém, para quem entra ter de onde partir.
+- O autor é o do selo (assinado). Cada aparelho guarda os avisos e refaz o estado aplicando-os em ordem de horário do rumor (empate: menor id), e **só aceita a mudança se o autor tinha permissão** naquele momento; senão, descarta.
+- O ponto de partida é a criação ou, para quem entrou depois, o **primeiro aviso que chegou** ao aparelho e o adiciona, feito por um administrador. Assim um ex-membro não impõe um estado falso com horário antigo a quem acabou de entrar. Quem é readicionado parte da lista que veio no aviso, porque não recebeu o que mudou enquanto estava fora.
+- O horário de entrada de quem entra é o horário do próprio aviso. Assim ninguém forja antiguidade para herdar o título. O herdeiro do criador é calculado em cada aparelho, não escolhido por quem sai.
+- **Aviso com horário falso** ([T17](02-modelo-de-ameacas.md), decidido pelo Pedro em 2026-10-22): o aviso de quem perdeu o papel de administrador (removido, rebaixado ou saiu) não vale se tem horário de antes da perda mas **chegou depois** dela.
+- **Repasse:** um aviso não chega a quem o autor ainda não sabia que estava no grupo (ex.: Bob remove Carol enquanto Alice adiciona Dave). Quando o app do autor vê o membro novo, reenvia a ele o aviso original, com o mesmo horário, se foi feito até 1 dia antes da entrada dele. Quem entrou aplica esses avisos logo depois da lista que recebeu, menos `renomear` (o nome da lista é mais novo).
+- O aviso vai para os membros de antes e de depois da mudança, para que quem saiu ou foi removido veja "Você foi removido" e pare de enviar.
 - Mensagens de grupo só valem de quem é ou já foi membro. Se chegam antes do aviso que me pôs no grupo (os embrulhos chegam em qualquer ordem), ficam guardadas e entram quando ele chegar.
-- O evento vai para os membros do estado novo **e** para quem saiu ou foi removido, para que o app dele mostre "Você foi removido" e pare de enviar.
 - **Nomes dos membros** (decidido em 2026-10-22): cada membro manda o **próprio nome**, cifrado, só para o grupo, com a ação `apresentar`, ao entrar e ao receber a notícia de um membro novo (este último envio só para quem entrou). Quem não está nos contatos aparece como "~Nome", com a opção de adicionar. Entrar num grupo mostra o seu nome a todos os membros, como no WhatsApp.
 
 ### 3.4 Status de entrega

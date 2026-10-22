@@ -32,7 +32,7 @@ export type ContactRecord = {
 /** Membro de grupo; a antiguidade decide quem herda o título de criador (docs/06 §3.3). */
 export type GroupMember = { publicKey: string; joinedAt: number };
 
-/** Estado de um grupo, como vai em cada aviso de grupo (kind 4440). */
+/** Estado de um grupo; vai inteiro no aviso de criação e no que adiciona alguém (kind 4440). */
 export type GroupState = {
 	name: string;
 	members: GroupMember[];
@@ -145,8 +145,16 @@ export type GroupEventRecord = {
 	/** quando chegou a este aparelho (ms); decide o ponto de partida de quem entrou depois */
 	receivedAt: number;
 	action: string;
-	/** ausente na ação `apresentar` */
+	/** quem foi adicionado, removido, promovido ou rebaixado */
+	targets: string[];
+	/** novo nome do grupo (renomear) */
+	subject?: string;
+	/** lista completa, só na criação e para quem é adicionado */
 	state?: GroupState;
+	/** quem recebeu o aviso (tags `p`); quem entrou depois e não recebeu ganha um repasse */
+	recipients: string[];
+	/** o próprio rumor, só nos avisos que eu fiz: é o que eu repasso */
+	rumor?: Omit<NostrEvent, 'sig'>;
 	/** nome que o autor mandou junto */
 	name?: string;
 };

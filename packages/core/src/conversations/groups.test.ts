@@ -19,6 +19,9 @@ import {
 	renameGroup,
 	storeGroupControl,
 	successor,
+	takeForwards,
+	type ControlContent,
+	type GroupAction,
 	type GroupChange
 } from './groups.ts';
 import { storeIncoming, storeOutgoing } from './messaging.ts';
@@ -83,10 +86,20 @@ async function say(from: Person, groupId: string, text: string, to: Person[]) {
 	return { wrapped, got };
 }
 
-/** Aviso forjado: alguém manda um estado à mão, sem passar pelas conferências do app. */
-function forge(from: Person, groupId: string, state: GroupState, to: string[], createdAt = Math.floor(tick() / 1000)) {
-	return from.vault.wrapGroupMessage(to, '', controlTags(groupId, 'adicionar', state), GROUP_CONTROL_KIND, createdAt);
+/** Aviso forjado: alguém monta as tags à mão, sem passar pelas conferências do app. */
+function forge(
+	from: Person,
+	groupId: string,
+	action: GroupAction,
+	content: ControlContent,
+	to: string[],
+	createdAt = Math.floor(tick() / 1000)
+) {
+	return from.vault.wrapGroupMessage(to, '', controlTags(groupId, action, content), GROUP_CONTROL_KIND, createdAt);
 }
+
+const deliver = (p: Person, w: ReturnType<typeof forge>) =>
+	storeGroupControl(p.storage, p.publicKey, p.vault.unwrap(w.toRecipients.find((r) => r.recipient === p.publicKey)!.wrap), clock);
 
 describe('criar grupo e conversar', () => {
 	it('quem foi adicionado ganha a conversa de grupo, com os membros e o criador', async () => {
@@ -157,11 +170,12 @@ describe('permissões (docs/06 §3.3)', () => {
 	it('um aviso forjado por membro comum é ignorado pelos outros', async () => {
 		const { alice, bob, carol, groupId } = await family();
 		const dave = await person('Dave');
-		const state = await stateOf(carol, groupId);
 		const at = Math.floor(tick() / 1000);
-		const forged = forge(bob, groupId, { ...state, members: [...state.members, { publicKey: dave.publicKey, joinedAt: at }] }, [carol.publicKey], at);
-		await storeGroupControl(carol.storage, carol.publicKey, carol.vault.unwrap(forged.toRecipients[0].wrap), clock);
-		expect((await stateOf(carol, groupId)).members.map((m) => m.publicKey)).not.toContain(dave.publicKey);
+		const state = await stateOf(carol, groupId);
+		const withDave = { ...state, members: [...state.members, { publicKey: dave.publicKey, joinedAt: at }] };
+		await deliver(carol, forge(bob, groupId, 'adicionar', { targets: [dave.publicKey], state: withDave }, [carol.publicKey], at));
+		await deliver(carol, forge(bob, groupId, 'renomear', { subject: 'Grupo do Bob' }, [carol.publicKey]));
+		expect(await stateOf(carol, groupId)).toEqual(state);
 		expect((await stateOf(carol, groupId)).creator).toBe(alice.publicKey);
 	});
 
@@ -194,11 +208,11 @@ describe('permissões (docs/06 §3.3)', () => {
 		expect(() => demoteAdmin(bobs, bob.publicKey, carol.publicKey, 'Bob', tick())).toThrow(GroupPermissionError);
 		expect(() => removeMember(bobs, bob.publicKey, alice.publicKey, 'Bob', tick())).toThrow(GroupPermissionError);
 
-		// forjado: Bob tira Alice e se diz criador; Carol ignora
+		// forjado: Bob tira Alice e rebaixa Carol; Carol ignora
 		const state = await stateOf(carol, groupId);
-		const forged = forge(bob, groupId, { ...state, members: state.members.filter((m) => m.publicKey !== alice.publicKey), admins: [bob.publicKey, carol.publicKey], creator: bob.publicKey }, [carol.publicKey]);
-		await storeGroupControl(carol.storage, carol.publicKey, carol.vault.unwrap(forged.toRecipients[0].wrap), clock);
-		expect((await stateOf(carol, groupId)).creator).toBe(alice.publicKey);
+		await deliver(carol, forge(bob, groupId, 'remover', { targets: [alice.publicKey] }, [carol.publicKey]));
+		await deliver(carol, forge(bob, groupId, 'rebaixar', { targets: [carol.publicKey] }, [carol.publicKey]));
+		expect(await stateOf(carol, groupId)).toEqual(state);
 	});
 
 	it('só o criador remove ou rebaixa administradores', async () => {
@@ -211,14 +225,15 @@ describe('permissões (docs/06 §3.3)', () => {
 		expect(() => demoteAdmin(alices, alice.publicKey, alice.publicKey, 'Alice', tick())).toThrow(GroupPermissionError);
 	});
 
-	it('ninguém mexe na antiguidade: um membro novo não entra com horário antigo', async () => {
-		const { alice, bob, carol, groupId } = await family();
+	it('ninguém mexe na antiguidade: o horário de entrada é o do aviso', async () => {
+		const { alice, bob, groupId } = await family();
 		const dave = await person('Dave');
+		const at = Math.floor(tick() / 1000);
+		// a lista que vai junto diz que Dave entrou antes de todo mundo, para herdar o grupo
 		const state = await stateOf(bob, groupId);
-		// Alice é administradora, mas manda Dave "entrando" antes de todo mundo para herdar o grupo
-		const forged = forge(alice, groupId, { ...state, members: [...state.members, { publicKey: dave.publicKey, joinedAt: 1 }] }, [bob.publicKey, carol.publicKey]);
-		await storeGroupControl(bob.storage, bob.publicKey, bob.vault.unwrap(forged.toRecipients.find((r) => r.recipient === bob.publicKey)!.wrap), clock);
-		expect((await stateOf(bob, groupId)).members.map((m) => m.publicKey)).not.toContain(dave.publicKey);
+		const lie = { ...state, members: [...state.members, { publicKey: dave.publicKey, joinedAt: 1 }] };
+		await deliver(bob, forge(alice, groupId, 'adicionar', { targets: [dave.publicKey], state: lie }, [bob.publicKey, dave.publicKey], at));
+		expect((await stateOf(bob, groupId)).members.find((m) => m.publicKey === dave.publicKey)?.joinedAt).toBe(at);
 	});
 });
 
@@ -245,20 +260,15 @@ describe('quando o criador sai', () => {
 		expect(await stateOf(carol, groupId)).toMatchObject({ creator: heir });
 	});
 
-	it('o criador não passa o título para quem quiser', async () => {
+	it('o criador não escolhe o herdeiro: cada aparelho calcula', async () => {
 		const { alice, bob, carol, groupId } = await family();
 		const state = await stateOf(bob, groupId);
-		const wrong = [bob.publicKey, carol.publicKey].sort()[1]; // não é o sucessor
-		expect(successor(state, alice.publicKey)).not.toBe(wrong);
-		const forged = alice.vault.wrapGroupMessage(
-			[bob.publicKey],
-			'',
-			controlTags(groupId, 'sair', { ...state, members: state.members.filter((m) => m.publicKey !== alice.publicKey), admins: [wrong], creator: wrong }),
-			GROUP_CONTROL_KIND,
-			Math.floor(tick() / 1000)
-		);
-		await storeGroupControl(bob.storage, bob.publicKey, bob.vault.unwrap(forged.toRecipients[0].wrap), clock);
-		expect((await stateOf(bob, groupId)).creator).toBe(alice.publicKey);
+		const heir = successor(state, alice.publicKey)!;
+		const wrong = [bob.publicKey, carol.publicKey].find((k) => k !== heir)!;
+		// um "sair" com uma lista que põe outra pessoa como criadora: a lista não conta
+		const lie = { ...state, members: state.members.filter((m) => m.publicKey !== alice.publicKey), admins: [wrong], creator: wrong };
+		await deliver(bob, forge(alice, groupId, 'sair', { state: lie }, [bob.publicKey]));
+		expect((await stateOf(bob, groupId)).creator).toBe(heir);
 	});
 });
 
@@ -297,8 +307,7 @@ describe('ordem de chegada', () => {
 			admins: [bob.publicKey],
 			creator: bob.publicKey
 		};
-		const forged = forge(bob, groupId, fake, [dave.publicKey], at);
-		await storeGroupControl(dave.storage, dave.publicKey, dave.vault.unwrap(forged.toRecipients[0].wrap), clock);
+		await deliver(dave, forge(bob, groupId, 'adicionar', { targets: [dave.publicKey], state: fake }, [dave.publicKey], at));
 		expect(await stateOf(dave, groupId)).toMatchObject({ creator: alice.publicKey });
 		expect((await stateOf(dave, groupId)).members.map((m) => m.publicKey)).not.toContain(bob.publicKey);
 	});
@@ -313,6 +322,119 @@ describe('ordem de chegada', () => {
 	});
 });
 
+describe('dois administradores ao mesmo tempo', () => {
+	// regressão: com a lista inteira em cada aviso, a mudança de um apagava a do outro
+	it('Alice adiciona Dave enquanto Bob remove Carol: valem as duas, em todos os aparelhos', async () => {
+		const { alice, bob, carol, groupId } = await family();
+		const dave = await person('Dave');
+		await act(alice, promoteAdmin(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()), [bob, carol]);
+
+		// cada um parte do que sabia, sem ter visto a mudança do outro
+		const t = tick();
+		const added = wrap(alice, addMembers(await conversationOf(alice, groupId), alice.publicKey, [dave.publicKey], 'Alice', t));
+		const removed = wrap(bob, removeMember(await conversationOf(bob, groupId), bob.publicKey, carol.publicKey, 'Bob', t));
+		const take = (p: Person, w: typeof added) => {
+			const item = w.toRecipients.find((r) => r.recipient === p.publicKey);
+			return storeGroupControl(p.storage, p.publicKey, item ? p.vault.unwrap(item.wrap) : w.rumor, clock);
+		};
+		await take(alice, added);
+		await take(alice, removed);
+		await take(bob, removed);
+		await take(bob, added);
+		await take(dave, added);
+		await take(carol, removed);
+
+		const members = async (p: Person) => (await stateOf(p, groupId)).members.map((m) => m.publicKey).sort();
+		const expected = [alice.publicKey, bob.publicKey, dave.publicKey].sort();
+		expect(await members(alice)).toEqual(expected);
+		expect(await members(bob)).toEqual(expected);
+		expect((await conversationOf(carol, groupId)).group!.amMember).toBe(false);
+		// Dave entrou com a lista que Alice tinha, ainda com Carol: o aviso de Bob não foi para ele
+		expect(await members(dave)).toContain(carol.publicKey);
+
+		// Bob vê que Dave entrou e repassa o aviso dele; Dave fica igual aos outros
+		const forwards = await takeForwards(bob.storage, await conversationOf(bob, groupId), bob.publicKey);
+		expect(forwards.map((f) => f.to)).toEqual([[dave.publicKey]]);
+		for (const { rumor, to } of forwards) {
+			for (const { wrap: w } of bob.vault.rewrapGroupControl(rumor, to)) {
+				await storeGroupControl(dave.storage, dave.publicKey, dave.vault.unwrap(w), clock);
+			}
+		}
+		expect(await members(dave)).toEqual(expected);
+		expect(await stateOf(dave, groupId)).toEqual(await stateOf(alice, groupId));
+		// repasse feito uma vez só
+		expect(await takeForwards(bob.storage, await conversationOf(bob, groupId), bob.publicKey)).toEqual([]);
+	});
+});
+
+describe('repasse', () => {
+	it('quem entra não recebe avisos antigos, que já estavam na lista que veio junto', async () => {
+		const { alice, bob, carol, groupId } = await family();
+		const dave = await person('Dave');
+		await act(alice, promoteAdmin(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()), [bob, carol]);
+		clock += 2 * 24 * 60 * 60_000;
+		await act(alice, addMembers(await conversationOf(alice, groupId), alice.publicKey, [dave.publicKey], 'Alice', tick()), [bob, carol, dave]);
+		expect(await takeForwards(alice.storage, await conversationOf(alice, groupId), alice.publicKey)).toEqual([]);
+	});
+});
+
+describe('aviso com horário falso (T17)', () => {
+	async function bobRemoved() {
+		const { alice, bob, carol, groupId } = await family();
+		const dave = await person('Dave');
+		await act(alice, addMembers(await conversationOf(alice, groupId), alice.publicKey, [dave.publicKey], 'Alice', tick()), [bob, carol, dave]);
+		await act(alice, promoteAdmin(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()), [bob, carol, dave]);
+		const beforeRemoval = Math.floor(tick() / 1000);
+		await act(alice, removeMember(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()), [bob, carol, dave]);
+		return { alice, bob, carol, dave, groupId, beforeRemoval };
+	}
+
+	it('administrador removido não "volta no tempo" para remover alguém', async () => {
+		const { alice, bob, carol, dave, groupId, beforeRemoval } = await bobRemoved();
+		const forged = forge(bob, groupId, 'remover', { targets: [carol.publicKey] }, [alice.publicKey, carol.publicKey, dave.publicKey], beforeRemoval);
+		tick();
+		for (const p of [alice, carol, dave]) await deliver(p, forged);
+		for (const p of [alice, carol, dave]) expect((await stateOf(p, groupId)).members.map((m) => m.publicKey)).toContain(carol.publicKey);
+	});
+
+	it('nem para pôr um amigo e torná-lo administrador', async () => {
+		const { alice, bob, carol, groupId, beforeRemoval } = await bobRemoved();
+		const eve = await person('Eve');
+		const state = await stateOf(carol, groupId);
+		const withEve = { ...state, members: [...state.members, { publicKey: eve.publicKey, joinedAt: beforeRemoval }] };
+		const add = forge(bob, groupId, 'adicionar', { targets: [eve.publicKey], state: withEve }, [alice.publicKey, carol.publicKey], beforeRemoval);
+		const promote = forge(bob, groupId, 'promover', { targets: [eve.publicKey] }, [alice.publicKey, carol.publicKey], beforeRemoval);
+		tick();
+		for (const p of [alice, carol]) {
+			await deliver(p, add);
+			await deliver(p, promote);
+			expect((await stateOf(p, groupId)).members.map((m) => m.publicKey)).not.toContain(eve.publicKey);
+		}
+	});
+
+	it('o que ele fez de verdade antes de ser removido continua valendo', async () => {
+		const { alice, bob, carol, groupId } = await family();
+		await act(alice, promoteAdmin(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()), [bob, carol]);
+		await act(bob, renameGroup(await conversationOf(bob, groupId), bob.publicKey, 'Família Silva', 'Bob', tick()), [alice, carol]);
+		await act(alice, removeMember(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()), [bob, carol]);
+		expect(await stateOf(carol, groupId)).toMatchObject({ name: 'Família Silva' });
+	});
+});
+
+describe('voltar ao grupo', () => {
+	it('quem é readicionado recebe a lista atual, com o que mudou enquanto estava fora', async () => {
+		const { alice, bob, carol, groupId } = await family();
+		const dave = await person('Dave');
+		await act(alice, removeMember(await conversationOf(alice, groupId), alice.publicKey, carol.publicKey, 'Alice', tick()), [bob, carol]);
+		await act(alice, addMembers(await conversationOf(alice, groupId), alice.publicKey, [dave.publicKey], 'Alice', tick()), [bob, dave]);
+		await act(alice, renameGroup(await conversationOf(alice, groupId), alice.publicKey, 'Família 2', 'Alice', tick()), [bob, dave]);
+		const { results } = await act(alice, addMembers(await conversationOf(alice, groupId), alice.publicKey, [carol.publicKey], 'Alice', tick()), [bob, carol, dave]);
+		expect(results.get('Carol')).toMatchObject({ joined: true });
+		expect(await stateOf(carol, groupId)).toEqual(await stateOf(bob, groupId));
+		expect(await stateOf(carol, groupId)).toMatchObject({ name: 'Família 2' });
+	});
+});
+
 describe('nomes dos membros', () => {
 	it('quem entra se apresenta; o nome fica guardado no grupo, não nos contatos', async () => {
 		const { alice, bob, carol, groupId } = await family();
@@ -324,7 +446,7 @@ describe('nomes dos membros', () => {
 	it('um estranho não consegue dar nome a si mesmo no grupo', async () => {
 		const { bob, groupId } = await family();
 		const dave = await person('Dave');
-		const wrapped = dave.vault.wrapGroupMessage([bob.publicKey], '', controlTags(groupId, 'apresentar', undefined, 'Dave'), GROUP_CONTROL_KIND);
+		const wrapped = dave.vault.wrapGroupMessage([bob.publicKey], '', controlTags(groupId, 'apresentar', {}, 'Dave'), GROUP_CONTROL_KIND);
 		await storeGroupControl(bob.storage, bob.publicKey, bob.vault.unwrap(wrapped.toRecipients[0].wrap), clock);
 		expect((await conversationOf(bob, groupId)).group!.names[dave.publicKey]).toBeUndefined();
 	});

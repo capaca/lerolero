@@ -75,6 +75,7 @@ export {
 	removeMember,
 	renameGroup,
 	storeGroupControl,
+	takeForwards,
 	type GroupAction,
 	type GroupChange,
 	type StoredGroupChange
