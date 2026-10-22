@@ -10,7 +10,10 @@ import {
 	fetchDmRelays,
 	markRead,
 	markSent,
+	mediaTags,
 	nameTagFor,
+	openMedia,
+	prepareMedia,
 	listContacts,
 	NO_FAILURES,
 	openStorage,
@@ -25,6 +28,7 @@ import {
 	type ContactRecord,
 	type ConversationRecord,
 	type IdentityRecord,
+	type MessageMedia,
 	type MessageRecord,
 	type Invite,
 	type Vault
@@ -233,6 +237,33 @@ class Session {
 	}
 
 	/**
+	 * Envia um áudio: cifra e sobe para os servidores Blossom (o mesmo arquivo não sobe
+	 * duas vezes) e manda a mensagem kind 15 com a chave, pela fila como um texto.
+	 */
+	async sendAudio(recipient: string, file: Blob, duration: number) {
+		const network = this.network;
+		if (!network) throw new Error('Sem conexão com a rede');
+		const list = await relayList();
+		const ref = await prepareMedia(storage, file, {
+			servers: [...list.blossom, ...list.blossomReserva],
+			signer: (template) => vault.sign(template)
+		});
+		const media: MessageMedia = { ...ref, duration };
+		const relays = await this.deliveryRelays(recipient);
+		const tags = [...(await nameTagFor(storage, recipient, this.current.displayName)), ...mediaTags(media)];
+		const wrapped = await vault.wrapDirectMessage(recipient, media.urls[0], tags, 15);
+		await storeOutgoing(storage, wrapped.rumor, recipient);
+		this.version++;
+		void network.engine.enqueue(wrapped.toRecipient, relays, wrapped.rumor.id);
+		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+	}
+
+	/** Arquivo de uma mensagem: do aparelho, ou baixado, conferido e decifrado na hora. */
+	openMedia(media: MessageMedia): Promise<Blob> {
+		return openMedia(storage, media);
+	}
+
+	/**
 	 * Onde o contato recebe: o que veio no convite; senão o kind 10050 dele na rede;
 	 * senão a lista padrão, que quase todo mundo usa (o convite curto não traz relays).
 	 * A reserva não é guardada no contato, para a busca ser tentada de novo da próxima vez.
@@ -361,6 +392,12 @@ export function friendlyError(err: unknown): string {
 			return `${e.message ?? 'Convite inválido'}.`;
 		case 'SelfInviteError':
 			return 'Este é o seu próprio convite.';
+		case 'BlossomError':
+			return 'Não foi possível enviar o arquivo agora. Verifique a internet e tente de novo.';
+		case 'NoOpusError':
+			return 'Este aparelho não grava áudio no formato do app. No iPhone, é preciso o iOS 18.4 ou mais novo.';
+		case 'NotAllowedError':
+			return 'O app não tem permissão para usar o microfone. Libere nas configurações do navegador.';
 		case 'NoRelaysError':
 			return 'Não sei onde entregar mensagens para esta pessoa. Peça a ela um convite novo.';
 		default:

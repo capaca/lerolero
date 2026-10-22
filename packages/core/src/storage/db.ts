@@ -3,6 +3,7 @@ import type {
 	ContactRecord,
 	ConversationRecord,
 	IdentityRecord,
+	MediaRecord,
 	MessageRecord,
 	OutboxRecord,
 	SeenWrapRecord,
@@ -20,6 +21,7 @@ export class LeroleroDb extends Dexie {
 	outbox!: EntityTable<OutboxRecord, 'id'>;
 	sync!: EntityTable<SyncRecord, 'relay'>;
 	seen_wraps!: EntityTable<SeenWrapRecord, 'id'>;
+	media!: EntityTable<MediaRecord, 'ox'>;
 
 	constructor(name = 'lerolero') {
 		super(name);
@@ -33,5 +35,7 @@ export class LeroleroDb extends Dexie {
 			sync: 'relay',
 			seen_wraps: 'id, receivedAt'
 		});
+		// M2: mídia (as tabelas anteriores seguem iguais; o Dexie migra sozinho)
+		this.version(2).stores({ media: 'ox, lastAccess' });
 	}
 }

@@ -5,7 +5,7 @@ import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import type { KdfParams } from '../crypto/seal.ts';
 import { createVault, type Rumor } from '../identity/vault.ts';
 import { openStorage } from '../storage/repositories.ts';
-import { directConversationId, markRead, markSent, NAME_TAG, nameTagFor, storeIncoming, storeOutgoing } from './messaging.ts';
+import { directConversationId, markRead, markSent, mediaTags, NAME_TAG, nameTagFor, storeIncoming, storeOutgoing } from './messaging.ts';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 const closers: Array<() => void> = [];
@@ -118,6 +118,35 @@ describe('conversas 1:1', () => {
 		const conv = await storeIncoming(bob.storage, bob.publicKey, rumorAt('velha', 1000));
 		expect(conv?.conversation.lastMessagePreview).toBe('nova');
 		expect((await bob.storage.messages.listByConversation(conv!.conversation.id, 10)).map((m) => m.text)).toEqual(['velha', 'nova']);
+	});
+
+	it('áudio (kind 15): vai e volta com tudo o que é preciso para baixar e decifrar', async () => {
+		const alice = await device();
+		const bob = await device();
+		const media = {
+			ox: 'a'.repeat(64),
+			x: 'b'.repeat(64),
+			type: 'audio/webm;codecs=opus',
+			size: 12345,
+			urls: ['https://um.example/' + 'b'.repeat(64), 'https://dois.example/' + 'b'.repeat(64)],
+			key: 'c'.repeat(64),
+			nonce: 'd'.repeat(24),
+			duration: 7
+		};
+		const wrapped = alice.vault.wrapDirectMessage(bob.publicKey, media.urls[0], mediaTags(media), 15);
+		const sent = await storeOutgoing(alice.storage, wrapped.rumor, bob.publicKey);
+		expect(sent.message.media).toEqual(media);
+		expect(sent.conversation.lastMessagePreview).toBe('🎤 Áudio');
+
+		const got = await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(wrapped.toRecipient));
+		expect(got?.message).toMatchObject({ kind: 15, text: '', media });
+	});
+
+	it('ignora arquivo sem chave ou com outra cifra', async () => {
+		const bob = await device();
+		const key = generateSecretKey();
+		const broken = createRumor({ kind: 15, content: 'https://x.example/f', tags: [['p', bob.publicKey], ['file-type', 'audio/ogg']] }, key) as Rumor;
+		expect(await storeIncoming(bob.storage, bob.publicKey, broken)).toBeUndefined();
 	});
 
 	it('ignora o que o M1 ainda não trata: grupos e outros tipos', async () => {

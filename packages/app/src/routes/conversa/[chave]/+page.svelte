@@ -3,7 +3,9 @@
 	import { page } from '$app/state';
 	import { contactName, directConversationId, MAX_TEXT_LENGTH, toNpub, type ContactRecord, type MessageRecord } from '@lerolero/core';
 	import { onDestroy, tick } from 'svelte';
+	import AudioPlayer from '#lib/components/AudioPlayer.svelte';
 	import { dayKey, formatDay, formatTime } from '#lib/format.ts';
+	import { MAX_SECONDS, startRecording, type Recording } from '#lib/recorder.ts';
 	import { friendlyError, session } from '#lib/session.svelte.ts';
 
 	// Abre com as últimas mensagens; as anteriores vêm sob demanda. As mensagens ficam
@@ -23,6 +25,57 @@
 	let error = $state('');
 	let scroller = $state<HTMLDivElement>();
 	let input = $state<HTMLTextAreaElement>();
+
+	// gravação de áudio: um toque começa, outro envia (RF-40)
+	let recording = $state<Recording>();
+	let elapsed = $state(0);
+	let sendingAudio = $state(false);
+	let ticker: ReturnType<typeof setInterval> | undefined;
+
+	async function startAudio() {
+		error = '';
+		try {
+			recording = await startRecording();
+			elapsed = 0;
+			ticker = setInterval(() => {
+				elapsed = Math.floor((performance.now() - recording!.startedAt) / 1000);
+				if (elapsed >= MAX_SECONDS) void finishAudio();
+			}, 250);
+		} catch (err) {
+			error = friendlyError(err);
+		}
+	}
+
+	function stopTicker() {
+		clearInterval(ticker);
+		ticker = undefined;
+	}
+
+	function cancelAudio() {
+		stopTicker();
+		recording?.cancel();
+		recording = undefined;
+	}
+
+	async function finishAudio() {
+		const current = recording;
+		if (!current) return;
+		stopTicker();
+		recording = undefined;
+		const { file, duration } = await current.stop();
+		if (duration < 1) return; // toque sem querer
+		sendingAudio = true;
+		try {
+			await session.sendAudio(publicKey, file, duration);
+		} catch (err) {
+			error = friendlyError(err);
+		} finally {
+			sendingAudio = false;
+		}
+	}
+
+	onDestroy(cancelAudio);
+	const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 	type Item = { type: 'dia'; key: number; label: string } | { type: 'msg'; message: MessageRecord };
 	const blocks = $derived.by(() => {
@@ -146,7 +199,13 @@
 						{@const m = item.message}
 						<div class="row" class:mine={m.sender === me}>
 							<div class="bubble">
-								<p>{m.text}</p>
+								{#if m.media?.type.startsWith('audio/')}
+									<AudioPlayer media={m.media} />
+								{:else if m.media}
+									<p class="hint">📎 Arquivo (ainda não suportado nesta versão)</p>
+								{:else}
+									<p>{m.text}</p>
+								{/if}
 								<span class="meta">
 									{formatTime(m.createdAt)}
 									{#if m.sender === me}
@@ -165,18 +224,33 @@
 
 	<form class="composer" onsubmit={send}>
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
-		<div class="line">
-			<textarea
-				bind:this={input}
-				bind:value={text}
-				{onkeydown}
-				rows="1"
-				maxlength={MAX_TEXT_LENGTH}
-				placeholder="Mensagem"
-				aria-label="Mensagem"
-			></textarea>
-			<button class="primary" type="submit" disabled={!text.trim()} aria-label="Enviar">Enviar</button>
-		</div>
+		{#if recording}
+			<div class="line recording" role="status">
+				<span class="dot" aria-hidden="true"></span>
+				<span class="elapsed">Gravando {clock(elapsed)}</span>
+				<button type="button" onclick={cancelAudio}>Cancelar</button>
+				<button type="button" class="primary" onclick={finishAudio}>Enviar áudio</button>
+			</div>
+		{:else if sendingAudio}
+			<p class="hint sending" role="status">Enviando áudio…</p>
+		{:else}
+			<div class="line">
+				<textarea
+					bind:this={input}
+					bind:value={text}
+					{onkeydown}
+					rows="1"
+					maxlength={MAX_TEXT_LENGTH}
+					placeholder="Mensagem"
+					aria-label="Mensagem"
+				></textarea>
+				{#if text.trim()}
+					<button class="primary" type="submit" aria-label="Enviar">Enviar</button>
+				{:else}
+					<button class="primary mic" type="button" onclick={startAudio} aria-label="Gravar áudio">🎤</button>
+				{/if}
+			</div>
+		{/if}
 	</form>
 </div>
 
@@ -273,6 +347,34 @@
 		display: flex;
 		gap: 0.5rem;
 		align-items: flex-end;
+	}
+	.recording {
+		align-items: center;
+	}
+	.elapsed {
+		flex: 1;
+		white-space: nowrap;
+		font-variant-numeric: tabular-nums;
+	}
+	.dot {
+		width: 0.7rem;
+		height: 0.7rem;
+		border-radius: 50%;
+		background: var(--danger);
+		animation: pulse 1s infinite alternate;
+	}
+	@keyframes pulse {
+		to {
+			opacity: 0.3;
+		}
+	}
+	.mic {
+		font-size: 1.1rem;
+		padding: 0.6rem 0.9rem;
+	}
+	.sending {
+		margin: 0.4rem 0;
+		text-align: center;
 	}
 	textarea {
 		flex: 1;

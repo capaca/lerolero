@@ -47,7 +47,8 @@ export type Rumor = Omit<NostrEvent, 'sig'>;
  */
 const SIGNABLE_KINDS = new Set([
 	22242, // autenticação em relay (NIP-42)
-	10050 // relays onde recebo mensagens (NIP-17)
+	10050, // relays onde recebo mensagens (NIP-17)
+	24242 // autorização de envio a servidor Blossom (BUD-01/02)
 ]);
 
 const encoder = new TextEncoder();
@@ -142,15 +143,17 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 		},
 
 		/**
-		 * Embrulha uma mensagem de texto 1:1 (NIP-17, kind 14): um gift wrap para o
-		 * destinatário e outro para mim, que vira minha cópia em outros aparelhos.
-		 * `extraTags` leva as tags próprias do app (ex.: ["nome", …] na primeira mensagem).
+		 * Embrulha uma mensagem 1:1 (NIP-17): kind 14 (texto) ou 15 (arquivo, com a URL
+		 * no conteúdo e a chave nas tags). Um gift wrap vai para o destinatário e outro
+		 * para mim, que vira minha cópia em outros aparelhos. `extraTags` leva as tags
+		 * do app (ex.: ["nome", …] na primeira mensagem; as do arquivo no kind 15).
 		 */
-		wrapDirectMessage(recipient: string, text: string, extraTags: string[][] = []): WrappedMessage {
+		wrapDirectMessage(recipient: string, content: string, extraTags: string[][] = [], kind: 14 | 15 = 14): WrappedMessage {
 			if (!secretKey) throw new LockedError();
 			if (!/^[0-9a-f]{64}$/.test(recipient)) throw new Error('destinatário inválido');
-			if (!text.trim() || text.length > MAX_TEXT_LENGTH) throw new Error('mensagem vazia ou longa demais');
-			const rumor = createRumor({ kind: 14, content: text, tags: [['p', recipient], ...extraTags] }, secretKey) as Rumor;
+			if (kind === 14 && (!content.trim() || content.length > MAX_TEXT_LENGTH)) throw new Error('mensagem vazia ou longa demais');
+			if (kind === 15 && !/^https:\/\/\S+$/.test(content)) throw new Error('arquivo sem endereço https');
+			const rumor = createRumor({ kind, content, tags: [['p', recipient], ...extraTags] }, secretKey) as Rumor;
 			const me = getPublicKey(secretKey);
 			return {
 				rumor,

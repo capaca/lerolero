@@ -7,6 +7,7 @@ import type {
 	ContactRecord,
 	ConversationRecord,
 	IdentityRecord,
+	MediaRecord,
 	MessageRecord,
 	OutboxRecord,
 	SeenWrapRecord
@@ -61,6 +62,13 @@ export interface SeenWrapRepository {
 	prune(before: number): Promise<number>;
 }
 
+export interface MediaRepository {
+	get(ox: string): Promise<MediaRecord | undefined>;
+	put(media: MediaRecord): Promise<void>;
+	/** marca o último acesso (a expiração apaga o que ficou muito tempo sem uso, RF-72) */
+	touch(ox: string, at: number): Promise<void>;
+}
+
 export type Storage = {
 	identity: IdentityRepository;
 	settings: SettingsRepository;
@@ -70,6 +78,7 @@ export type Storage = {
 	outbox: OutboxRepository;
 	sync: SyncRepository;
 	seenWraps: SeenWrapRepository;
+	media: MediaRepository;
 	close(): void;
 };
 
@@ -120,6 +129,11 @@ export function openStorage(name?: string): Storage {
 			has: async (id) => (await db.seen_wraps.get(id)) !== undefined,
 			add: async (wrap) => void (await db.seen_wraps.put(wrap)),
 			prune: (before) => db.seen_wraps.where('receivedAt').below(before).delete()
+		},
+		media: {
+			get: (ox) => db.media.get(ox),
+			put: async (media) => void (await db.media.put(media)),
+			touch: async (ox, at) => void (await db.media.update(ox, { lastAccess: at }))
 		},
 		close: () => db.close()
 	};

@@ -42,6 +42,19 @@ export type ConversationRecord = {
 
 export type MessageStatus = 'pendente' | 'enviada' | 'recebida';
 
+/** Arquivo anexado a uma mensagem kind 15: o suficiente para baixar, conferir e decifrar. */
+export type MessageMedia = {
+	ox: string;
+	x: string;
+	type: string;
+	size: number;
+	urls: string[];
+	key: string;
+	nonce: string;
+	/** duração em segundos (áudio) */
+	duration?: number;
+};
+
 export type MessageRecord = {
 	/** id do rumor */
 	id: string;
@@ -52,6 +65,8 @@ export type MessageRecord = {
 	/** horário real (do rumor), em segundos */
 	createdAt: number;
 	status: MessageStatus;
+	/** presente nas mensagens de arquivo (kind 15) */
+	media?: MessageMedia;
 };
 
 export type OutboxRecord = {
@@ -67,5 +82,28 @@ export type OutboxRecord = {
 };
 
 export type SyncRecord = { relay: string; cursor: number };
+
+/**
+ * Mídia no aparelho (docs/06 §4), indexada pelo hash do original (`ox`): a mesma foto
+ * recebida em várias conversas é baixada e guardada uma vez só (RF-70, RNF-27).
+ */
+export type MediaRecord = {
+	/** SHA-256 do arquivo original, em hex */
+	ox: string;
+	type: string;
+	size: number;
+	/** o arquivo original; ausente quando já expirou do aparelho (RF-72) */
+	file?: Blob;
+	/** onde está o arquivo cifrado */
+	urls: string[];
+	/** SHA-256 do arquivo cifrado, em hex */
+	x: string;
+	/** chave e nonce do AES-GCM, em hex */
+	key: string;
+	nonce: string;
+	/** marcada para não expirar */
+	keep: boolean;
+	lastAccess: number;
+};
 
 export type SeenWrapRecord = { id: string; receivedAt: number };

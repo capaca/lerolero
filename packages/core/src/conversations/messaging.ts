@@ -4,7 +4,7 @@
 import type { Rumor } from '../identity/vault.ts';
 import { cleanName } from '../contacts/invite.ts';
 import type { Storage } from '../storage/repositories.ts';
-import type { ConversationRecord, MessageRecord } from '../storage/records.ts';
+import type { ConversationRecord, MessageMedia, MessageRecord } from '../storage/records.ts';
 
 /**
  * Tag própria com o nome de quem envia, só na primeira mensagem de cada conversa:
@@ -16,7 +16,55 @@ export const NAME_TAG = 'nome';
 export const directConversationId = (other: string) => `direta:${other}`;
 
 const PREVIEW_LENGTH = 80;
-const preview = (text: string) => text.replace(/\s+/g, ' ').trim().slice(0, PREVIEW_LENGTH);
+
+function preview(message: Pick<MessageRecord, 'text' | 'media'>): string {
+	if (message.media) return message.media.type.startsWith('audio/') ? '🎤 Áudio' : '📎 Arquivo';
+	return message.text.replace(/\s+/g, ' ').trim().slice(0, PREVIEW_LENGTH);
+}
+
+/**
+ * Tags do kind 15 (NIP-17) a partir de um arquivo já enviado ao Blossom. A primeira URL
+ * vai no conteúdo; as outras como `fallback`, para quem recebe tentar se a primeira falhar.
+ */
+export function mediaTags(media: MessageMedia): string[][] {
+	const tags = [
+		['file-type', media.type],
+		['encryption-algorithm', 'aes-gcm'],
+		['decryption-key', media.key],
+		['decryption-nonce', media.nonce],
+		['x', media.x],
+		['ox', media.ox],
+		['size', String(media.size)],
+		...media.urls.slice(1).map((u) => ['fallback', u])
+	];
+	if (media.duration !== undefined) tags.push(['duration', String(Math.round(media.duration))]);
+	return tags;
+}
+
+/** Lê o arquivo de um rumor kind 15; undefined se faltar algo ou não for AES-GCM. */
+export function mediaFromRumor(rumor: Rumor): MessageMedia | undefined {
+	const tag = (name: string) => rumor.tags.find((t) => t[0] === name)?.[1];
+	const hex = (v: string | undefined, len: number) => (v && new RegExp(`^[0-9a-f]{${len}}$`).test(v) ? v : undefined);
+	const url = /^https:\/\/\S+$/.test(rumor.content) ? rumor.content : undefined;
+	const fallbacks = rumor.tags.filter((t) => t[0] === 'fallback' && /^https:\/\/\S+$/.test(t[1] ?? '')).map((t) => t[1]);
+	const key = hex(tag('decryption-key'), 64);
+	const nonce = hex(tag('decryption-nonce'), 24);
+	const x = hex(tag('x'), 64);
+	const ox = hex(tag('ox'), 64);
+	const type = tag('file-type');
+	if (!url || !key || !nonce || !x || !ox || !type || tag('encryption-algorithm') !== 'aes-gcm') return undefined;
+	const duration = Number(tag('duration'));
+	return {
+		ox,
+		x,
+		type,
+		size: Number(tag('size')) || 0,
+		urls: [url, ...fallbacks].slice(0, 4),
+		key,
+		nonce,
+		...(Number.isFinite(duration) && duration > 0 ? { duration } : {})
+	};
+}
 
 export type StoredMessage = { message: MessageRecord; conversation: ConversationRecord; isNew: boolean };
 
@@ -35,7 +83,7 @@ async function upsertConversation(
 		members: [other],
 		unread: (existing?.unread ?? 0) + (changes.unread ?? 0),
 		lastMessageAt: isLatest ? message.createdAt : existing.lastMessageAt,
-		lastMessagePreview: isLatest ? preview(message.text) : existing.lastMessagePreview,
+		lastMessagePreview: isLatest ? preview(message) : existing.lastMessagePreview,
 		nameSent: changes.nameSent || existing?.nameSent
 	};
 	await storage.conversations.put(conversation);
@@ -53,7 +101,9 @@ export async function storeIncoming(
 	rumor: Rumor,
 	options: { openConversationId?: string } = {}
 ): Promise<StoredMessage | undefined> {
-	if (rumor.kind !== 14) return undefined;
+	if (rumor.kind !== 14 && rumor.kind !== 15) return undefined;
+	const media = rumor.kind === 15 ? mediaFromRumor(rumor) : undefined;
+	if (rumor.kind === 15 && !media) return undefined; // arquivo que não sabemos abrir
 	const others = new Set([rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])]);
 	others.delete(me);
 	if (others.size !== 1) return undefined; // grupo (M3) ou mensagem para mim mesmo
@@ -70,10 +120,11 @@ export async function storeIncoming(
 		id: rumor.id,
 		conversationId: directConversationId(other),
 		sender: rumor.pubkey,
-		kind: 14,
-		text: rumor.content,
+		kind: rumor.kind,
+		text: media ? '' : rumor.content,
 		createdAt: rumor.created_at,
-		status: mine ? 'enviada' : 'recebida'
+		status: mine ? 'enviada' : 'recebida',
+		...(media ? { media } : {})
 	};
 	await storage.messages.put(message);
 
@@ -97,14 +148,16 @@ async function rememberSender(storage: Storage, sender: string, rumor: Rumor) {
 
 /** Guarda a mensagem que acabei de escrever, ainda na fila ("pendente", RNF-12: aparece na hora). */
 export async function storeOutgoing(storage: Storage, rumor: Rumor, recipient: string): Promise<StoredMessage> {
+	const media = rumor.kind === 15 ? mediaFromRumor(rumor) : undefined;
 	const message: MessageRecord = {
 		id: rumor.id,
 		conversationId: directConversationId(recipient),
 		sender: rumor.pubkey,
-		kind: 14,
-		text: rumor.content,
+		kind: rumor.kind,
+		text: media ? '' : rumor.content,
 		createdAt: rumor.created_at,
-		status: 'pendente'
+		status: 'pendente',
+		...(media ? { media } : {})
 	};
 	await storage.messages.put(message);
 	const nameSent = rumor.tags.some((t) => t[0] === NAME_TAG);

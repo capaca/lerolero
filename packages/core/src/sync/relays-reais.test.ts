@@ -10,6 +10,7 @@ import { RelayPool } from '../net/pool.ts';
 import { parseRelayList } from '../relays.ts';
 import { openStorage } from '../storage/repositories.ts';
 import { dmRelayListTemplate, fetchDmRelays, SyncEngine } from './engine.ts';
+import { openMedia, prepareMedia } from '../media/media.ts';
 
 const list = parseRelayList(published);
 const closers: Array<() => void> = [];
@@ -76,6 +77,26 @@ describe.skipIf(!process.env.REDE)('relays de verdade', () => {
 			console.log('Alice recebeu:', received, `em ${receivedAt - sendStart} ms desde o envio`);
 			expect(received.length).toBeGreaterThan(0);
 			expect(received.length).toBe(1); // repetidos dos outros relays foram descartados
+		},
+		60_000
+	);
+
+	it(
+		'mídia: envia cifrada para 2 servidores Blossom reais e outra pessoa baixa e abre',
+		async () => {
+			const alice = await person('alice-midia');
+			const bob = await person('bob-midia');
+			const file = new Blob([crypto.getRandomValues(new Uint8Array(20_000))], { type: 'audio/webm;codecs=opus' });
+			const t0 = Date.now();
+			const ref = await prepareMedia(alice.storage, file, {
+				servers: [...list.blossom, ...list.blossomReserva],
+				signer: async (t) => alice.vault.sign(t)
+			});
+			console.log(`enviado em ${Date.now() - t0} ms para:`, ref.urls.map((u) => new URL(u).host).join(', '));
+			const t1 = Date.now();
+			const opened = await openMedia(bob.storage, ref);
+			console.log(`baixado e decifrado em ${Date.now() - t1} ms`);
+			expect(new Uint8Array(await opened.arrayBuffer())).toEqual(new Uint8Array(await file.arrayBuffer()));
 		},
 		60_000
 	);
