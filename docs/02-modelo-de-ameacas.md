@@ -65,6 +65,8 @@ Como os usuários espalham suas mensagens por vários relays independentes, **ne
 | T10 | Celular roubado ou acessado por terceiros | **Opcional:** PIN/biometria próprios do app e mensagens temporárias | v1 |
 | T11 | Perda do celular = perda da identidade | **Frase de recuperação** (12 palavras) + backup cifrado de contatos e configurações nos relays | MVP |
 | T12 | Vazamento da chave expõe todo o histórico | Risco aceito no MVP. Forward secrecy no futuro (Double Ratchet ou MLS) | Futuro |
+| T14 | Adivinhar o PIN pelo próprio app, com o celular na mão | **Espera crescente:** 5 tentativas livres, depois 30 s, 1 min, 5 min, 15 min e 1 h por tentativa (contador único para desbloquear e para ver a frase). Testar o milhão de PINs de 6 dígitos vira mais de um século | MVP |
+| T15 | Copiar os dados do navegador (celular com root, computador destravado, perícia) e testar os PINs fora do app | **Limitação conhecida do PWA:** o Argon2id encarece cada tentativa, mas sem limite de tentativas 1 milhão de PINs pode cair em horas com placas de vídeo. O PIN do PWA protege contra quem pega o celular, não contra quem extrai os dados. No app nativo (v1), o cofre de hardware do sistema (Android Keystore etc.) guarda a chave e limita as tentativas | MVP (aceito) → v1 |
 | T13 | Confirmações de leitura revelam a atividade | Ligadas por padrão, desativáveis (quem desliga também deixa de ver as dos outros). O estado "em modo foco" só aparece se o usuário quiser | MVP |
 
 ## Decisões tomadas nesta etapa
