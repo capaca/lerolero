@@ -3,8 +3,11 @@
 
 const OPUS_TYPES = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4;codecs=opus'];
 
-/** Voz em Opus: ~20 kbps dá ~150 KB por minuto, perto do WhatsApp (RNF-22). */
-const BITRATE = 20_000;
+/**
+ * Voz em Opus: ~28 kbps dá ~210 KB por minuto. Com 20 kbps, em lugar barulhento
+ * (academia, rua) o ruído comia boa parte dos bits e a voz ficava ruim (RNF-22).
+ */
+const BITRATE = 28_000;
 
 export const MAX_SECONDS = 5 * 60;
 
@@ -24,7 +27,7 @@ export async function startRecording(): Promise<Recording> {
 	const mimeType = opusRecordingType();
 	if (!mimeType) throw Object.assign(new Error('Sem Opus'), { name: 'NoOpusError' });
 	const stream = await navigator.mediaDevices.getUserMedia({
-		audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 }
+		audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }
 	});
 	const recorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: BITRATE });
 	const chunks: Blob[] = [];
