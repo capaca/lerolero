@@ -57,6 +57,26 @@ export class FakeBlossom {
 			res.writeHead(200, { 'content-type': 'application/json' });
 			return res.end(JSON.stringify({ url: `${this.url}/${sha}`, sha256: sha, size: body.length }));
 		}
+		if (req.method === 'DELETE') {
+			const sha = path.slice(1);
+			let event: NostrEvent | undefined;
+			try {
+				event = JSON.parse(Buffer.from(String(req.headers.authorization ?? '').replace(/^Nostr /, ''), 'base64').toString('utf8'));
+			} catch {}
+			const ok =
+				event &&
+				verifyEvent(event) &&
+				event.kind === 24242 &&
+				event.tags.some((t) => t[0] === 't' && t[1] === 'delete') &&
+				event.tags.some((t) => t[0] === 'x' && t[1] === sha);
+			if (!ok) {
+				res.writeHead(401);
+				return res.end();
+			}
+			this.files.delete(sha);
+			res.writeHead(200);
+			return res.end();
+		}
 		if (req.method === 'GET') {
 			const file = this.files.get(path.slice(1));
 			if (!file) {

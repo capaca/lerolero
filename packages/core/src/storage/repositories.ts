@@ -41,6 +41,9 @@ export interface MessageRepository {
 	put(message: MessageRecord): Promise<void>;
 	/** as `limit` mais recentes antes de `before` (segundos), em ordem cronológica */
 	listByConversation(conversationId: string, limit: number, before?: number): Promise<MessageRecord[]>;
+	delete(id: string): Promise<void>;
+	/** quantas mensagens ainda usam o arquivo `ox` */
+	countUsingMedia(ox: string): Promise<number>;
 }
 
 export interface OutboxRepository {
@@ -69,6 +72,7 @@ export interface MediaRepository {
 	put(media: MediaRecord): Promise<void>;
 	/** marca o último acesso (a expiração apaga o que ficou muito tempo sem uso, RF-72) */
 	touch(ox: string, at: number): Promise<void>;
+	delete(ox: string): Promise<void>;
 }
 
 export type Storage = {
@@ -116,7 +120,9 @@ export function openStorage(name?: string): Storage {
 					.limit(limit)
 					.toArray();
 				return newestFirst.reverse();
-			}
+			},
+			delete: (id) => db.messages.delete(id),
+			countUsingMedia: (ox) => db.messages.where('media.ox').equals(ox).count()
 		},
 		outbox: {
 			put: async (item) => void (await db.outbox.put(item)),
@@ -137,7 +143,8 @@ export function openStorage(name?: string): Storage {
 		media: {
 			get: (ox) => db.media.get(ox),
 			put: async (media) => void (await db.media.put(media)),
-			touch: async (ox, at) => void (await db.media.update(ox, { lastAccess: at }))
+			touch: async (ox, at) => void (await db.media.update(ox, { lastAccess: at })),
+			delete: (ox) => db.media.delete(ox)
 		},
 		close: () => db.close()
 	};

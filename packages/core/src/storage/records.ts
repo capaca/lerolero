@@ -69,6 +69,8 @@ export type MessageRecord = {
 	status: MessageStatus;
 	/** presente nas mensagens de arquivo (kind 15) */
 	media?: MessageMedia;
+	/** apagada para todos (RF-25): fica o aviso no lugar, sem conteúdo */
+	deleted?: boolean;
 };
 
 export type OutboxRecord = {
