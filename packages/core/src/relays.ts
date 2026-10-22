@@ -66,7 +66,10 @@ function normalizeUrl(value: unknown, protocol: 'wss:' | 'https:', field: string
 	} catch {
 		throw new Error(`lista de relays: "${field}" tem um endereço inválido: ${String(value)}`);
 	}
-	if (url.protocol !== protocol) {
+	// sem TLS só no próprio aparelho: os servidores locais da suíte e2e (packages/e2e)
+	const local = url.hostname === '127.0.0.1' || url.hostname === 'localhost';
+	const plain = protocol === 'wss:' ? 'ws:' : 'http:';
+	if (url.protocol !== protocol && !(local && url.protocol === plain)) {
 		throw new Error(`lista de relays: "${field}" só aceita ${protocol}// (recebeu ${url.href})`);
 	}
 	return `${url.protocol}//${url.host}${url.pathname.replace(/\/+$/, '')}`;

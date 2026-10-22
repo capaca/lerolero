@@ -1,0 +1,16 @@
+{
+	"name": "@lerolero/e2e",
+	"version": "0.0.0",
+	"private": true,
+	"license": "AGPL-3.0-or-later",
+	"type": "module",
+	"scripts": {
+		"check": "tsc --noEmit",
+		"e2e": "playwright test"
+	},
+	"devDependencies": {
+		"@playwright/test": "1.64.0",
+		"@types/node": "24.19.1",
+		"typescript": "6.0.3"
+	}
+}

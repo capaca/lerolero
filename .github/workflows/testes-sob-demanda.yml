@@ -32,18 +32,21 @@ jobs:
       # sobrescreve o resultado dela
       - name: Marca o status do commit
         run: |
-          if [ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/statuses" \
-              --jq '[.[] | select(.context == "testes de integração")] | length')" != 0 ]; then
-            echo "o commit já tem status de integração"; exit 0
-          fi
           if gh pr diff ${{ github.event.pull_request.number }} -R "$GITHUB_REPOSITORY" --name-only \
               | grep -qvE '^docs/|\.md$'; then
-            state=pending; desc="Ponha o rótulo integration-tests para rodar"
+            state=pending; docs=false
           else
-            state=success; desc="Só documentação: dispensado"
+            state=success; docs=true
           fi
-          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=$state \
-            -f context='testes de integração' -f description="$desc"
+          for context in "testes de integração" "testes e2e"; do
+            if [ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/statuses" \
+                --jq "[.[] | select(.context == \"$context\")] | length")" != 0 ]; then
+              echo "o commit já tem status de $context"; continue
+            fi
+            label=$([ "$context" = "testes e2e" ] && echo e2e-tests || echo integration-tests)
+            desc=$([ $docs = true ] && echo "Só documentação: dispensado" || echo "Ponha o rótulo $label para rodar")
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=$state -f context="$context" -f description="$desc"
+          done
 
   integracao:
     if: github.event.action == 'labeled' && github.event.label.name == 'integration-tests'
@@ -84,16 +87,47 @@ jobs:
   e2e:
     if: github.event.action == 'labeled' && github.event.label.name == 'e2e-tests'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
       SHA: ${{ github.event.pull_request.head.sha }}
+      CONTEXT: testes e2e
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      # a suíte (packages/e2e) é a próxima etapa do roadmap; quando existir, este job roda ela
-      # como o de integração, e o status "testes e2e" passa a ser exigido para o merge
-      - name: Ainda não há suíte e2e
+      - name: Marca como rodando
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=failure -f context='testes e2e' \
-            -f description="A suíte e2e ainda não existe" -f target_url="$RUN_URL"
-          gh pr edit ${{ github.event.pull_request.number }} -R "$GITHUB_REPOSITORY" --remove-label e2e-tests
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending \
+            -f context="$CONTEXT" -f description="Rodando" -f target_url="$RUN_URL"
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build igual ao do GitHub Pages
+        run: pnpm build
+        env:
+          BASE_PATH: /lerolero
+      # Chrome que já vem no ubuntu-latest, com relays e Blossom locais (packages/e2e/servidores.ts)
+      - name: Suíte de ponta a ponta
+        working-directory: packages/e2e
+        run: pnpm e2e
+      - name: Guarda capturas e traces das falhas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-e2e
+          path: packages/e2e/resultados/
+          retention-days: 7
+      - name: Grava o resultado
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = success ]; then state=success; desc="Passou"; else state=failure; desc="Falhou"; fi
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=$state \
+            -f context="$CONTEXT" -f description="$desc" -f target_url="$RUN_URL"
+      - name: Tira o rótulo
+        if: always()
+        run: gh pr edit ${{ github.event.pull_request.number }} -R "$GITHUB_REPOSITORY" --remove-label e2e-tests

@@ -153,7 +153,8 @@ lerolero/
 ├── docs/                  # esta especificação
 ├── packages/
 │   ├── core/              # núcleo em TypeScript, sem interface (testável isoladamente)
-│   └── app/               # interface Svelte + PWA
+│   ├── app/               # interface Svelte + PWA
+│   └── e2e/               # suíte de ponta a ponta (Playwright, relays e Blossom locais)
 ├── platforms/
 │   ├── android/           # Capacitor (v1)
 │   └── desktop/           # Tauri (Rust) (v1)
@@ -162,6 +163,10 @@ lerolero/
 ```
 
 Monorepo com workspaces (ex.: pnpm).
+
+A lista de relays só aceita `wss://` e `https://`, com uma exceção decidida em 2026-10-22: `ws://` e `http://` em
+`127.0.0.1` e `localhost`, para a suíte e2e apontar o app de produção para servidores locais sem build especial. O
+risco é nulo: no máximo o app conversaria com o próprio aparelho.
 
 ## Questões em aberto
 

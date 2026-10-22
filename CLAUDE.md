@@ -13,11 +13,13 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
 
 ## Comandos (na raiz)
 
-- `scripts/verificar.sh [check] [test] [build]`: roda como a CI e mostra só uma linha por etapa e os erros (log
+- `scripts/verificar.sh [check] [test] [build] [e2e]`: roda como a CI e mostra só uma linha por etapa e os erros (log
   completo em `$TMPDIR/lerolero-verificar/`). Prefira este aos comandos abaixo, que imprimem muito.
 - `pnpm check`: tsc + svelte-check (inclui o service worker). Um aviso no service worker é esperado.
 - `pnpm test`: vitest. O core testa com `FakeRelay`/`FakeBlossom` (`packages/core/src/testing`).
 - `BASE_PATH=/lerolero pnpm build`: build igual ao do GitHub Pages.
+- Suíte e2e (`packages/e2e`, Playwright no Chrome instalado, relays e Blossom locais): `scripts/verificar.sh build e2e`.
+  Funcionalidade nova entra com o seu teste em `packages/e2e/testes/`.
 - `pnpm test:rede` em `packages/core`: relays e Blossom reais (lento, só sob demanda).
 
 ## Estrutura
@@ -26,7 +28,8 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
   nunca sai dele), armazenamento Dexie atrás de repositórios (`storage/`), rede (`net/`), sincronização (`sync/`),
   mídia/Blossom (`media/`), conversas (`conversations/`).
 - `packages/app`: SvelteKit 3 estático (SPA). Imports via `#lib/...`; estado da sessão em `src/lib/session.svelte.ts`.
-- `prototipos/`: pesquisas fora do workspace (usam npm). `prototipos/e2e-rascunho` tem os testes de navegador em Puppeteer.
+- `prototipos/`: pesquisas fora do workspace (usam npm). `prototipos/e2e-rascunho` tem os rascunhos em Puppeteer
+  ainda não migrados para `packages/e2e`.
 - Fluxo (ADR-0006): push direto na `main` é bloqueado; tudo entra por PR com squash. `ci.yml` (tipos, testes, build)
   roda a cada commit; `testes-sob-demanda.yml` roda pelos rótulos `integration-tests` e `e2e-tests`; só
   `release.yml` (manual, SemVer 0.x) publica no Pages.

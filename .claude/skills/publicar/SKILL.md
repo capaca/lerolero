@@ -55,9 +55,9 @@ gh run list --branch "$(git branch --show-current)" --limit 1 --json databaseId 
 
 ## 4. Testes sob demanda e merge
 
-- O merge exige `verificar` (tipos, testes unitários e build, a cada commit) e `testes de integração`.
-- Peça os testes com a rede real pondo o rótulo: `gh pr edit --add-label integration-tests` (e `e2e-tests` quando a
-  suíte existir). O rótulo sai sozinho depois da rodada; um commit novo deixa o status pendente outra vez.
+- O merge exige `verificar` (tipos, testes unitários e build, a cada commit), `testes de integração` e `testes e2e`.
+- Peça as duas rodadas pondo os rótulos: `gh pr edit --add-label integration-tests,e2e-tests` (rede real e suíte e2e com
+  servidores locais). Rode a suíte antes, localmente: `scripts/verificar.sh build e2e`. O rótulo sai sozinho depois da rodada; um commit novo deixa o status pendente outra vez.
 - PR só de documentação (`docs/` ou `.md`) dispensa os testes de integração.
 - Acompanhe em segundo plano (`gh run watch <id> --exit-status`) e diga o resultado. Se falhar, mostre o passo e o erro.
   Falha por instabilidade de relay público: ponha o rótulo de novo.
