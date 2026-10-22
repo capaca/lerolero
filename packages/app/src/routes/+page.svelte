@@ -17,7 +17,7 @@
 	let showPhraseReminder = $state(false);
 	let contactCount = $state(0);
 	// undefined enquanto carrega, para não piscar a tela de "nenhuma conversa"
-	let conversations = $state.raw<Array<{ conversation: ConversationRecord; name?: string; key: string }>>();
+	let conversations = $state.raw<Array<{ conversation: ConversationRecord; name?: string; key: string; href: string }>>();
 	let newChatOpen = $state(false);
 
 	// recarrega a lista quando chega ou sai mensagem
@@ -30,9 +30,15 @@
 		const list = await session.listConversations();
 		conversations = await Promise.all(
 			list.map(async (conversation) => {
+				if (conversation.group) {
+					// a cor do avatar do grupo sai do id dele, como a do contato sai da chave
+					const key = conversation.id.slice('grupo:'.length);
+					return { conversation, key, name: conversation.group.state.name, href: resolve('/grupo/[id]', { id: key }) };
+				}
 				const key = conversation.members[0];
 				const contact: ContactRecord | undefined = await session.getContact(key);
-				return { conversation, key, name: contact ? contactName(contact) : undefined };
+				const href = resolve('/conversa/[chave]', { chave: key });
+				return { conversation, key, name: contact ? contactName(contact) : undefined, href };
 			})
 		);
 	}
@@ -111,10 +117,10 @@
 		</section>
 	{:else if conversations}
 		<ul class="conversations">
-			{#each conversations as { conversation, name, key } (conversation.id)}
+			{#each conversations as { conversation, name, key, href } (conversation.id)}
 				<li>
-					<a href={resolve('/conversa/[chave]', { chave: key })}>
-						<Avatar {name} publicKey={key} />
+					<a {href}>
+						<Avatar {name} publicKey={key} group={!!conversation.group} />
 						<span class="text">
 							<span class="top">
 								<strong>{name ?? `${toNpub(key).slice(0, 12)}…`}</strong>
@@ -147,7 +153,8 @@
 
 	{#if newChatOpen}
 		<Sheet label="Nova conversa" onclose={() => (newChatOpen = false)}>
-			<a class="item" href={resolve('/contatos')}><Icon name="users" /> Conversar com um contato</a>
+			<a class="item" href={resolve('/contatos')}><Icon name="message" /> Conversar com um contato</a>
+			<a class="item" href={resolve('/grupo/novo')}><Icon name="users" /> Novo grupo</a>
 			<a class="item" href={resolve('/contatos/ler')}><Icon name="scan" /> Adicionar contato (ler QR code)</a>
 			<a class="item" href={resolve('/contatos/meu-convite')}><Icon name="user-plus" /> Convidar alguém</a>
 			<button class="item cancel" onclick={() => (newChatOpen = false)}>Cancelar</button>

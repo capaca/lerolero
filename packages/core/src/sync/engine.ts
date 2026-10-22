@@ -37,8 +37,9 @@ export const EXTRA_ATTEMPTS_AFTER_ACCEPTED = 3;
  *   1: texto (kind 14)
  *   2: áudio e arquivos (kind 15)
  *   3: apagar para todos (kind 5)
+ *   4: grupos (tag `g` e avisos de grupo, kind 4440)
  */
-export const SYNC_GENERATION = 3;
+export const SYNC_GENERATION = 4;
 
 /**
  * Se o aparelho sincronizou com uma geração anterior, esquece cursores e embrulhos

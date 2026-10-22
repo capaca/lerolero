@@ -63,6 +63,8 @@ export {
 	addMembers,
 	createGroup,
 	demoteAdmin,
+	describeNotice,
+	groupNames,
 	GROUP_CONTROL_KIND,
 	GROUP_TAG,
 	groupConversationId,

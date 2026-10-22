@@ -87,9 +87,10 @@ O NIP-17 define uma conversa pelo **conjunto de participantes** (tags `p`), com 
 - O horário de entrada de quem entra é o horário do próprio aviso. Assim ninguém forja antiguidade para herdar o título. O herdeiro do criador é calculado em cada aparelho, não escolhido por quem sai.
 - **Aviso com horário falso** ([T17](02-modelo-de-ameacas.md), decidido pelo Pedro em 2026-10-22): o aviso de quem perdeu o papel de administrador (removido, rebaixado ou saiu) não vale se tem horário de antes da perda mas **chegou depois** dela.
 - **Repasse:** um aviso não chega a quem o autor ainda não sabia que estava no grupo (ex.: Bob remove Carol enquanto Alice adiciona Dave). Quando o app do autor vê o membro novo, reenvia a ele o aviso original, com o mesmo horário, se foi feito até 1 dia antes da entrada dele. Quem entrou aplica esses avisos logo depois da lista que recebeu, menos `renomear` (o nome da lista é mais novo).
+- Cada aviso que vale aparece na conversa ("Ana adicionou Bruno"), com os nomes como cada um conhece as pessoas.
 - O aviso vai para os membros de antes e de depois da mudança, para que quem saiu ou foi removido veja "Você foi removido" e pare de enviar.
 - Mensagens de grupo só valem de quem é ou já foi membro. Se chegam antes do aviso que me pôs no grupo (os embrulhos chegam em qualquer ordem), ficam guardadas e entram quando ele chegar.
-- **Nomes dos membros** (decidido em 2026-10-22): cada membro manda o **próprio nome**, cifrado, só para o grupo, com a ação `apresentar`, ao entrar e ao receber a notícia de um membro novo (este último envio só para quem entrou). Quem não está nos contatos aparece como "~Nome", com a opção de adicionar. Entrar num grupo mostra o seu nome a todos os membros, como no WhatsApp.
+- **Nomes dos membros** (decidido em 2026-10-22): cada membro manda o **próprio nome**, cifrado, só para o grupo, com a ação `apresentar`, ao entrar e ao receber a notícia de um membro novo (este último envio só para quem entrou). Por garantia, a primeira mensagem de cada um no grupo também leva a tag `nome`, caso a apresentação se perca. Quem não está nos contatos aparece como "~Nome", com a opção de adicionar. Entrar num grupo mostra o seu nome a todos os membros, como no WhatsApp.
 
 ### 3.4 Status de entrega
 

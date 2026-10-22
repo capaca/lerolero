@@ -4,10 +4,19 @@
 import {
 	addContact,
 	connect,
+	createGroup,
+	GROUP_CONTROL_KIND,
+	groupNames,
+	introduce,
+	storeGroupControl,
+	takeForwards,
+	type GroupChange,
+	type StoredGroupChange,
 	deleteForMe,
 	deletionTags,
 	parseInvite,
 	directConversationId,
+	groupConversationId,
 	dmRelayListTemplate,
 	fetchDmRelays,
 	markDeleted,
@@ -55,6 +64,14 @@ export class NoRelaysError extends Error {
 	}
 }
 
+/** Saí ou fui removido do grupo: não dá mais para mandar nada nele. */
+export class NotInGroupError extends Error {
+	constructor() {
+		super('Você não faz mais parte deste grupo');
+		this.name = 'NotInGroupError';
+	}
+}
+
 /** Muitos PINs errados: precisa esperar `waitMs` para tentar de novo. */
 export class PinLockedError extends Error {
 	constructor(readonly waitMs: number) {
@@ -87,6 +104,8 @@ class Session {
 	openConversationId: string | undefined;
 	// $state.raw: o registro tem bytes que vão para o worker e para o IndexedDB, que não aceitam proxies
 	identity = $state.raw<IdentityRecord | undefined>();
+	/** onde recebem as pessoas que não são contatos (membros de grupo), achado nesta sessão */
+	private foundRelays = new Map<string, string[]>();
 	/** gravação da sessão aberta em andamento: bloquear espera, senão ela voltaria depois de apagada */
 	private savingSession?: Promise<void>;
 
@@ -258,47 +277,116 @@ class Session {
 
 	private async receive(wrap: Parameters<Vault['unwrap']>[0]) {
 		const rumor = await vault.unwrap(wrap);
+		if (rumor.kind === GROUP_CONTROL_KIND) return this.receiveGroupControl(rumor);
 		const stored = await storeIncoming(storage, this.current.publicKey, rumor, { openConversationId: this.openConversationId });
 		if (stored?.isNew) this.version++;
 	}
 
-	/**
-	 * Envia texto para um contato. A mensagem aparece na hora como "enviando" (RNF-12)
-	 * e segue pela fila; sem internet, sai quando a conexão voltar.
-	 */
-	async sendText(recipient: string, text: string) {
-		const network = this.network;
-		if (!network) throw new Error('Sem conexão com a rede');
-		const relays = await this.deliveryRelays(recipient);
-		const tags = await nameTagFor(storage, recipient, this.current.displayName);
-		const wrapped = await vault.wrapDirectMessage(recipient, text.trim(), tags);
-		await storeOutgoing(storage, wrapped.rumor, recipient);
+	/** Aviso de grupo: atualiza o grupo, me apresento a quem entrou e repasso o que faltou (docs/06 §3.3). */
+	private async receiveGroupControl(rumor: Awaited<ReturnType<Vault['unwrap']>>) {
+		const me = this.current.publicKey;
+		const change = await storeGroupControl(storage, me, rumor);
+		if (!change?.isNew) return;
 		this.version++;
-		// a fila guarda e tenta de novo sozinha: a tela não espera a rede
-		void network.engine.enqueue(wrapped.toRecipient, relays, wrapped.rumor.id);
+		// avisos meus vindos de outro aparelho: lá já me apresentei
+		if (rumor.pubkey !== me) await this.afterGroupChange(change);
+	}
+
+	private async afterGroupChange({ conversation, joined, newMembers }: StoredGroupChange) {
+		if (!conversation.group?.amMember) return;
+		const myName = this.current.displayName;
+		if (joined) await this.sendGroupChange(introduce(conversation, myName));
+		else if (newMembers.length) await this.sendGroupChange(introduce(conversation, myName, newMembers));
+		for (const { rumor, to } of await takeForwards(storage, conversation, this.current.publicKey)) {
+			for (const { recipient, wrap } of await vault.rewrapGroupControl(rumor, to)) void this.enqueueTo(recipient, wrap);
+		}
+	}
+
+	/** Embrulha um aviso de grupo meu, aplica aqui e manda a cada membro (e aos meus outros aparelhos). */
+	private async sendGroupChange(change: GroupChange) {
+		const network = this.requireNetwork();
+		const wrapped = await vault.wrapGroupMessage(change.recipients, '', change.tags, GROUP_CONTROL_KIND, change.createdAt);
+		await storeGroupControl(storage, this.current.publicKey, wrapped.rumor);
+		this.version++;
+		for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap);
 		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+	}
+
+	/** Cria um grupo (RF-31) e devolve o id da conversa. */
+	async createGroup(name: string, members: string[]): Promise<string> {
+		const change = createGroup(this.current.publicKey, name, members, this.current.displayName);
+		await this.sendGroupChange(change);
+		return groupConversationId(change.groupId);
+	}
+
+	/**
+	 * Um embrulho para um membro do grupo. Se a busca de onde ele recebe falhar (rede ruim),
+	 * vai para a lista padrão, que quase todo mundo usa, em vez de não ir: um aviso de grupo
+	 * perdido deixa o grupo diferente no celular dele.
+	 */
+	private async enqueueTo(recipient: string, wrap: Parameters<SyncEngine['enqueue']>[0], messageId?: string) {
+		const relays = await this.deliveryRelays(recipient).catch(async () => (await relayList()).dm);
+		await this.requireNetwork().engine.enqueue(wrap, relays, messageId);
+	}
+
+	private requireNetwork() {
+		if (!this.network) throw new Error('Sem conexão com a rede');
+		return this.network;
+	}
+
+	/**
+	 * Envia para uma conversa: ao contato (1:1) ou a cada membro do grupo, com a tag `g`.
+	 * A mensagem aparece na hora como "enviando" (RNF-12) e segue pela fila; sem internet,
+	 * sai quando a conexão voltar. `store: false` para o que não vira mensagem (pedido de apagar).
+	 */
+	private async sendTo(conversationId: string, content: string, tags: string[][], kind: 14 | 15 | 5, store = true) {
+		const network = this.requireNetwork();
+		if (conversationId.startsWith('grupo:')) {
+			const conversation = await storage.conversations.get(conversationId);
+			if (!conversation?.group?.amMember) throw new NotInGroupError();
+			const groupTag = ['g', conversationId.slice('grupo:'.length)];
+			const nameTags = kind === 5 ? [] : await nameTagFor(storage, conversationId, this.current.displayName);
+			const wrapped = await vault.wrapGroupMessage(conversation.members, content, [...nameTags, ...tags, groupTag], kind);
+			if (store) {
+				await storeOutgoing(storage, wrapped.rumor);
+				this.version++;
+			}
+			for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap, store ? wrapped.rumor.id : undefined);
+			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+			return;
+		}
+		const recipient = conversationId.slice('direta:'.length);
+		const relays = await this.deliveryRelays(recipient);
+		const nameTags = kind === 5 ? [] : await nameTagFor(storage, recipient, this.current.displayName);
+		const wrapped = await vault.wrapDirectMessage(recipient, content, [...nameTags, ...tags], kind);
+		if (store) {
+			await storeOutgoing(storage, wrapped.rumor, recipient);
+			this.version++;
+		}
+		// a fila guarda e tenta de novo sozinha: a tela não espera a rede
+		void network.engine.enqueue(wrapped.toRecipient, relays, store ? wrapped.rumor.id : undefined);
+		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+	}
+
+	/** Envia texto para uma conversa (1:1 ou grupo). */
+	sendText(conversationId: string, text: string) {
+		return this.sendTo(conversationId, text.trim(), [], 14);
 	}
 
 	/**
 	 * Envia um áudio: cifra e sobe para os servidores Blossom (o mesmo arquivo não sobe
-	 * duas vezes) e manda a mensagem kind 15 com a chave, pela fila como um texto.
+	 * duas vezes) e manda a mensagem kind 15 com a chave, pela fila como um texto. No
+	 * grupo, o arquivo sobe uma vez só; só a mensagem com o endereço vai para cada um.
 	 */
-	async sendAudio(recipient: string, file: Blob, duration: number) {
-		const network = this.network;
-		if (!network) throw new Error('Sem conexão com a rede');
+	async sendAudio(conversationId: string, file: Blob, duration: number) {
+		this.requireNetwork();
 		const list = await relayList();
 		const ref = await prepareMedia(storage, file, {
 			servers: [...list.blossom, ...list.blossomReserva],
 			signer: (template) => vault.sign(template)
 		});
 		const media: MessageMedia = { ...ref, duration };
-		const relays = await this.deliveryRelays(recipient);
-		const tags = [...(await nameTagFor(storage, recipient, this.current.displayName)), ...mediaTags(media)];
-		const wrapped = await vault.wrapDirectMessage(recipient, media.urls[0], tags, 15);
-		await storeOutgoing(storage, wrapped.rumor, recipient);
-		this.version++;
-		void network.engine.enqueue(wrapped.toRecipient, relays, wrapped.rumor.id);
-		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+		await this.sendTo(conversationId, media.urls[0], mediaTags(media), 15);
 	}
 
 	/** Apagar para mim (RF-25): some deste aparelho, sem avisar ninguém. */
@@ -308,20 +396,16 @@ class Session {
 	}
 
 	/**
-	 * Apagar para todos (RF-25): troca pelo aviso aqui, manda o pedido cifrado ao contato
-	 * e aos meus outros aparelhos e, se ninguém mais usa o arquivo, tira dos servidores.
-	 * É um pedido: o Lero-lero do contato apaga, mas apps de terceiros podem ignorar.
+	 * Apagar para todos (RF-25): troca pelo aviso aqui, manda o pedido cifrado a quem está
+	 * na conversa e aos meus outros aparelhos e, se ninguém mais usa o arquivo, tira dos
+	 * servidores. É um pedido: o Lero-lero dos outros apaga, mas apps de terceiros podem ignorar.
 	 */
-	async deleteForEveryone(recipient: string, messageId: string) {
-		const network = this.network;
-		if (!network) throw new Error('Sem conexão com a rede');
+	async deleteForEveryone(conversationId: string, messageId: string) {
 		const message = await storage.messages.get(messageId);
-		if (!message || message.deleted || message.sender !== this.current.publicKey) return;
+		if (!message || message.deleted || message.notice || message.sender !== this.current.publicKey) return;
 		await markDeleted(storage, message);
 		this.version++;
-		const wrapped = await vault.wrapDirectMessage(recipient, '', deletionTags(message), 5);
-		void network.engine.enqueue(wrapped.toRecipient, await this.deliveryRelays(recipient));
-		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+		await this.sendTo(conversationId, '', deletionTags(message), 5, false);
 		// arquivo que nenhuma outra mensagem usa (markDeleted já tirou do aparelho): sai dos servidores
 		const media = message.media;
 		if (media && !(await storage.media.get(media.ox))) {
@@ -342,10 +426,14 @@ class Session {
 	private async deliveryRelays(publicKey: string): Promise<string[]> {
 		const contact = await storage.contacts.get(publicKey);
 		if (contact?.dmRelays.length) return contact.dmRelays;
+		const cached = this.foundRelays.get(publicKey);
+		if (cached) return cached;
 		const list = await relayList();
 		const found = await fetchDmRelays(this.network!.pool, list.geral, publicKey);
 		if (found.length) {
 			if (contact) await storage.contacts.put({ ...contact, dmRelays: found });
+			// membro de grupo que não é contato: lembra nesta sessão, para não buscar a cada mensagem
+			else this.foundRelays.set(publicKey, found);
 			return found;
 		}
 		if (!list.dm.length) throw new NoRelaysError();
@@ -353,18 +441,18 @@ class Session {
 	}
 
 	/**
-	 * Conversa aberta na tela: conecta já aos relays do contato e mantém enquanto ela
-	 * estiver aberta, para a primeira mensagem sair em ~200 ms em vez de ~1,5 s.
+	 * Conversa aberta na tela: conecta já aos relays de quem vai receber e mantém enquanto
+	 * ela estiver aberta, para a primeira mensagem sair em ~200 ms em vez de ~1,5 s.
 	 * Devolve a função que libera ao sair da conversa.
 	 */
-	async prepareConversation(publicKey: string): Promise<() => void> {
+	async prepareConversation(conversationId: string): Promise<() => void> {
 		const network = this.network;
 		if (!network) return () => {};
-		try {
-			return network.pool.hold(await this.deliveryRelays(publicKey)).release;
-		} catch {
-			return () => {}; // sem relays conhecidos: o envio mostra o erro
-		}
+		const conversation = await storage.conversations.get(conversationId);
+		const people = conversation?.members ?? [conversationId.slice('direta:'.length)];
+		const found = await Promise.allSettled(people.map((p) => this.deliveryRelays(p)));
+		const relays = [...new Set(found.flatMap((r) => (r.status === 'fulfilled' ? r.value : [])))];
+		return network.pool.hold(relays).release;
 	}
 
 	/**
@@ -375,7 +463,7 @@ class Session {
 		const recipient = parseInvite(invite);
 		const existing = await storage.contacts.get(recipient.publicKey);
 		if (existing?.state !== 'aceito') await this.addContact(recipient, contactName);
-		await this.sendText(recipient.publicKey, text);
+		await this.sendText(directConversationId(recipient.publicKey), text);
 		return recipient.publicKey;
 	}
 
@@ -383,17 +471,22 @@ class Session {
 		return storage.conversations.listByRecent();
 	}
 
-	getConversation(publicKey: string) {
-		return storage.conversations.get(directConversationId(publicKey));
+	getConversation(conversationId: string) {
+		return storage.conversations.get(conversationId);
 	}
 
-	getMessages(publicKey: string, limit: number, before?: number): Promise<MessageRecord[]> {
-		return storage.messages.listByConversation(directConversationId(publicKey), limit, before);
+	getMessages(conversationId: string, limit: number, before?: number): Promise<MessageRecord[]> {
+		return storage.messages.listByConversation(conversationId, limit, before);
 	}
 
-	async markRead(publicKey: string) {
-		await markRead(storage, directConversationId(publicKey));
+	async markRead(conversationId: string) {
+		await markRead(storage, conversationId);
 		this.version++;
+	}
+
+	/** Como chamar cada membro de um grupo nesta tela ("Você", contato, "~Nome"). */
+	groupNames(conversation: ConversationRecord) {
+		return groupNames(storage, conversation.group!, this.current.publicKey);
 	}
 
 	connectedRelays(): string[] {
@@ -471,6 +564,10 @@ export function friendlyError(err: unknown): string {
 			return 'O app não tem permissão para usar o microfone. Libere nas configurações do navegador.';
 		case 'NoRelaysError':
 			return 'Não sei onde entregar mensagens para esta pessoa. Peça a ela um convite novo.';
+		case 'NotInGroupError':
+			return 'Você não faz mais parte deste grupo.';
+		case 'GroupPermissionError':
+			return 'Só os administradores do grupo podem fazer isso.';
 		default:
 			return 'Algo deu errado. Tente de novo.';
 	}

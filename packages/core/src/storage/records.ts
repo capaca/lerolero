@@ -96,7 +96,11 @@ export type MessageRecord = {
 	media?: MessageMedia;
 	/** apagada para todos (RF-25): fica o aviso no lugar, sem conteúdo */
 	deleted?: boolean;
+	/** aviso de grupo ("Ana adicionou Bruno"); o texto é refeito com os nomes atuais na tela */
+	notice?: GroupNotice;
 };
+
+export type GroupNotice = { action: string; targets: string[]; subject?: string };
 
 export type OutboxRecord = {
 	/** id do gift wrap */

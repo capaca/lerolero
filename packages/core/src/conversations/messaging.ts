@@ -177,7 +177,13 @@ async function storeGroupMessage(
 	if (!existing) return undefined;
 
 	const unread = !mine && options.openConversationId !== id ? 1 : 0;
-	const conversation = await upsertConversation(storage, message, { unread }, existing);
+	let conversation = await upsertConversation(storage, message, { unread }, existing);
+	// a primeira mensagem de cada um no grupo também traz o nome, caso a apresentação se perca
+	const sentName = mine ? undefined : cleanName(rumor.tags.find((t) => t[0] === NAME_TAG)?.[1] ?? '');
+	if (sentName && conversation.group && conversation.group.names[rumor.pubkey] !== sentName) {
+		conversation = { ...conversation, group: { ...conversation.group, names: { ...conversation.group.names, [rumor.pubkey]: sentName } } };
+		await storage.conversations.put(conversation);
+	}
 	return { message, conversation, isNew: true };
 }
 
@@ -229,9 +235,10 @@ export async function markRead(storage: Storage, conversationId: string) {
 	if (conversation && conversation.unread > 0) await storage.conversations.put({ ...conversation, unread: 0 });
 }
 
-/** A primeira mensagem de cada conversa leva meu nome. */
+/** A primeira mensagem de cada conversa leva meu nome. `recipient`: o contato, ou o id de uma conversa de grupo. */
 export async function nameTagFor(storage: Storage, recipient: string, myName: string): Promise<string[][]> {
-	const conversation = await storage.conversations.get(directConversationId(recipient));
+	const id = recipient.startsWith('grupo:') ? recipient : directConversationId(recipient);
+	const conversation = await storage.conversations.get(id);
 	return conversation?.nameSent ? [] : [[NAME_TAG, cleanName(myName)]];
 }
 
@@ -244,7 +251,7 @@ export const deletionTags = (message: MessageRecord): string[][] => [
 ];
 
 /** Recalcula a prévia da conversa depois que uma mensagem sumiu ou foi apagada. */
-async function refreshConversation(storage: Storage, conversationId: string) {
+export async function refreshConversation(storage: Storage, conversationId: string) {
 	const conversation = await storage.conversations.get(conversationId);
 	if (!conversation) return;
 	const [latest] = await storage.messages.listByConversation(conversationId, 1);

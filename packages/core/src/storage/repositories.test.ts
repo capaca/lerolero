@@ -69,3 +69,34 @@ describe('repositórios', () => {
 		expect(await storage.settings.get('inexistente')).toBeUndefined();
 	});
 });
+
+describe('migração do banco', () => {
+	it('da versão 3 para a 4 (grupos): mensagens, conversas e ajustes continuam', async () => {
+		const { Dexie } = await import('dexie');
+		const name = 'migracao-v3';
+		// o banco como estava publicado antes dos grupos
+		const old = new Dexie(name);
+		old.version(3).stores({
+			identity: 'id',
+			settings: 'key',
+			contacts: 'publicKey, state',
+			conversations: 'id, lastMessageAt',
+			messages: 'id, [conversationId+createdAt], status, media.ox',
+			outbox: 'id, nextAttemptAt',
+			sync: 'relay',
+			seen_wraps: 'id, receivedAt',
+			media: 'ox, lastAccess'
+		});
+		await old.table('conversations').put({ id: 'direta:b', type: 'direta', members: ['b'], lastMessageAt: 5, unread: 1 });
+		await old.table('messages').put(message('m1', 'direta:b', 5));
+		await old.table('settings').put({ key: 'geracaoSync', value: 3 });
+		old.close();
+
+		const upgraded = openStorage(name);
+		expect(await upgraded.conversations.get('direta:b')).toMatchObject({ unread: 1 });
+		expect((await upgraded.messages.listByConversation('direta:b', 10)).map((m) => m.id)).toEqual(['m1']);
+		expect(await upgraded.settings.get('geracaoSync')).toBe(3);
+		expect(await upgraded.groupEvents.listByGroup('x')).toEqual([]);
+		upgraded.close();
+	});
+});

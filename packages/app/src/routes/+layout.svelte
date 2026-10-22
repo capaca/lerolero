@@ -30,7 +30,9 @@
 			'/contatos/ler',
 			'/contatos/[chave]',
 			'/convite',
-			'/conversa/[chave]'
+			'/conversa/[chave]',
+			'/grupo/novo',
+			'/grupo/[id]'
 		]
 	};
 

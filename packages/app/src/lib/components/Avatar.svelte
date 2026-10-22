@@ -18,13 +18,14 @@
 	// A foto entra aqui quando houver o cartão de perfil (Q-P5).
 	import Icon from './Icon.svelte';
 
-	let { name, publicKey, size = 44 }: { name?: string; publicKey: string; size?: number } = $props();
+	// grupo: ícone de pessoas, para não confundir com um contato que tenha as mesmas iniciais
+	let { name, publicKey, size = 44, group = false }: { name?: string; publicKey: string; size?: number; group?: boolean } = $props();
 
-	const letters = $derived(name ? initials(name) : '');
+	const letters = $derived(name && !group ? initials(name) : '');
 </script>
 
 <span class="avatar" style:--h={hue(publicKey)} style:--size="{size}px" aria-hidden="true">
-	{#if letters}{letters}{:else}<Icon name="user" size={Math.round(size * 0.5)} />{/if}
+	{#if letters}{letters}{:else}<Icon name={group ? 'users' : 'user'} size={Math.round(size * 0.5)} />{/if}
 </span>
 
 <style>

@@ -9,9 +9,10 @@
 import type { Rumor } from '../identity/vault.ts';
 import { cleanName } from '../contacts/invite.ts';
 import type { Storage } from '../storage/repositories.ts';
-import type { ConversationRecord, GroupEventRecord, GroupInfo, GroupMember, GroupState, MessageRecord } from '../storage/records.ts';
+import type { ConversationRecord, GroupEventRecord, GroupInfo, GroupMember, GroupNotice, GroupState, MessageRecord } from '../storage/records.ts';
+import { contactName } from '../contacts/contacts.ts';
 import { toHex } from '../media/crypto.ts';
-import { kindOf, NAME_TAG, preview as previewOf } from './messaging.ts';
+import { kindOf, NAME_TAG, preview as previewOf, refreshConversation } from './messaging.ts';
 
 /** Kind próprio dos avisos de grupo (faixa 4440–4449 reservada ao Lero-lero, Q-P1). */
 export const GROUP_CONTROL_KIND = 4440;
@@ -205,7 +206,13 @@ export function applyOp(state: GroupState, op: GroupOp): GroupState | undefined 
 
 // ---------- estado a partir dos avisos ----------
 
-export type ReplayResult = { state?: GroupState; everMembers: string[]; names: Record<string, string> };
+export type ReplayResult = {
+	state?: GroupState;
+	everMembers: string[];
+	names: Record<string, string>;
+	/** avisos que valeram (viram aviso na conversa) */
+	applied: string[];
+};
 
 /** Alguém perdeu o papel de administrador (removido, rebaixado ou saiu), com o aviso que fez isso. */
 type Loss = { who: string; event: GroupEventRecord };
@@ -226,8 +233,8 @@ export function replay(events: GroupEventRecord[], me: string): ReplayResult {
 		);
 		if (lost) rejected.add(e.id);
 	}
-	const { state, everMembers, names } = rejected.size ? run(events, me, rejected) : first;
-	return { state, everMembers, names };
+	const { state, everMembers, names, applied } = rejected.size ? run(events, me, rejected) : first;
+	return { state, everMembers, names, applied };
 }
 
 function run(events: GroupEventRecord[], me: string, rejected: Set<string>): ReplayResult & { losses: Loss[] } {
@@ -236,9 +243,10 @@ function run(events: GroupEventRecord[], me: string, rejected: Set<string>): Rep
 	// ponto de partida: a criação ou, para quem entrou depois, o primeiro aviso que **chegou**
 	// e me inclui; um ex-membro não impõe um estado falso com horário antigo a quem acabou de entrar
 	const base = valid.filter((e) => startsGroup(e, me)).sort((a, b) => a.receivedAt - b.receivedAt)[0];
-	if (!base?.state) return { everMembers: [], names: {}, losses: [] };
+	if (!base?.state) return { everMembers: [], names: {}, applied: [], losses: [] };
 
 	let state = base.state;
+	const applied = [base.id];
 	const ever = new Set(state.members.map((m) => m.publicKey));
 	const losses: Loss[] = [];
 	// avisos mais antigos que o ponto de partida só chegam por repasse: são mudanças que quem
@@ -252,17 +260,19 @@ function run(events: GroupEventRecord[], me: string, rejected: Set<string>): Rep
 		// fui readicionado: enquanto estava fora não recebi os avisos, então parto da lista que veio junto
 		if (!isMember(state, me) && startsGroup(e, me)) {
 			state = e.state!;
+			applied.push(e.id);
 		} else {
 			const next = applyOp(state, e);
 			if (!next) continue;
 			for (const admin of state.admins) if (!next.admins.includes(admin)) losses.push({ who: admin, event: e });
 			state = next;
+			applied.push(e.id);
 		}
 		state.members.forEach((m) => ever.add(m.publicKey));
 	}
 	const names: Record<string, string> = {};
 	for (const e of ordered) if (e.name && ever.has(e.author)) names[e.author] = e.name;
-	return { state, everMembers: [...ever], names, losses };
+	return { state, everMembers: [...ever], names, applied, losses };
 }
 
 /** Aviso que serve de ponto de partida: a criação, ou um aviso de um administrador que me adiciona. */
@@ -311,16 +321,16 @@ export async function storeGroupControl(
 	};
 	await storage.groupEvents.put(event);
 
-	const { state, everMembers, names } = replay([...known, event], me);
+	const all = [...known, event];
+	const { state, everMembers, names, applied } = replay(all, me);
 	if (!state) return undefined;
 	const before = existing?.group;
 	const amMember = isMember(state, me);
-	const group: GroupInfo = { state, names, everMembers, amMember };
+	// nomes que vieram nas mensagens (messaging.ts) continuam; os das apresentações valem por cima
+	const group: GroupInfo = { state, names: { ...before?.names, ...names }, everMembers, amMember };
 	const conversation: ConversationRecord = {
 		unread: 0,
 		lastMessageAt: event.createdAt,
-		lastMessagePreview: event.author === me ? 'Você criou o grupo' : 'Você foi adicionado ao grupo',
-		lastMessageKind: 'texto',
 		...existing,
 		id,
 		type: 'grupo',
@@ -329,6 +339,7 @@ export async function storeGroupControl(
 	};
 	await storage.conversations.put(conversation);
 	if (!existing) await adoptHeldMessages(storage, conversation, me);
+	await syncNotices(storage, conversation, all, new Set(applied), me);
 
 	const wasMember = before?.amMember ?? false;
 	const previous = new Set(before?.state.members.map((m) => m.publicKey) ?? []);
@@ -338,6 +349,84 @@ export async function storeGroupControl(
 		joined: amMember && !wasMember,
 		newMembers: wasMember ? conversation.members.filter((k) => !previous.has(k)) : []
 	};
+}
+
+/**
+ * Um aviso na conversa para cada aviso de grupo que valeu. Um aviso que deixou de valer
+ * (ex.: chegou outro que o anula, T17) some da conversa.
+ */
+async function syncNotices(storage: Storage, conversation: ConversationRecord, events: GroupEventRecord[], applied: Set<string>, me: string) {
+	const nameOf = await groupNames(storage, conversation.group!, me);
+	let changed = false;
+	for (const e of events) {
+		if (e.action === 'apresentar') continue;
+		const stored = await storage.messages.get(e.id);
+		if (!applied.has(e.id)) {
+			if (stored?.notice) {
+				await storage.messages.delete(e.id);
+				changed = true;
+			}
+			continue;
+		}
+		if (stored) continue;
+		const notice: GroupNotice = { action: e.action, targets: e.targets, ...(e.subject ?? e.state?.name ? { subject: e.subject ?? e.state!.name } : {}) };
+		await storage.messages.put({
+			id: e.id,
+			conversationId: conversation.id,
+			sender: e.author,
+			kind: GROUP_CONTROL_KIND,
+			text: describeNotice(notice, e.author, nameOf),
+			createdAt: e.createdAt,
+			status: e.author === me ? 'enviada' : 'recebida',
+			notice
+		});
+		changed = true;
+	}
+	if (changed) await refreshConversation(storage, conversation.id);
+}
+
+/**
+ * Nome de cada membro para os avisos: "Você"; o nome do contato; o nome que a pessoa
+ * mandou ao grupo, com "~" (não está nos contatos e pode ter escolhido qualquer nome).
+ */
+export async function groupNames(storage: Storage, group: GroupInfo, me: string): Promise<(publicKey: string) => string> {
+	const names = new Map<string, string>();
+	for (const key of group.everMembers) {
+		const contact = await storage.contacts.get(key);
+		if (contact?.state === 'aceito') names.set(key, contactName(contact));
+		else if (group.names[key]) names.set(key, `~${group.names[key]}`);
+	}
+	return (key) => (key === me ? 'Você' : (names.get(key) ?? 'Alguém'));
+}
+
+/** "Ana, Bruno e Carla" */
+function listNames(names: string[]): string {
+	return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`;
+}
+
+/** Texto do aviso na conversa; `nameOf` dá "Você" para mim (no meio da frase vira "você"). */
+export function describeNotice(notice: GroupNotice, author: string, nameOf: (publicKey: string) => string): string {
+	const who = nameOf(author);
+	const target = (k: string) => (nameOf(k) === 'Você' ? 'você' : nameOf(k));
+	const targets = listNames(notice.targets.map(target));
+	switch (notice.action) {
+		case 'criar':
+			return `${who} criou o grupo “${notice.subject ?? ''}”`;
+		case 'adicionar':
+			return `${who} adicionou ${targets}`;
+		case 'remover':
+			return notice.targets[0] === author ? `${who} saiu do grupo` : `${who} removeu ${targets}`;
+		case 'sair':
+			return `${who} saiu do grupo`;
+		case 'renomear':
+			return `${who} mudou o nome do grupo para “${notice.subject ?? ''}”`;
+		case 'promover':
+			return `${who} deu a ${targets} a função de administrador`;
+		case 'rebaixar':
+			return `${who} tirou ${targets} da função de administrador`;
+		default:
+			return `${who} mudou o grupo`;
+	}
 }
 
 /**

@@ -106,12 +106,12 @@ describe('criar grupo e conversar', () => {
 		const { alice, bob, carol, groupId, results } = await family();
 		expect(results.get('Bob')).toMatchObject({ isNew: true, joined: true });
 		const bobs = await conversationOf(bob, groupId);
-		expect(bobs).toMatchObject({ type: 'grupo', lastMessagePreview: 'Você foi adicionado ao grupo' });
+		expect(bobs).toMatchObject({ type: 'grupo', lastMessagePreview: '~Alice criou o grupo “Família”', unread: 0 });
 		expect(bobs.members.sort()).toEqual([alice.publicKey, carol.publicKey].sort());
 		expect(bobs.group).toMatchObject({ amMember: true, state: { name: 'Família', creator: alice.publicKey, admins: [alice.publicKey] } });
 		// o nome de quem criou chega junto, cifrado só para o grupo
 		expect(bobs.group!.names[alice.publicKey]).toBe('Alice');
-		expect((await conversationOf(alice, groupId)).lastMessagePreview).toBe('Você criou o grupo');
+		expect((await conversationOf(alice, groupId)).lastMessagePreview).toBe('Você criou o grupo “Família”');
 	});
 
 	it('a mensagem chega a todos na conversa do grupo, não na conversa 1:1', async () => {
@@ -153,7 +153,7 @@ describe('criar grupo e conversar', () => {
 		const conversation = await conversationOf(bob, created.groupId);
 		expect(conversation).toMatchObject({ unread: 1, lastMessagePreview: 'chegou primeiro' });
 		const messages = await bob.storage.messages.listByConversation(conversation.id, 10);
-		expect(messages.map((m) => m.text)).toEqual(['chegou primeiro']);
+		expect(messages.map((m) => m.text)).toEqual(['~Alice criou o grupo “Família”', 'chegou primeiro']);
 	});
 });
 
@@ -435,12 +435,45 @@ describe('voltar ao grupo', () => {
 	});
 });
 
+describe('avisos na conversa', () => {
+	it('cada mudança vira um aviso, com os nomes como cada um conhece', async () => {
+		const { alice, bob, carol, groupId } = await family();
+		await act(bob, introduce(await conversationOf(bob, groupId), 'Bob'), [alice, carol]);
+		await act(alice, removeMember(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()), [bob, carol]);
+		const texts = async (p: Person) =>
+			(await p.storage.messages.listByConversation(groupConversationId(groupId), 10)).map((m) => m.text);
+		expect(await texts(alice)).toEqual(['Você criou o grupo “Família”', 'Você removeu ~Bob']);
+		expect(await texts(bob)).toEqual(['~Alice criou o grupo “Família”', '~Alice removeu você']);
+		expect((await conversationOf(carol, groupId)).lastMessagePreview).toBe('~Alice removeu ~Bob');
+	});
+
+	it('aviso que não valeu não aparece', async () => {
+		const { bob, carol, groupId } = await family();
+		const forged = forge(bob, groupId, 'remover', { targets: [carol.publicKey] }, [carol.publicKey]);
+		await deliver(carol, forged);
+		const messages = await carol.storage.messages.listByConversation(groupConversationId(groupId), 10);
+		expect(messages.map((m) => m.notice?.action)).toEqual(['criar']);
+	});
+});
+
 describe('nomes dos membros', () => {
 	it('quem entra se apresenta; o nome fica guardado no grupo, não nos contatos', async () => {
 		const { alice, bob, carol, groupId } = await family();
 		await act(bob, introduce(await conversationOf(bob, groupId), 'Bob'), [alice, carol]);
 		expect((await conversationOf(carol, groupId)).group!.names[bob.publicKey]).toBe('Bob');
 		expect(await carol.storage.contacts.get(bob.publicKey)).toBeUndefined();
+	});
+
+	it('se a apresentação se perder, o nome chega com a primeira mensagem', async () => {
+		const { alice, bob, carol, groupId } = await family();
+		const conversation = await conversationOf(bob, groupId);
+		const wrapped = bob.vault.wrapGroupMessage(conversation.members, 'oi', [['g', groupId], ['nome', 'Bob']], 14, Math.floor(tick() / 1000));
+		const item = wrapped.toRecipients.find((r) => r.recipient === carol.publicKey)!;
+		await storeIncoming(carol.storage, carol.publicKey, carol.vault.unwrap(item.wrap));
+		expect((await conversationOf(carol, groupId)).group!.names[bob.publicKey]).toBe('Bob');
+		// e um aviso de grupo depois não apaga o nome
+		await act(alice, renameGroup(await conversationOf(alice, groupId), alice.publicKey, 'Família 2', 'Alice', tick()), [bob, carol]);
+		expect((await conversationOf(carol, groupId)).group!.names[bob.publicKey]).toBe('Bob');
 	});
 
 	it('um estranho não consegue dar nome a si mesmo no grupo', async () => {

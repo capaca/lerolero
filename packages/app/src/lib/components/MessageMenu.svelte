@@ -5,10 +5,11 @@
 
 	let {
 		mine,
+		group = false,
 		onclose,
 		ondeleteForMe,
 		ondeleteForEveryone
-	}: { mine: boolean; onclose: () => void; ondeleteForMe: () => void; ondeleteForEveryone: () => void } = $props();
+	}: { mine: boolean; group?: boolean; onclose: () => void; ondeleteForMe: () => void; ondeleteForEveryone: () => void } = $props();
 
 	let confirming = $state(false);
 </script>
@@ -17,8 +18,13 @@
 	{#if confirming}
 		<p><strong>Apagar para todos?</strong></p>
 		<p class="hint">
-			A mensagem some para você e, no Lero-lero, para o contato também. Se ele usar outro app compatível, o app
-			dele pode ignorar o pedido.
+			{#if group}
+				A mensagem some para você e, no Lero-lero, para todos do grupo. Quem usar outro app compatível pode
+				continuar vendo.
+			{:else}
+				A mensagem some para você e, no Lero-lero, para o contato também. Se ele usar outro app compatível, o app
+				dele pode ignorar o pedido.
+			{/if}
 		</p>
 		<div class="actions">
 			<button onclick={onclose}>Cancelar</button>
