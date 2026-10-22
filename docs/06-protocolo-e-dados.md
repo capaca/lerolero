@@ -1,7 +1,7 @@
 # 06 — Protocolo e dados
 
 - **Status:** ✅ aprovado
-- **Última atualização:** 2026-10-16
+- **Última atualização:** 2026-10-22
 
 Formatos concretos das mensagens na rede e dos dados guardados no aparelho. Base: [ADR-0001](adr/0001-protocolo-de-transporte.md) (Nostr), [ADR-0003](adr/0003-armazenamento-local.md) (IndexedDB) e [ADR-0004](adr/0004-midia.md) (mídia).
 
@@ -50,20 +50,40 @@ kind 1059  Gift wrap — assinado por chave descartável; tag ["p", <destinatár
 | Apagar para todos | `5` | NIP-09 | Pedido de apagamento; outros apps podem ignorar (RF-25) |
 | Edição | próprio | — | Kind a definir; tag `["e", <id original>]` + novo texto + `alt` |
 | Confirmação (entregue / lida / retida) | próprio | — | Kind a definir (seção 3.4) |
-| Controle de grupo | próprio | — | Kind a definir (seção 3.3) |
+| Controle de grupo | `4440` | próprio | Seção 3.3; tag `alt` "aviso de grupo do Lero-lero" |
 | Pedido de reenvio | próprio | — | Kind a definir (seção 3.5) |
 
-Os números dos kinds próprios devem ser escolhidos consultando o registro de kinds do repositório de NIPs, para evitar colisão (Q-P1).
+Os números dos kinds próprios devem ser escolhidos consultando o registro de kinds do repositório de NIPs, para evitar colisão (Q-P1). A faixa **4440–4449** fica reservada para os kinds próprios do Lero-lero (livre no registro em 2026-10-22).
 
 ### 3.3 Grupos
 
 O NIP-17 define uma conversa pelo **conjunto de participantes** (tags `p`), com nome opcional pela tag `subject`. Isso não basta para RF-31 (adicionar/remover membros, administrador), então usamos uma convenção por cima:
 
 - Cada grupo tem um **identificador aleatório** na tag `["g", <id>]`, presente em todo rumor do grupo. Assim o grupo mantém a identidade quando os membros mudam.
-- **Eventos de controle** (kind próprio) com ações `criar`, `adicionar`, `remover`, `renomear`, `promover`. Só são aceitos se assinados (no selo) por um administrador conhecido.
-- Cada membro guarda a lista atual de membros; mensagens são embrulhadas só para ela. Membro removido simplesmente deixa de receber embrulhos (RF-32).
+- Cada membro guarda a lista atual de membros; mensagens são embrulhadas só para ela (mais a cópia para si). Membro removido simplesmente deixa de receber embrulhos (RF-32). Quem entra não recebe as mensagens anteriores.
 - Limite: **20 membros** (RF-30).
 - Apps que não entendem a tag `g` veem uma conversa NIP-17 comum entre os mesmos participantes.
+
+**Papéis e permissões** (decidido pelo Pedro em 2026-10-22):
+
+| Ação | Quem pode |
+|---|---|
+| Mandar mensagens, sair do grupo | Qualquer membro |
+| Adicionar membros, renomear o grupo, promover a administrador | Administradores (o criador também é administrador) |
+| Remover membro comum | Administradores |
+| Remover um administrador ou tirá-lo da função | Só o criador |
+| Remover o criador | Ninguém |
+
+- **O criador sai:** o título de criador passa ao **administrador mais antigo** no grupo; sem outros administradores, ao **membro mais antigo**. Assim o grupo sempre tem um criador. A regra é fixa, e não um sorteio como no WhatsApp, porque não há servidor: cada aparelho precisa chegar sozinho ao mesmo resultado. Empate de antiguidade: menor chave pública.
+- Considerado e não adotado: qualquer administrador tirar outro (como no WhatsApp). O Pedro preferiu deixar isso só com o criador. Risco aceito: se o criador perder a identidade sem sair do grupo, ninguém mais tira um administrador problemático.
+
+**Eventos de controle** (rumor kind `4440`, tag `g`, `["v", "1"]` e `alt`):
+
+- Ação na tag `["acao", <ação>]`: `criar`, `adicionar`, `remover`, `sair`, `renomear`, `promover`, `rebaixar`, `apresentar`.
+- Todo evento leva o **estado completo** depois da ação: nome do grupo (`subject`), membros (`p`, com o horário de entrada), administradores e criador. Quem entra recebe tudo de uma vez.
+- O autor é o do selo (assinado). Cada aparelho aplica os eventos em ordem de horário do rumor (empate: menor id) e **só aceita a ação se o autor tinha permissão** no estado que ele conhece; senão, descarta.
+- O evento vai para os membros do estado novo **e** para quem saiu ou foi removido, para que o app dele mostre "Você foi removido" e pare de enviar.
+- **Nomes dos membros** (decidido em 2026-10-22): cada membro manda o **próprio nome**, cifrado, só para o grupo, com a ação `apresentar`, ao entrar e ao receber a notícia de um membro novo (este último envio só para quem entrou). Quem não está nos contatos aparece como "~Nome", com a opção de adicionar. Entrar num grupo mostra o seu nome a todos os membros, como no WhatsApp.
 
 ### 3.4 Status de entrega
 
@@ -125,7 +145,7 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 | `identity` | chave pública, chave privada cifrada, sal e parâmetros do Argon2id, frase confirmada (sim/não) | — |
 | `settings` | chave/valor (modo foco, confirmações, expiração de mídia, entrega em lotes…) | PK: chave |
 | `contacts` | chave pública, nome local, nome escolhido pelo contato, foto, estado (`aceito`, `pedido`, `bloqueado`), relays de DM | PK: chave pública; idx: estado |
-| `conversations` | id, tipo (`direta`, `grupo`), membros, administradores, nome, última mensagem, não lidas, exceção de modo foco, último `seq` enviado | PK: id; idx: última mensagem |
+| `conversations` | id, tipo (`direta`, `grupo`), membros (com horário de entrada), administradores, criador, nome, última mensagem, não lidas, exceção de modo foco, último `seq` enviado | PK: id; idx: última mensagem |
 | `messages` | id do rumor, conversa, remetente, kind, texto, horário real, `seq`, status, resposta a, editada em, apagada, retida (modo foco), hash da mídia (`ox`) | PK: id; idx: [conversa + horário], status, retida |
 | `reactions` | mensagem, autor, emoji | idx: mensagem |
 | `media` | `ox` (hash original), tipo, tamanho, arquivo (Blob), URLs Blossom, chave, nonce, `x`, guardar (sim/não), último acesso | PK: `ox`; idx: último acesso |
@@ -151,7 +171,7 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 
 | # | Questão | Responsável |
 |---|---|---|
-| Q-P1 | Escolher os números dos kinds próprios (edição, confirmação, controle de grupo, pedido de reenvio) no registro de NIPs; avaliar propor um NIP para confirmações de entrega, que hoje não têm padrão | Implementação |
+| Q-P1 | Escolher os números dos kinds próprios (edição, confirmação, pedido de reenvio) no registro de NIPs (✅ controle de grupo = `4440`, faixa 4440–4449 reservada, 2026-10-22); avaliar propor um NIP para confirmações de entrega, que hoje não têm padrão | Implementação |
 | Q-P2 | Formato da figurinha sonora (v1): provavelmente kind `15` com imagem + áudio Opus curto, e `alt` "figurinha sonora" para outros apps (Q-F5) | Pedro (v1) |
 | Q-P3 | Janela de espera antes de pedir reenvio por buraco na numeração | Implementação |
 | Q-P4 | ✅ Português. Interoperabilidade da identidade via exportação da chave privada | — |

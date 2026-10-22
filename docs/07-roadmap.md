@@ -70,13 +70,13 @@ Somando: **~33 semanas de desenvolvimento + 6 de beta** → MVP público por vol
   3. Geral: aviso de "sem conexão"; tamanho da letra em Ajustes (Normal, Grande, Muito grande; RNF-65); nível do microfone durante a gravação.
 - **Ajustes pedidos pelo Pedro depois de usar o app (2026-10-22):** ✅ recarregar a página sem pedir o PIN se o app foi usado nos últimos 5 minutos (T16); ✅ áudio a ~28 kbps com controle automático de volume, porque em lugar barulhento a voz ficava ruim. Se ainda não bastar, supressão de ruído forte no aparelho (RNNoise em WebAssembly, ~150 KB a mais no app). Conferido: a hora mostrada na mensagem já é a do envio (vem do celular de quem enviou).
 
-**Andamento (2026-10-22):** Blossom, áudio (Opus a ~17 kbps, Q-R2 resolvida) e exclusão de mensagens e áudios prontos e publicados. Ordem combinada a seguir: melhorias de UX/UI, suite e2e, fotos, cartão de perfil, expiração.
+**Andamento (2026-10-22):** Blossom, áudio (Opus a ~17 kbps, Q-R2 resolvida) e exclusão de mensagens e áudios prontos e publicados; etapa 1 de UX/UI publicada. **Grupos (RF-30..33) adiantados do M3** a pedido do Pedro (2026-10-22): são o uso principal no Brasil e mudam a tela da conversa (nome de quem escreveu nos balões), então a etapa 2 de UX vem depois, já pensada para grupos. Ordem a seguir: grupos (core: dados e envio/recebimento; tela: criar e conversar; gestão: membros, administradores, sair), etapas 2 e 3 de UX/UI, suite e2e, fotos, cartão de perfil, expiração.
 
 **Pronto quando:** os critérios de aceite "Mídia salva uma vez" passam; 1 minuto de áudio fica em torno de 210 KB e uma foto em até 200 KB.
 
 ### M3 — Grupos e recursos de conversa (~7 semanas)
 
-- Grupos de até 20 com tag `g` e eventos de controle; administrador; remover membro (RF-30..33).
+- ~~Grupos de até 20 com tag `g` e eventos de controle; administrador; remover membro (RF-30..33).~~ Adiantado para o M2 (2026-10-22).
 - Responder, reagir, editar, apagar para todos (RF-22..25).
 - Status de entrega com confirmações agrupadas; confirmação de leitura desativável (RF-50, 51).
 - Detecção de perdas: numeração por conversa + pedido de reenvio + prazo de 7 dias (RF-53).

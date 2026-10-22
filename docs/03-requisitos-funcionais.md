@@ -57,7 +57,7 @@
 | ID | Requisito | Prioridade | Fase |
 |---|---|---|---|
 | RF-30 | Grupos pequenos, de até **20 membros** ([ADR-0001](adr/0001-protocolo-de-transporte.md)) | Must | MVP |
-| RF-31 | Criar grupo, dar nome, adicionar e remover membros, sair do grupo; o criador é administrador | Must | MVP |
+| RF-31 | Criar grupo, dar nome, adicionar e remover membros, sair do grupo; o criador é administrador e pode promover outros. Só o criador remove ou rebaixa administradores; se ele sair, o título passa ao administrador mais antigo (ou ao membro mais antigo). Regras completas em [06 §3.3](06-protocolo-e-dados.md) | Must | MVP |
 | RF-32 | Membro removido deixa de receber as mensagens novas | Must | MVP |
 | RF-33 | Todos os recursos de conversa (seção 3) e de mídia (seção 5) funcionam em grupos | Must | MVP |
 | RF-34 | Grupos grandes (centenas de membros), com protocolo de grupo dedicado (ex.: MLS) | — | Futuro |
