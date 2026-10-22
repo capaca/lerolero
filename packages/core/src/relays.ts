@@ -44,6 +44,21 @@ export function parseRelayList(input: unknown): RelayList {
 	return list;
 }
 
+/**
+ * Escolhe a lista a usar: a mais nova (pelo campo `atualizado`) entre a baixada
+ * da rede e a embutida no app. A embutida é a reserva para quando o site de
+ * hospedagem estiver fora do ar ou a cópia baixada vier quebrada (docs/05).
+ */
+export async function loadRelayList(embedded: unknown, fetchList: () => Promise<unknown>): Promise<RelayList> {
+	const fallback = parseRelayList(embedded);
+	try {
+		const fetched = parseRelayList(await fetchList());
+		return fetched.atualizado >= fallback.atualizado ? fetched : fallback;
+	} catch {
+		return fallback;
+	}
+}
+
 function normalizeUrl(value: unknown, protocol: 'wss:' | 'https:', field: string): string {
 	let url: URL;
 	try {

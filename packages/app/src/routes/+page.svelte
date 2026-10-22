@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { asset } from '$app/paths';
-	import { parseRelayList, type RelayList } from '@lerolero/core';
+	import { loadRelayList, type RelayList } from '@lerolero/core';
+	import embedded from '../../static/relays.json';
 
-	// a lista padrão vem da rede, para poder mudar sem nova versão do app (RNF-36)
-	const relays: Promise<RelayList> = fetch(asset('relays.json'), { cache: 'no-cache' })
-		.then((res) => {
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			return res.json();
-		})
-		.then(parseRelayList);
+	// a lista vem da rede, para poder mudar sem nova versão do app (RNF-36);
+	// a cópia embutida no app é a reserva se o site estiver fora do ar
+	const relays: Promise<RelayList> = loadRelayList(embedded, async () => {
+		const res = await fetch(asset('relays.json'), { cache: 'no-cache' });
+		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		return res.json();
+	});
 </script>
 
 <svelte:head>

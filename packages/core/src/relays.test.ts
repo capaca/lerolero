@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import published from '../../../relays.json' with { type: 'json' };
-import { parseRelayList } from './relays.ts';
+import { loadRelayList, parseRelayList } from './relays.ts';
 
 const valid = {
 	versao: 1,
@@ -39,5 +39,24 @@ describe('parseRelayList', () => {
 		['não é objeto', 'texto', /não é um objeto/]
 	])('recusa %s', (_, input, message) => {
 		expect(() => parseRelayList(input)).toThrow(message);
+	});
+});
+
+describe('loadRelayList', () => {
+	const embedded = { ...valid, atualizado: '2026-10-22' };
+
+	it('usa a lista baixada quando ela é mais nova', async () => {
+		const list = await loadRelayList(embedded, async () => ({ ...valid, atualizado: '2026-11-01', dm: ['wss://novo.example'] }));
+		expect(list.dm).toEqual(['wss://novo.example']);
+	});
+
+	it('mantém a embutida quando a baixada é mais antiga', async () => {
+		const list = await loadRelayList(embedded, async () => ({ ...valid, atualizado: '2026-01-01', dm: ['wss://velho.example'] }));
+		expect(list.atualizado).toBe('2026-10-22');
+	});
+
+	it('cai na embutida se a rede falhar ou a baixada vier quebrada', async () => {
+		expect((await loadRelayList(embedded, () => Promise.reject(new Error('offline')))).atualizado).toBe('2026-10-22');
+		expect((await loadRelayList(embedded, async () => ({ versao: 99 }))).atualizado).toBe('2026-10-22');
 	});
 });

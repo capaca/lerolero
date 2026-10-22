@@ -21,6 +21,9 @@ Formatos concretos das mensagens na rede e dos dados guardados no aparelho. Base
 | Derivação | NIP-06: caminho `m/44'/1237'/0'/0/0` |
 | Proteção no PWA | Chave privada cifrada com AES-GCM; a chave de cifra vem do **PIN** via **Argon2id** (parâmetros mínimos recomendados pela OWASP: 19 MiB de memória, 2 iterações, paralelismo 1; ajustar para ~1 s no aparelho de referência) |
 | Proteção no nativo | Cofre do sistema (Android Keystore, Keychain etc.); PIN opcional |
+| PIN | **6 dígitos** (decidido em 2026-10-22). Familiar para o público leigo; a força vem do Argon2id calibrado. Esquecer o PIN exige restaurar pela frase |
+| Nome de exibição | **Privado** (decidido em 2026-10-22): **não** publicamos perfil (kind `0`). O nome vai só dentro do convite/QR e das mensagens cifradas, então só os contatos ligam a chave a um nome. Outros apps Nostr mostram apenas a chave |
+| Convite (QR e link) | Leva a chave pública, o nome e os relays de DM, para quem recebe poder escrever sem consultar a rede. O link usa o endereço do PWA com os dados depois do `#`, que não chega ao servidor. Até a Q-N1 (domínio), o endereço é o do GitHub Pages: **links criados antes do domínio deixam de funcionar quando ele mudar**, então a Q-N1 precisa estar decidida antes do beta |
 | Relays de DM | Publicados em um evento kind `10050` com 1 a 3 relays (recomendação do NIP-17) |
 
 ## 3. Mensagens na rede
