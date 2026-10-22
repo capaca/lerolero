@@ -204,6 +204,15 @@ export function applyOp(state: GroupState, op: GroupOp): GroupState | undefined 
 	}
 }
 
+export type ManageAction = 'adicionar' | 'remover' | 'renomear' | 'promover' | 'rebaixar';
+
+/** Se eu posso fazer a ação, pelas mesmas regras de quem recebe: a tela só oferece o que vai valer. */
+export function canDo(state: GroupState, me: string, action: ManageAction, target?: string): boolean {
+	if (action === 'adicionar') return isMember(state, me) && state.admins.includes(me) && state.members.length < MAX_GROUP_MEMBERS;
+	if (action === 'remover' && target === me) return false; // sair é outra ação
+	return applyOp(state, { action, author: me, createdAt: 0, targets: target ? [target] : [], subject: 'nome' }) !== undefined;
+}
+
 // ---------- estado a partir dos avisos ----------
 
 export type ReplayResult = {
@@ -518,7 +527,10 @@ function change(
 	now: number
 ): GroupChange {
 	const before = stateOf(conversation);
-	const createdAt = seconds(now);
+	// Avisos no mesmo segundo se desempatam pelo id, ao acaso: "adicionar e já promover" poderia
+	// valer na ordem inversa e a promoção ser recusada. Por isso o aviso sai depois do último da
+	// conversa, mas nunca mais de um minuto à frente (o relógio adiantado de outro não me arrasta).
+	const createdAt = Math.max(seconds(now), Math.min(conversation.lastMessageAt + 1, seconds(now) + 60));
 	const after = applyOp(before, { action, author: me, createdAt, targets: content.targets ?? [], subject: content.subject });
 	if (!after) throw new GroupPermissionError();
 	const groupId = groupIdFrom(conversation);

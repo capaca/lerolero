@@ -6,6 +6,7 @@ import { openStorage } from '../storage/repositories.ts';
 import type { GroupState } from '../storage/records.ts';
 import {
 	addMembers,
+	canDo,
 	controlTags,
 	createGroup,
 	demoteAdmin,
@@ -223,6 +224,36 @@ describe('permissões (docs/06 §3.3)', () => {
 		// o criador não deixa de ser administrador
 		const alices = await conversationOf(alice, groupId);
 		expect(() => demoteAdmin(alices, alice.publicKey, alice.publicKey, 'Alice', tick())).toThrow(GroupPermissionError);
+	});
+
+	it('duas mudanças minhas no mesmo segundo valem na ordem em que fiz (adicionar e depois promover)', async () => {
+		const { alice, bob, carol, groupId } = await family();
+		const dave = await person('Dave');
+		const now = tick();
+		const added = addMembers(await conversationOf(alice, groupId), alice.publicKey, [dave.publicKey], 'Alice', now);
+		await act(alice, added, [bob, carol, dave]);
+		const promoted = promoteAdmin(await conversationOf(alice, groupId), alice.publicKey, dave.publicKey, 'Alice', now);
+		expect(promoted.createdAt).toBeGreaterThan(added.createdAt);
+		await act(alice, promoted, [bob, carol, dave]);
+		expect((await stateOf(bob, groupId)).admins).toContain(dave.publicKey);
+		const notices = (await bob.storage.messages.listByConversation(groupConversationId(groupId), 10)).map((m) => m.notice?.action);
+		expect(notices.slice(-2)).toEqual(['adicionar', 'promover']);
+	});
+
+	it('canDo diz à tela o que cada um pode fazer, com as mesmas regras', async () => {
+		const { alice, bob, carol, groupId } = await family();
+		await act(alice, promoteAdmin(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()), [bob, carol]);
+		const state = await stateOf(carol, groupId);
+		const [a, b, c] = [alice.publicKey, bob.publicKey, carol.publicKey];
+		// criador: tudo, menos tirar a si mesmo
+		expect(['adicionar', 'renomear'].every((x) => canDo(state, a, x as 'adicionar'))).toBe(true);
+		expect([canDo(state, a, 'remover', b), canDo(state, a, 'rebaixar', b), canDo(state, a, 'remover', c)]).toEqual([true, true, true]);
+		expect([canDo(state, a, 'remover', a), canDo(state, a, 'rebaixar', a), canDo(state, a, 'promover', b)]).toEqual([false, false, false]);
+		// administrador: adiciona, renomeia, promove e remove membro comum; não mexe no criador
+		expect([canDo(state, b, 'adicionar'), canDo(state, b, 'renomear'), canDo(state, b, 'promover', c), canDo(state, b, 'remover', c)]).toEqual([true, true, true, true]);
+		expect([canDo(state, b, 'remover', a), canDo(state, b, 'rebaixar', a)]).toEqual([false, false]);
+		// membro comum: nada
+		expect([canDo(state, c, 'adicionar'), canDo(state, c, 'renomear'), canDo(state, c, 'promover', b), canDo(state, c, 'remover', b)]).toEqual([false, false, false, false]);
 	});
 
 	it('ninguém mexe na antiguidade: o horário de entrada é o do aviso', async () => {
