@@ -79,8 +79,8 @@
 			dá para sair do grupo.
 		</li>
 		<li>
-			<strong>Apague uma mensagem.</strong> Segure o dedo sobre ela e escolha <strong>Apagar para mim</strong> ou,
-			nas suas mensagens, <strong>Apagar para todos</strong>.
+			<strong>Copie ou apague uma mensagem.</strong> Segure o dedo sobre ela (o celular vibra de leve) e escolha
+			<strong>Copiar</strong>, <strong>Apagar para mim</strong> ou, nas suas mensagens, <strong>Apagar para todos</strong>.
 		</li>
 	</ol>
 	<p>O app pede o PIN sempre que é aberto. Esqueceu o PIN? Use <strong>Esqueci o PIN</strong> e digite a frase.</p>

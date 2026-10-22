@@ -7,9 +7,18 @@
 		mine,
 		group = false,
 		onclose,
+		oncopy,
 		ondeleteForMe,
 		ondeleteForEveryone
-	}: { mine: boolean; group?: boolean; onclose: () => void; ondeleteForMe: () => void; ondeleteForEveryone: () => void } = $props();
+	}: {
+		mine: boolean;
+		group?: boolean;
+		onclose: () => void;
+		/** só nas mensagens de texto */
+		oncopy?: () => void;
+		ondeleteForMe: () => void;
+		ondeleteForEveryone: () => void;
+	} = $props();
 
 	let confirming = $state(false);
 </script>
@@ -31,6 +40,9 @@
 			<button class="danger" onclick={ondeleteForEveryone}>Apagar para todos</button>
 		</div>
 	{:else}
+		{#if oncopy}
+			<button class="item" onclick={oncopy}><Icon name="copy" /> Copiar</button>
+		{/if}
 		{#if mine}
 			<button class="item" onclick={() => (confirming = true)}><Icon name="trash" /> Apagar para todos</button>
 		{/if}

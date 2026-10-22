@@ -17,6 +17,7 @@ rodam como estão (caminhos de uma pasta temporária, Chrome do macOS, relays re
 | `baloes.mjs` | balões da mesma pessoa agrupados, pontinha só no último; regressão da ordem no mesmo segundo |
 | `data.mjs` | data do dia no topo ao rolar: aparece, troca de dia, some ao parar e no fim, rolagem longa |
 | `novas.mjs` | linha "Mensagens novas" ao abrir e ao chegar, botão de ir para o fim com contagem (duas pessoas, relays reais); regressão da ordem com a fila de envio |
+| `copiar-mensagem.mjs` | "Copiar" no menu da mensagem (botão direito e toque longo), aviso "Mensagem copiada", vibração |
 | `teclado.mjs` | regressão: com o teclado aberto, as últimas mensagens continuam junto do campo |
 | `comentario.mjs`, `rede.mjs`, `copiar.mjs` | enviar comentário, kind 10050 na rede, copiar a frase |
 | `pages-server.mjs` | servidor estático que imita o GitHub Pages (404.html, `.html`, cache opcional) |

@@ -102,7 +102,26 @@
 	function openMenu(message: MessageRecord) {
 		if (message.deleted || message.notice) return;
 		menuFor = message;
+		// vibração curta confirma o toque longo (no iPhone o navegador não vibra)
+		navigator.vibrate?.(15);
 	}
+
+	let copied = $state(false);
+	let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+	async function copyMessage() {
+		const message = menuFor;
+		menuFor = undefined;
+		if (!message) return;
+		try {
+			await navigator.clipboard.writeText(message.text);
+			copied = true;
+			clearTimeout(copiedTimer);
+			copiedTimer = setTimeout(() => (copied = false), 2000);
+		} catch {
+			error = 'Não foi possível copiar a mensagem.';
+		}
+	}
+	onDestroy(() => clearTimeout(copiedTimer));
 
 	function onpointerdown(event: PointerEvent, message: MessageRecord) {
 		// botões e a barra do áudio continuam funcionando normalmente
@@ -395,6 +414,9 @@
 				</div>
 			{/each}
 		</div>
+		{#if copied}
+			<p class="copied" role="status">Mensagem copiada</p>
+		{/if}
 		{#if farFromEnd || pending}
 			<button class="round jump" onclick={() => goToEnd()} aria-label={pending ? `Ir para o fim, ${pending} ${pending === 1 ? 'mensagem nova' : 'mensagens novas'}` : 'Ir para o fim'}>
 				<Icon name="chevron-down" />
@@ -408,6 +430,7 @@
 			mine={menuFor.sender === me}
 			group={!!nameOf}
 			onclose={() => (menuFor = undefined)}
+			oncopy={menuFor.media ? undefined : copyMessage}
 			ondeleteForMe={() => deleteMessage(false)}
 			ondeleteForEveryone={() => deleteMessage(true)}
 		/>
@@ -512,6 +535,21 @@
 	}
 	.floating-day.visible {
 		opacity: 1;
+	}
+	.copied {
+		position: absolute;
+		bottom: 0.8rem;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 1;
+		margin: 0;
+		padding: 0.35rem 0.9rem;
+		border-radius: 999px;
+		background: var(--fg);
+		color: var(--bg);
+		font-size: 0.85rem;
+		white-space: nowrap;
+		pointer-events: none;
 	}
 	.jump {
 		position: absolute;
