@@ -13,6 +13,8 @@
 
 **Prioridade dentro do MVP (MoSCoW):** **Must** = sem isso não há MVP · **Should** = importante, mas pode ser cortado se o prazo apertar · **Could** = só se sobrar tempo.
 
+**Repriorização (decidida em 2026-10-22):** o critério para o resto do MVP passou a ser o uso no dia a dia (o que faz um grupo de amigos usar o app em vez do WhatsApp). Saíram do MVP e foram para a v1: modo foco e o estado "retida" (RF-52, 60–62), entrega em lotes (RF-63) e expiração de mídia com o painel de armazenamento (RF-72, 73). A detecção de perdas (RF-53) foi mantida no MVP.
+
 ## 1. Identidade e conta
 
 | ID | Requisito | Prioridade | Fase |
@@ -79,17 +81,17 @@
 |---|---|---|---|
 | RF-50 | Indicadores enviada → entregue → lida | Must | MVP |
 | RF-51 | Confirmação de leitura ligada por padrão e desativável; quem desliga também deixa de ver as dos outros | Must | MVP |
-| RF-52 | Estado **"retida em modo foco"**, visível só se o destinatário permitir | Should | MVP |
+| RF-52 | Estado **"retida em modo foco"**, visível só se o destinatário permitir | Should | v1 (adiado em 2026-10-22) |
 | RF-53 | Estado **"não entregue / possivelmente perdida"**, com opção de reenviar (Q10 da [Visão](01-visao.md)) | Should | MVP |
 
 ## 7. Atenção e foco
 
 | ID | Requisito | Prioridade | Fase |
 |---|---|---|---|
-| RF-60 | **Modo foco (Reter):** ligar manualmente ou por um tempo ("por 2 horas"); o app continua recebendo, mas só mostra as mensagens quando o modo termina | Must | MVP |
-| RF-61 | Modo foco **agendado** (ex.: todo dia das 22 h às 7 h) | Should | MVP |
-| RF-62 | Exceções no modo foco: contatos escolhidos continuam aparecendo | Could | MVP |
-| RF-63 | **Entrega em lotes:** mensagens novas (de qualquer tipo) aparecem de X em X minutos, em vez de uma a uma. **Desligada por padrão**; o intervalo é configurável pelo usuário. No MVP (PWA, sem push), vale enquanto o app está aberto | Should | MVP |
+| RF-60 | **Modo foco (Reter):** ligar manualmente ou por um tempo ("por 2 horas"); o app continua recebendo, mas só mostra as mensagens quando o modo termina | Must | v1 (adiado em 2026-10-22) |
+| RF-61 | Modo foco **agendado** (ex.: todo dia das 22 h às 7 h) | Should | v1 (adiado em 2026-10-22) |
+| RF-62 | Exceções no modo foco: contatos escolhidos continuam aparecendo | Could | v1 (adiado em 2026-10-22) |
+| RF-63 | **Entrega em lotes:** mensagens novas (de qualquer tipo) aparecem de X em X minutos, em vez de uma a uma. **Desligada por padrão**; o intervalo é configurável pelo usuário. No MVP (PWA, sem push), vale enquanto o app está aberto | Should | v1 (adiado em 2026-10-22) |
 | RF-64 | Aviso automático para quem mandar mensagem durante o modo foco | — | v1 |
 | RF-65 | **Modo foco (Pausar):** o app nem sincroniza; mensagens podem se perder | — | v1 |
 | RF-66 | Resumo periódico ("12 mensagens em 3 conversas") | — | Futuro |
@@ -100,8 +102,8 @@
 |---|---|---|---|
 | RF-70 | **Mídia salva uma única vez:** a mesma foto ou áudio encaminhado em várias conversas ocupa espaço e é baixado uma vez só (identificação por hash) | Must | MVP |
 | RF-71 | Download sob demanda por padrão; download automático configurável | Must | MVP |
-| RF-72 | Expiração automática de mídia antiga: **ligada por padrão, 30 dias**, configurável. Apaga do aparelho a mídia antiga; as mensagens de texto ficam. Mídia marcada como "guardar" ou salva na galeria não expira, e o app avisa antes da primeira limpeza | Should | MVP |
-| RF-73 | Painel de armazenamento: quanto cada conversa e cada tipo de mídia ocupa, com limpeza fácil | Should | MVP |
+| RF-72 | Expiração automática de mídia antiga: **ligada por padrão, 30 dias**, configurável. Apaga do aparelho a mídia antiga; as mensagens de texto ficam. Mídia marcada como "guardar" ou salva na galeria não expira, e o app avisa antes da primeira limpeza | Should | v1 (adiado em 2026-10-22) |
+| RF-73 | Painel de armazenamento: quanto cada conversa e cada tipo de mídia ocupa, com limpeza fácil | Should | v1 (adiado em 2026-10-22) |
 | RF-74 | **Modos de banda:** Econômico / Equilibrado / Qualidade | — | v1 |
 
 ## 9. Sincronização e notificações
@@ -138,13 +140,13 @@
 - A envia uma mensagem com B offline: A vê "enviada".
 - B abre o app 2 dias depois: a mensagem aparece; A vê "entregue" na próxima vez que abrir o app.
 
-**Modo foco (RF-60, RF-52)**
+**Modo foco (RF-60, RF-52)** — v1, adiado em 2026-10-22
 - B liga o modo foco por 1 hora. A envia 3 mensagens: nada aparece para B durante a hora.
 - Se B permitiu mostrar o estado, A vê "retida em modo foco".
 - Ao fim da hora, as 3 mensagens aparecem para B, na ordem.
 
 **Mídia salva uma vez (RF-70)**
-- A mesma imagem recebida em 5 conversas é baixada uma vez e ocupa o espaço de uma imagem no painel de armazenamento.
+- A mesma imagem recebida em 5 conversas é baixada uma vez e ocupa o espaço de uma imagem (no painel de armazenamento quando ele existir, na v1).
 - Apagar a imagem de uma conversa não a apaga das outras.
 
 **Perda de identidade (RF-05, RF-06)**

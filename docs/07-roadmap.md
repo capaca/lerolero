@@ -20,8 +20,8 @@ gantt
   M0 Fundação              :m0, 2026-11, 3w
   M1 Conversas 1:1         :m1, after m0, 8w
   M2 Mídia                 :m2, after m1, 6w
-  M3 Grupos e conversa     :m3, after m2, 7w
-  M4 Atenção e segurança   :m4, after m3, 5w
+  M3 Conversa do dia a dia :m3, after m2, 6w
+  M4 Segurança e confiança :m4, after m3, 4w
   M5 Polimento             :m5, after m4, 4w
   Beta fechado             :b, after m5, 6w
   section Lançamento
@@ -30,9 +30,27 @@ gantt
   v1 Android + desktop     :v1, after b, 26w
 ```
 
-Somando: **~33 semanas de desenvolvimento + 6 de beta** → MVP público por volta do **3º trimestre de 2027**; v1 por volta do **1º trimestre de 2028**.
+Somando: **~31 semanas de desenvolvimento + 6 de beta** (eram 33 antes da repriorização de 2026-10-22) → MVP público por volta do **3º trimestre de 2027**; v1 por volta do **1º trimestre de 2028**.
 
 ## MVP (PWA)
+
+### Ordem do restante do MVP (repriorizada em 2026-10-22)
+
+Critério escolhido pelo Pedro: **uso no dia a dia**, o que faz um grupo de amigos usar o app em vez do WhatsApp. A suíte e2e vem antes, para os bugs pararem de chegar ao celular. Ritmo real até aqui: de 16 a 22/10 saíram M0 (menos as esperas), M1, quase todo o M2 e os grupos, o equivalente a ~15 semanas das estimativas (Q-M1).
+
+1. Suíte de testes de ponta a ponta na CI (M2).
+2. Fotos e encaminhar sem reenviar (M2).
+3. Responder e reagir (M3).
+4. Status de entrega e de leitura (M3).
+5. Etapa 3 de UX/UI: aviso de sem conexão, tamanho da letra, nível do microfone (M3).
+6. Cartão de perfil privado com nome e foto (M3).
+7. Editar mensagem e mencionar com `@` (M3).
+8. Backup cifrado de contatos, grupos e configurações (M4).
+9. Pedidos de mensagem, bloqueio e prova de trabalho (M4).
+10. Detecção de perdas (M4).
+11. Polimento (M5), revisão de prontidão e beta.
+
+**Saíram do MVP para a v1** (decidido em 2026-10-22): modo foco com o estado "retida" (RF-52, 60–62), entrega em lotes (RF-63) e expiração de mídia com o painel de armazenamento (RF-72, 73). Ficam bem definidos nos docs para quando chegar a vez.
 
 ### M0 — Fundação (~3 semanas)
 
@@ -60,41 +78,47 @@ Somando: **~33 semanas de desenvolvimento + 6 de beta** → MVP público por vol
 - Áudio: gravação, envio, reprodução 1x/1,5x/2x (RF-40); decidir o formato no Safari (Q-R2).
 - Fotos: compressão, prévia leve, download sob demanda (RF-41, 71).
 - Cifra e envio ao Blossom; deduplicação por hash; encaminhar sem reenviar (RF-42, 70).
-- Expiração de mídia (30 dias, "guardar") e painel de armazenamento (RF-72, 73).
+- ~~Expiração de mídia (30 dias, "guardar") e painel de armazenamento (RF-72, 73).~~ Adiado para a v1 (2026-10-22).
 - **Suite de testes de ponta a ponta** (`packages/e2e`, Playwright): cadastro e PIN, restauração, convite e QR, conversa entre duas pessoas, áudio, atualização do app e comentário. Roda na CI a cada push contra o relay e o Blossom falsos (sem internet) e, uma vez por dia ou sob demanda, contra a rede real. Daqui em diante, cada funcionalidade nova entra com o seu teste.
-- Cartão de perfil privado com nome e foto (Q-P5, RF-02).
+- ~~Cartão de perfil privado com nome e foto (Q-P5, RF-02).~~ Passou para o M3 (2026-10-22).
 - **Excluir áudio e mídia:** apagar para mim (mensagem e arquivo no aparelho) e apagar para todos (pedido cifrado ao contato, como no RF-25, e remoção do arquivo dos servidores Blossom por quem enviou).
 - **Melhorias de UX/UI** (escolhidas pelo Pedro em 2026-10-22), em 3 etapas:
   1. Tela inicial: lista de conversas ocupando a tela, com ícones de Contatos e Ajustes e botão flutuante de nova conversa; avatares com iniciais (cor fixa por contato) na lista e no topo da conversa; estado vazio com "Convidar alguém" e "Ler QR code".
   2. Conversa: balões seguidos da mesma pessoa agrupados; data do dia presa no topo ao rolar; botão "ir para o fim" com o número de mensagens novas e linha "Mensagens novas"; "Copiar" no menu da mensagem, com vibração curta ao abrir.
-  3. Geral: aviso de "sem conexão"; tamanho da letra em Ajustes (Normal, Grande, Muito grande; RNF-65); nível do microfone durante a gravação.
+  3. ~~Geral~~ (passou para o M3 em 2026-10-22): aviso de "sem conexão"; tamanho da letra em Ajustes (Normal, Grande, Muito grande; RNF-65); nível do microfone durante a gravação.
 - **Ajustes pedidos pelo Pedro depois de usar o app (2026-10-22):** ✅ recarregar a página sem pedir o PIN se o app foi usado nos últimos 5 minutos (T16); ✅ áudio a ~28 kbps, porque em lugar barulhento a voz ficava ruim. O controle automático de volume, ligado junto, cortava a voz no começo dos áudios gravados em lugar barulhento (visto pelo Pedro no celular) e foi desligado em 2026-10-22; o resto ficou melhor com a taxa maior. Pedro conferiu: sem cortes, voz alta e clara, mas o som ainda fica **um pouco feio** em lugar barulhento (só registrado; candidatos: RNNoise, acima, ou ajustar a taxa). Se ainda não bastar, supressão de ruído forte no aparelho (RNNoise em WebAssembly, ~150 KB a mais no app). Conferido: a hora mostrada na mensagem já é a do envio (vem do celular de quem enviou).
 - **Aviso de versão nova mais rápido** (notado pelo Pedro em 2026-10-22, só registrado): hoje o aviso pode levar 10 minutos ou mais depois da publicação. A CI leva ~1 minuto; o GitHub Pages guarda os arquivos em cache por até 10 minutos (`max-age=600`); e o app só procura versão nova quando volta para a tela. Melhorias possíveis: procurar também a cada poucos minutos com o app aberto. O cache do Pages não dá para encurtar; com domínio próprio (Q-N1) e outro hospedeiro, sim.
 - ~~**Bug: o teclado esconde as mensagens numa conversa com poucas mensagens**~~ (visto pelo Pedro no celular em 2026-10-22) ✅ corrigido em 2026-10-22: no Chrome do Android o teclado só encolhia a parte visível e o navegador empurrava a página toda para cima. Agora a meta viewport pede `interactive-widget=resizes-content` (a página encolhe de verdade), as mensagens ficam alinhadas junto do campo e a conversa que estava no fim continua no fim quando a área encolhe. Teste de regressão em `prototipos/e2e-rascunho/teclado.mjs`, a levar para a suíte e2e.
 - ~~**Bug: mensagens mandadas no mesmo segundo aparecem fora de ordem**~~ (achado no teste da etapa 2 de UX, 2026-10-22) ✅ corrigido em 2026-10-22: o horário do Nostr é em segundos e o empate era decidido pelo id, ao acaso. Agora cada mensagem sai datada depois da última da conversa (no máximo 60 s à frente), como já acontecia com os avisos de grupo. Teste de regressão no core (`messaging.test.ts`). Faltava um caso, achado no teste do botão "ir para o fim": a primeira mensagem para alguém novo espera a busca dos relays, e a segunda, mandada nesse meio-tempo, pegava o mesmo segundo; agora os envios saem em fila (regressão em `prototipos/e2e-rascunho/novas.mjs`).
 
-**Andamento (2026-10-22):** Blossom, áudio (Opus a ~17 kbps, Q-R2 resolvida) e exclusão de mensagens e áudios prontos e publicados; etapa 1 de UX/UI publicada. **Grupos (RF-30..33) adiantados do M3** a pedido do Pedro (2026-10-22): são o uso principal no Brasil e mudam a tela da conversa (nome de quem escreveu nos balões), então a etapa 2 de UX vem depois, já pensada para grupos. Ordem a seguir: grupos (✅ core: dados e envio/recebimento; ✅ tela: criar o grupo e conversar nele, com avisos na conversa e nome de quem escreveu nos balões; ✅ gestão: tela de detalhes do grupo, aberta ao tocar no nome do grupo no topo da conversa (pedido do Pedro em 2026-10-22), com membros e papéis, adicionar pessoas, remover, promover e rebaixar administradores, renomear e sair; cada ação só aparece para quem tem permissão), etapa 2 de UX/UI (✅ balões seguidos agrupados, com a pontinha só no último; ✅ data do dia no topo enquanto se rola, que some quando a rolagem para; ✅ botão "ir para o fim" com o número de mensagens que chegaram e linha "Mensagens novas", que ao abrir fica antes da primeira não lida; ✅ "Copiar" no menu da mensagem, com vibração curta ao abrir — etapa 2 concluída), etapa 3 de UX/UI, suite e2e, fotos, cartão de perfil, expiração.
+**Andamento (2026-10-22):** Blossom, áudio (Opus a ~17 kbps, Q-R2 resolvida) e exclusão de mensagens e áudios prontos e publicados; etapa 1 de UX/UI publicada. **Grupos (RF-30..33) adiantados do M3** a pedido do Pedro (2026-10-22): são o uso principal no Brasil e mudam a tela da conversa (nome de quem escreveu nos balões), então a etapa 2 de UX vem depois, já pensada para grupos. Ordem a seguir: grupos (✅ core: dados e envio/recebimento; ✅ tela: criar o grupo e conversar nele, com avisos na conversa e nome de quem escreveu nos balões; ✅ gestão: tela de detalhes do grupo, aberta ao tocar no nome do grupo no topo da conversa (pedido do Pedro em 2026-10-22), com membros e papéis, adicionar pessoas, remover, promover e rebaixar administradores, renomear e sair; cada ação só aparece para quem tem permissão), etapa 2 de UX/UI (✅ balões seguidos agrupados, com a pontinha só no último; ✅ data do dia no topo enquanto se rola, que some quando a rolagem para; ✅ botão "ir para o fim" com o número de mensagens que chegaram e linha "Mensagens novas", que ao abrir fica antes da primeira não lida; ✅ "Copiar" no menu da mensagem, com vibração curta ao abrir — etapa 2 concluída), suite e2e e fotos (nova ordem acima; a etapa 3 de UX e o cartão de perfil passaram para o M3, a expiração para a v1).
 
 **Pronto quando:** os critérios de aceite "Mídia salva uma vez" passam; 1 minuto de áudio fica em torno de 210 KB e uma foto em até 200 KB.
 
-### M3 — Grupos e recursos de conversa (~7 semanas)
+### M3 — Conversa do dia a dia (~6 semanas)
+
+Antes "Grupos e recursos de conversa"; os grupos foram adiantados para o M2 e o marco foi reorganizado em 2026-10-22.
 
 - ~~Grupos de até 20 com tag `g` e eventos de controle; administrador; remover membro (RF-30..33).~~ Adiantado para o M2 (2026-10-22).
-- Responder, reagir, editar, apagar para todos (RF-22..25).
-- Mencionar alguém no grupo com `@` (RF-35). Avaliar se a menção fura o modo foco, como exceção (RF-61).
+- Responder e reagir (RF-22, 23).
 - Status de entrega com confirmações agrupadas; confirmação de leitura desativável (RF-50, 51).
-- Detecção de perdas: numeração por conversa + pedido de reenvio + prazo de 7 dias (RF-53).
+- Etapa 3 de UX/UI (veio do M2): aviso de "sem conexão"; tamanho da letra em Ajustes (Normal, Grande, Muito grande; RNF-65); nível do microfone durante a gravação.
+- Cartão de perfil privado com nome e foto (Q-P5, RF-02; veio do M2).
+- Editar mensagem (RF-24). ~~Apagar para todos (RF-25)~~ feito no M2.
+- Mencionar alguém no grupo com `@` (RF-35). Sem modo foco no MVP, não há exceção a avaliar por enquanto (RF-61, v1).
 
-**Pronto quando:** um grupo de 5 pessoas funciona com entrada e saída de membros; os status aparecem corretamente; uma mensagem apagada propositalmente de um relay de teste é detectada e reenviada.
+**Pronto quando:** um grupo de 5 pessoas conversa com respostas, reações e menções; os status aparecem corretamente.
 
-### M4 — Atenção e segurança (~5 semanas)
+### M4 — Segurança e confiança (~4 semanas)
 
-- Modo foco (Reter): manual, por tempo, agendado, exceções; estado "retida" (RF-52, 60..62).
-- Entrega em lotes, desligada por padrão (RF-63).
-- Pedidos de mensagem, bloqueio, prova de trabalho (RF-12, 13, 90).
+Antes "Atenção e segurança"; o modo foco e a entrega em lotes foram para a v1 (2026-10-22) e a detecção de perdas veio do M3.
+
 - Backup cifrado de contatos, grupos e configurações (RF-06).
+- Pedidos de mensagem, bloqueio, prova de trabalho (RF-12, 13, 90).
+- Detecção de perdas: numeração por conversa + pedido de reenvio + prazo de 7 dias (RF-53).
+- ~~Modo foco (Reter) e estado "retida" (RF-52, 60..62); entrega em lotes (RF-63).~~ Adiados para a v1 (2026-10-22).
 
-**Pronto quando:** os critérios de aceite "Modo foco" e "Perda de identidade" passam; a prova de trabalho leva menos de 1 s no aparelho de referência.
+**Pronto quando:** o critério de aceite "Perda de identidade" passa; a prova de trabalho leva menos de 1 s no aparelho de referência; uma mensagem apagada propositalmente de um relay de teste é detectada e reenviada.
 
 ### M5 — Polimento (~4 semanas)
 
@@ -143,7 +167,9 @@ Revisão do app inteiro com olhar de operação. Como não há servidor do proje
 | Chave no cofre do sistema; PIN/biometria opcional | RF-07, RNF-42 |
 | Figurinhas, incluindo a figurinha sonora (Q-F5, Q-P2) | RF-43 |
 | Modos de banda | RF-74 |
-| Modo foco Pausar; aviso automático | RF-64, 65 |
+| Modo foco: Reter (manual, por tempo, agendado, exceções) e estado "retida" (adiados do MVP em 2026-10-22); Pausar; aviso automático | RF-52, 60–62, 64, 65 |
+| Entrega em lotes (adiada do MVP em 2026-10-22) | RF-63 |
+| Expiração de mídia e painel de armazenamento (adiados do MVP em 2026-10-22) | RF-72, 73 |
 | Mensagens temporárias | RF-27 |
 | Builds reproduzíveis do APK | RNF-46 |
 
