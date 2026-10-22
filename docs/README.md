@@ -31,6 +31,7 @@ Cada decisão relevante tem um ADR em [`adr/`](adr/), seguindo o [template](adr/
 | [0004](adr/0004-midia.md) | Mídia (cifrada, Blossom, deduplicada) | ✅ aceito |
 | [0005](adr/0005-notificacoes.md) | Notificações (UnifiedPush no Android) | ✅ aceito |
 | [0006](adr/0006-fluxo-de-trabalho-e-releases.md) | Fluxo de trabalho e releases (PR, testes por rótulo, SemVer) | ✅ aceito |
+| [0007](adr/0007-homologacao.md) | Homologação antes da produção (outra organização GitHub, a cada merge) | ✅ aceito |
 
 ## Estudos
 

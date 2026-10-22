@@ -51,8 +51,11 @@ Escolhas do Pedro em 2026-10-22:
   `verificar`. O job roda e termina verde, porque uma checagem obrigatória que não roda deixa o PR esperando para sempre.
 - **Deploy só na release** (`release.yml`, disparo manual na `main` escolhendo `patch`, `minor` ou `major`): calcula a
   versão a partir da última tag, verifica, monta o site, publica no Pages e só então cria a tag `vX.Y.Z` e a GitHub
-  Release com as notas geradas dos PRs. Uma release por vez.
-- **SemVer 0.x** até o beta (minor = funcionalidade nova, patch = correção); a 1.0 marca a saída do beta. O número
+  Release com as notas geradas dos PRs. Uma release por vez. Desde a [ADR-0007](0007-homologacao.md) (2026-10-22), cada
+  merge vai antes para a homologação, e a release promove o commit validado lá.
+- **SemVer 0.x** até o beta (minor = funcionalidade nova, patch = correção); a 1.0 marca a saída do beta. Regra
+  detalhada em 2026-10-22 ([ADR-0007](0007-homologacao.md)): minor se algum PR desde a última tag traz algo que o
+  testador vê de novo; patch se só correções; nada a lançar se só testes, docs ou bastidores. O número
   aparece em Ajustes e vai no "Enviar comentário". O `version` do SvelteKit continua sendo o do build e nomeia o cache do
   service worker.
 - Tags `v*` não podem ser apagadas nem movidas.

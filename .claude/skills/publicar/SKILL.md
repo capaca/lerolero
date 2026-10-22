@@ -65,10 +65,21 @@ gh run list --branch "$(git branch --show-current)" --limit 1 --json databaseId 
 
 ## 5. Release
 
-Quando o Pedro pedir para publicar (ou juntar o que já entrou), dispare a release na `main`:
+Quando o Pedro pedir para publicar (ou juntar o que já entrou), decida o tipo pelos PRs desde a última tag
+(regra da ADR-0007):
 
 ```bash
-gh workflow run release.yml -f tipo=minor   # minor = funcionalidade nova; patch = só correção
+git fetch -q --tags && git log --oneline "$(git describe --tags --abbrev=0 origin/main 2>/dev/null || git rev-list --max-parents=0 origin/main)"..origin/main
+```
+
+- **minor**: algum PR traz algo que o testador vê de novo (funcionalidade, tela, fluxo, texto que muda o uso);
+- **patch**: só correções e ajustes que não mudam o que se faz no app;
+- **nada a lançar**: só testes, docs ou bastidores. Uma release pede ao testador para atualizar; não gaste à toa.
+
+Mostre ao Pedro a lista de PRs com o tipo sugerido e espere a confirmação. Só então dispare na `main`:
+
+```bash
+gh workflow run release.yml -f tipo=minor   # ou patch
 gh run list --workflow release.yml --limit 1 --json databaseId \
   --jq '"https://github.com/capaca/lerolero/actions/runs/\(.[0].databaseId)"'
 ```
