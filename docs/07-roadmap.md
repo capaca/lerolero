@@ -61,6 +61,10 @@ Somando: **~33 semanas de desenvolvimento + 6 de beta** → MVP público por vol
 - Fotos: compressão, prévia leve, download sob demanda (RF-41, 71).
 - Cifra e envio ao Blossom; deduplicação por hash; encaminhar sem reenviar (RF-42, 70).
 - Expiração de mídia (30 dias, "guardar") e painel de armazenamento (RF-72, 73).
+- **Suite de testes de ponta a ponta** (`packages/e2e`, Playwright): cadastro e PIN, restauração, convite e QR, conversa entre duas pessoas, áudio, atualização do app e comentário. Roda na CI a cada push contra o relay e o Blossom falsos (sem internet) e, uma vez por dia ou sob demanda, contra a rede real. Daqui em diante, cada funcionalidade nova entra com o seu teste.
+- Cartão de perfil privado com nome e foto (Q-P5, RF-02).
+
+**Andamento (2026-10-22):** Blossom e áudio prontos (Opus a ~17 kbps, Q-R2 resolvida). Ordem combinada a seguir: suite e2e, fotos, cartão de perfil, expiração.
 
 **Pronto quando:** os critérios de aceite "Mídia salva uma vez" passam; 1 minuto de áudio fica em torno de 120 KB e uma foto em até 200 KB.
 
