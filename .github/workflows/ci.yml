@@ -16,6 +16,7 @@ concurrency:
 jobs:
   verificar:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4 # versão do pnpm vem do campo packageManager
@@ -32,9 +33,15 @@ jobs:
         run: pnpm build
         env:
           BASE_PATH: /lerolero
+      # o protótipo fica fora do workspace (npm); o cache evita baixar tudo a cada execução,
+      # e o fetch-timeout curto faz um download travado ser repetido em 30 s, não em 5 min
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-medicao-${{ hashFiles('prototipos/medicao/package-lock.json') }}
       - name: Build do protótipo de medição
         working-directory: prototipos/medicao
-        run: npm ci && npm run build
+        run: npm ci --prefer-offline --no-audit --no-fund --fetch-timeout=30000 && npm run build
       # o app ocupa a raiz do site; o protótipo fica em /medicao/
       - name: Monta o site
         run: |
