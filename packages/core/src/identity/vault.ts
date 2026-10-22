@@ -178,12 +178,22 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 		 * no conteúdo e a chave nas tags). Um gift wrap vai para o destinatário e outro
 		 * para mim, que vira minha cópia em outros aparelhos. `extraTags` leva as tags
 		 * do app (ex.: ["nome", …] na primeira mensagem; as do arquivo no kind 15).
+		 * `createdAt` vem de `sendTime`, para não empatar com a mensagem anterior.
 		 */
-		wrapDirectMessage(recipient: string, content: string, extraTags: string[][] = [], kind: 14 | 15 | 5 = 14): WrappedMessage {
+		wrapDirectMessage(
+			recipient: string,
+			content: string,
+			extraTags: string[][] = [],
+			kind: 14 | 15 | 5 = 14,
+			createdAt?: number
+		): WrappedMessage {
 			if (!secretKey) throw new LockedError();
 			if (!isPublicKey(recipient)) throw new Error('destinatário inválido');
 			checkMessage(kind, content, extraTags);
-			const rumor = createRumor({ kind, content, tags: [['p', recipient], ...extraTags] }, secretKey) as Rumor;
+			const rumor = createRumor(
+				{ kind, content, tags: [['p', recipient], ...extraTags], ...(createdAt !== undefined ? { created_at: createdAt } : {}) },
+				secretKey
+			) as Rumor;
 			const me = getPublicKey(secretKey);
 			return {
 				rumor,

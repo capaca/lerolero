@@ -40,6 +40,7 @@ import {
 	removeFromBlossom,
 	renameContact,
 	storeIncoming,
+	sendTime,
 	storeOutgoing,
 	sessionIsOpen,
 	SyncEngine,
@@ -382,7 +383,13 @@ class Session {
 			if (!conversation?.group?.amMember) throw new NotInGroupError();
 			const groupTag = ['g', conversationId.slice('grupo:'.length)];
 			const nameTags = kind === 5 ? [] : await nameTagFor(storage, conversationId, this.current.displayName);
-			const wrapped = await vault.wrapGroupMessage(conversation.members, content, [...nameTags, ...tags, groupTag], kind);
+			const wrapped = await vault.wrapGroupMessage(
+				conversation.members,
+				content,
+				[...nameTags, ...tags, groupTag],
+				kind,
+				sendTime(conversation)
+			);
 			if (store) {
 				await storeOutgoing(storage, wrapped.rumor);
 				this.version++;
@@ -394,7 +401,13 @@ class Session {
 		const recipient = conversationId.slice('direta:'.length);
 		const relays = await this.deliveryRelays(recipient);
 		const nameTags = kind === 5 ? [] : await nameTagFor(storage, recipient, this.current.displayName);
-		const wrapped = await vault.wrapDirectMessage(recipient, content, [...nameTags, ...tags], kind);
+		const wrapped = await vault.wrapDirectMessage(
+			recipient,
+			content,
+			[...nameTags, ...tags],
+			kind,
+			sendTime(await storage.conversations.get(conversationId))
+		);
 		if (store) {
 			await storeOutgoing(storage, wrapped.rumor, recipient);
 			this.version++;

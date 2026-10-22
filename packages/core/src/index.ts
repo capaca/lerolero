@@ -55,6 +55,7 @@ export {
 	mediaTags,
 	NAME_TAG,
 	nameTagFor,
+	sendTime,
 	storeIncoming,
 	storeOutgoing,
 	type StoredMessage

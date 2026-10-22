@@ -12,7 +12,7 @@ import type { Storage } from '../storage/repositories.ts';
 import type { ConversationRecord, GroupEventRecord, GroupInfo, GroupMember, GroupNotice, GroupState, MessageRecord } from '../storage/records.ts';
 import { contactName } from '../contacts/contacts.ts';
 import { toHex } from '../media/crypto.ts';
-import { kindOf, NAME_TAG, preview as previewOf, refreshConversation } from './messaging.ts';
+import { kindOf, NAME_TAG, preview as previewOf, refreshConversation, sendTime } from './messaging.ts';
 
 /** Kind próprio dos avisos de grupo (faixa 4440–4449 reservada ao Lero-lero, Q-P1). */
 export const GROUP_CONTROL_KIND = 4440;
@@ -527,10 +527,8 @@ function change(
 	now: number
 ): GroupChange {
 	const before = stateOf(conversation);
-	// Avisos no mesmo segundo se desempatam pelo id, ao acaso: "adicionar e já promover" poderia
-	// valer na ordem inversa e a promoção ser recusada. Por isso o aviso sai depois do último da
-	// conversa, mas nunca mais de um minuto à frente (o relógio adiantado de outro não me arrasta).
-	const createdAt = Math.max(seconds(now), Math.min(conversation.lastMessageAt + 1, seconds(now) + 60));
+	// sem isso, "adicionar e já promover" no mesmo segundo poderia valer na ordem inversa
+	const createdAt = sendTime(conversation, now);
 	const after = applyOp(before, { action, author: me, createdAt, targets: content.targets ?? [], subject: content.subject });
 	if (!after) throw new GroupPermissionError();
 	const groupId = groupIdFrom(conversation);

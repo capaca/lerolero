@@ -15,6 +15,7 @@ import {
 	mediaTags,
 	NAME_TAG,
 	nameTagFor,
+	sendTime,
 	storeIncoming,
 	storeOutgoing
 } from './messaging.ts';
@@ -52,6 +53,34 @@ describe('conversas 1:1', () => {
 		const got = await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(toRecipient));
 		expect(got?.message).toMatchObject({ text: 'oi Bob', status: 'recebida', conversationId: directConversationId(alice.publicKey) });
 		expect(got?.conversation).toMatchObject({ unread: 1, lastMessagePreview: 'oi Bob' });
+	});
+
+	// Regressão (2026-10-22): mensagens no mesmo segundo apareciam fora de ordem para os dois lados.
+	it('várias mensagens no mesmo segundo aparecem na ordem em que foram enviadas', async () => {
+		const alice = await device();
+		const bob = await device();
+		const conversationId = directConversationId(bob.publicKey);
+		const now = Date.now();
+		const texts = ['oi', 'tudo bem?', 'pode trazer o bolo', 'até já', 'tchau'];
+		for (const text of texts) {
+			const createdAt = sendTime(await alice.storage.conversations.get(conversationId), now);
+			const w = alice.vault.wrapDirectMessage(bob.publicKey, text, [], 14, createdAt);
+			await storeOutgoing(alice.storage, w.rumor, bob.publicKey);
+			await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(w.toRecipient));
+		}
+		const mine = await alice.storage.messages.listByConversation(conversationId, 10);
+		const theirs = await bob.storage.messages.listByConversation(directConversationId(alice.publicKey), 10);
+		expect(mine.map((m) => m.text)).toEqual(texts);
+		expect(theirs.map((m) => m.text)).toEqual(texts);
+	});
+
+	it('o horário de envio passa da última mensagem, mas no máximo um minuto à frente', () => {
+		const now = 1_000_000_000;
+		expect(sendTime(undefined, now)).toBe(1_000_000);
+		expect(sendTime({ lastMessageAt: 999_000 }, now)).toBe(1_000_000);
+		expect(sendTime({ lastMessageAt: 1_000_000 }, now)).toBe(1_000_001);
+		// relógio de outra pessoa uma hora adiantado
+		expect(sendTime({ lastMessageAt: 1_003_600 }, now)).toBe(1_000_060);
 	});
 
 	it('a minha cópia aparece como enviada no meu outro aparelho', async () => {

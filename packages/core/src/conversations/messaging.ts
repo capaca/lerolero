@@ -18,6 +18,18 @@ export const directConversationId = (other: string) => `direta:${other}`;
 
 const PREVIEW_LENGTH = 80;
 
+/**
+ * Horário de uma mensagem ou aviso que eu envio, em segundos (o do Nostr). No mesmo segundo,
+ * a ordem se desempata pelo id, ao acaso: duas mensagens mandadas depressa apareciam trocadas.
+ * Por isso sai depois da última da conversa, mas nunca mais de um minuto à frente (o relógio
+ * adiantado de outra pessoa não me arrasta).
+ */
+export function sendTime(conversation: Pick<ConversationRecord, 'lastMessageAt'> | undefined, now = Date.now()): number {
+	const current = Math.floor(now / 1000);
+	if (!conversation) return current;
+	return Math.max(current, Math.min(conversation.lastMessageAt + 1, current + 60));
+}
+
 export function kindOf(message: Pick<MessageRecord, 'media'>): 'texto' | 'audio' | 'arquivo' {
 	if (!message.media) return 'texto';
 	return message.media.type.startsWith('audio/') ? 'audio' : 'arquivo';
