@@ -115,6 +115,8 @@ class Session {
 	private foundRelays = new Map<string, string[]>();
 	/** gravação da sessão aberta em andamento: bloquear espera, senão ela voltaria depois de apagada */
 	private savingSession?: Promise<void>;
+	/** fila de envios (sendTo) */
+	private sending: Promise<void> = Promise.resolve();
 
 	async init() {
 		this.identity = await storage.identity.get();
@@ -376,7 +378,16 @@ class Session {
 	 * A mensagem aparece na hora como "enviando" (RNF-12) e segue pela fila; sem internet,
 	 * sai quando a conexão voltar. `store: false` para o que não vira mensagem (pedido de apagar).
 	 */
-	private async sendTo(conversationId: string, content: string, tags: string[][], kind: 14 | 15 | 5, store = true) {
+	private sendTo(conversationId: string, content: string, tags: string[][], kind: 14 | 15 | 5, store = true) {
+		// Em fila: o horário de cada mensagem sai depois da anterior (sendTime), e a primeira para
+		// alguém espera a busca dos relays dele; sem a fila, a segunda pegava o mesmo segundo e
+		// chegava trocada (2026-10-22).
+		const run = this.sending.then(() => this.sendNow(conversationId, content, tags, kind, store));
+		this.sending = run.catch(() => {});
+		return run;
+	}
+
+	private async sendNow(conversationId: string, content: string, tags: string[][], kind: 14 | 15 | 5, store: boolean) {
 		const network = this.requireNetwork();
 		if (conversationId.startsWith('grupo:')) {
 			const conversation = await storage.conversations.get(conversationId);
