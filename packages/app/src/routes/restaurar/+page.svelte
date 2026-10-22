@@ -12,9 +12,20 @@
 	let busy = $state(false);
 	let error = $state('');
 
+	// PIN em dois campos: completar o 1º pula para o 2º; se não bater, treme e apaga o 2º
+	let pinAgainInput = $state<PinInput>();
+	let pinShakes = $state(0);
+	function pinMismatch() {
+		error = 'Os dois PINs não são iguais.';
+		pinAgain = '';
+		pinShakes++;
+		navigator.vibrate?.(150);
+		void pinAgainInput?.focus();
+	}
+
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
-		if (pin !== pinAgain) return (error = 'Os dois PINs não são iguais.');
+		if (pin !== pinAgain) return pinMismatch();
 		busy = true;
 		error = '';
 		try {
@@ -38,8 +49,16 @@
 		<label for="nome">Seu nome</label>
 		<input id="nome" maxlength="40" autocomplete="nickname" required bind:value={name} />
 		<p class="hint">O nome fica só no aparelho e com seus contatos; por isso pedimos de novo.</p>
-		<PinInput id="pin" label="Crie um PIN de 6 números para este aparelho" bind:value={pin} />
-		<PinInput id="pin2" label="Digite o PIN de novo" bind:value={pinAgain} />
+		<PinInput id="pin" label="Crie um PIN de 6 números para este aparelho" bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
+		<PinInput
+			bind:this={pinAgainInput}
+			id="pin2"
+			label="Digite o PIN de novo"
+			bind:value={pinAgain}
+			error={!!error && !pinAgain}
+			shakes={pinShakes}
+			oncomplete={() => pin !== pinAgain && pinMismatch()}
+		/>
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
 		<div class="actions">
 			<button class="primary" type="submit" disabled={busy}>{busy ? 'Recuperando…' : 'Recuperar conta'}</button>

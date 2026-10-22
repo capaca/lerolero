@@ -15,6 +15,18 @@
 	let words = $state<string[]>([]);
 	let wroteItDown = $state(false);
 	let error = $state('');
+	let pinForm = $state<HTMLFormElement>();
+
+	// PIN em dois campos: completar o 1º pula para o 2º; se não bater, treme e apaga o 2º
+	let pinAgainInput = $state<PinInput>();
+	let pinShakes = $state(0);
+	function pinMismatch() {
+		error = 'Os dois PINs não são iguais.';
+		pinAgain = '';
+		pinShakes++;
+		navigator.vibrate?.(150);
+		void pinAgainInput?.focus();
+	}
 
 	function submitName(event: SubmitEvent) {
 		event.preventDefault();
@@ -24,7 +36,7 @@
 	async function submitPin(event: SubmitEvent) {
 		event.preventDefault();
 		if (pin.length !== 6) return (error = 'O PIN precisa ter 6 números.');
-		if (pin !== pinAgain) return (error = 'Os dois PINs não são iguais.');
+		if (pin !== pinAgain) return pinMismatch();
 		error = '';
 		step = 'criando';
 		try {
@@ -62,9 +74,17 @@
 			O PIN protege sua conta neste aparelho e será pedido sempre que você abrir o app. Não use datas de
 			aniversário nem 123456.
 		</p>
-		<form onsubmit={submitPin}>
-			<PinInput id="pin" label="PIN de 6 números" bind:value={pin} autofocus />
-			<PinInput id="pin2" label="Digite o PIN de novo" bind:value={pinAgain} />
+		<form bind:this={pinForm} onsubmit={submitPin}>
+			<PinInput id="pin" label="PIN de 6 números" bind:value={pin} autofocus oncomplete={() => pinAgainInput?.focus()} />
+			<PinInput
+				bind:this={pinAgainInput}
+				id="pin2"
+				label="Digite o PIN de novo"
+				bind:value={pinAgain}
+				error={!!error && !pinAgain}
+				shakes={pinShakes}
+				oncomplete={() => (pin === pinAgain ? pinForm?.requestSubmit() : pinMismatch())}
+			/>
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 			<div class="actions">
 				<button class="primary" type="submit" disabled={step === 'criando'}>

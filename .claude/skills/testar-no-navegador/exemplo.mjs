@@ -42,7 +42,6 @@ async function createAccount(page, name) {
   await page.waitForSelector('#pin')
   await type(page, '#pin', PIN)
   await type(page, '#pin2', PIN)
-  await clickText(page, 'Criar conta')
   await page.waitForFunction(() => document.body.innerText.includes('Sua frase de recuperação'), { timeout: 20000 })
   return page.$$eval('ol li', (lis) => lis.map((li) => li.textContent.replace(/^\d+/, '').trim()))
 }

@@ -12,6 +12,8 @@
 	let checking = $state(false);
 	let done = $state(false);
 	let error = $state('');
+	let form = $state<HTMLFormElement>();
+	let shakes = $state(0);
 
 	async function reveal(event: SubmitEvent) {
 		event.preventDefault();
@@ -20,6 +22,8 @@
 			words = await session.reveal(pin);
 		} catch (err) {
 			error = friendlyError(err);
+			shakes++;
+			navigator.vibrate?.(150);
 		} finally {
 			pin = '';
 		}
@@ -39,8 +43,16 @@
 	<h1>Frase de recuperação</h1>
 
 	{#if words.length === 0}
-		<form onsubmit={reveal}>
-			<PinInput id="pin" label="Digite seu PIN para ver a frase" bind:value={pin} autofocus />
+		<form bind:this={form} onsubmit={reveal}>
+			<PinInput
+				id="pin"
+				label="Digite seu PIN para ver a frase"
+				bind:value={pin}
+				autofocus
+				error={!!error && !pin}
+				{shakes}
+				oncomplete={() => form?.requestSubmit()}
+			/>
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 			<div class="actions"><button class="primary" type="submit" disabled={pin.length !== 6}>Ver frase</button></div>
 		</form>

@@ -51,7 +51,6 @@ try {
   await page.waitForSelector('#pin')
   await page.type('#pin', PIN)
   await page.type('#pin2', PIN)
-  await clickText('Criar conta')
   await page.waitForFunction(() => document.body.innerText.includes('Sua frase de recuperação'), { timeout: 20000 })
 
   // conversa com alguém qualquer: as mensagens aparecem na hora, mesmo sem entrega
