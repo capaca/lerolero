@@ -32,7 +32,9 @@
 			'/convite',
 			'/conversa/[chave]',
 			'/grupo/novo',
-			'/grupo/[id]'
+			'/grupo/[id]',
+			'/grupo/[id]/detalhes',
+			'/grupo/[id]/adicionar'
 		]
 	};
 

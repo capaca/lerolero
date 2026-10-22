@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { groupConversationId, type ConversationRecord } from '@lerolero/core';
 	import Avatar from '#lib/components/Avatar.svelte';
@@ -49,7 +50,7 @@
 			closed={group.amMember ? undefined : 'Você não faz mais parte deste grupo.'}
 		>
 			{#snippet header()}
-				<ChatHeader name={group.state.name} {subtitle}>
+				<ChatHeader name={group.state.name} {subtitle} href={resolve('/grupo/[id]/detalhes', { id: groupId })}>
 					{#snippet avatar()}
 						<Avatar name={group.state.name} publicKey={groupId} size={36} group />
 					{/snippet}

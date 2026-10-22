@@ -74,7 +74,9 @@
 		<li>
 			<strong>Crie um grupo.</strong> Toque em <strong>+ → Novo grupo</strong>, dê um nome e escolha quem participa
 			(até 20 pessoas, contando você). No grupo, quem não está nos seus contatos aparece com um <strong>~</strong>
-			antes do nome que a própria pessoa escolheu.
+			antes do nome que a própria pessoa escolheu. Toque no nome do grupo, no topo da conversa, para ver quem
+			participa; quem administra adiciona e remove pessoas, muda o nome e escolhe outros administradores. Lá também
+			dá para sair do grupo.
 		</li>
 		<li>
 			<strong>Apague uma mensagem.</strong> Segure o dedo sobre ela e escolha <strong>Apagar para mim</strong> ou,
@@ -90,7 +92,6 @@
 		<tbody>
 			<tr><td>Sem notificações</td><td>Abra o app de vez em quando para ver se chegou mensagem</td></tr>
 			<tr><td>Sem fotos e arquivos</td><td>Só texto e áudio</td></tr>
-			<tr><td>Grupos ainda simples</td><td>Depois de criar o grupo, ainda não dá para adicionar ou remover pessoas, mudar o nome nem sair; isso vem na próxima versão</td></tr>
 			<tr><td>"Apagar para todos" é um pedido</td><td>No Lero-lero a mensagem some para todos na conversa; se a outra pessoa usar outro app compatível, ele pode ignorar o pedido</td></tr>
 			<tr><td>Sem "entregue" e "lida"</td><td>O ✓ diz só que a mensagem chegou ao servidor, não ao celular da outra pessoa</td></tr>
 			<tr><td>Sem bloqueio e sem filtro de spam</td><td>Quem tiver seu link de convite consegue te mandar mensagem</td></tr>

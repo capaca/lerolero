@@ -4,7 +4,13 @@
 import {
 	addContact,
 	connect,
+	addMembers,
 	createGroup,
+	demoteAdmin,
+	leaveGroup,
+	promoteAdmin,
+	removeMember,
+	renameGroup,
 	GROUP_CONTROL_KIND,
 	groupNames,
 	introduce,
@@ -317,6 +323,36 @@ class Session {
 		const change = createGroup(this.current.publicKey, name, members, this.current.displayName);
 		await this.sendGroupChange(change);
 		return groupConversationId(change.groupId);
+	}
+
+	/** Gestão do grupo (RF-31, RF-32): as regras de permissão são conferidas no core antes de enviar. */
+	private async manageGroup(
+		conversationId: string,
+		build: (conversation: ConversationRecord, me: string, myName: string) => GroupChange
+	) {
+		const conversation = await storage.conversations.get(conversationId);
+		if (!conversation?.group?.amMember) throw new NotInGroupError();
+		await this.sendGroupChange(build(conversation, this.current.publicKey, this.current.displayName));
+	}
+
+	addToGroup(conversationId: string, publicKeys: string[]) {
+		return this.manageGroup(conversationId, (c, me, name) => addMembers(c, me, publicKeys, name));
+	}
+
+	removeFromGroup(conversationId: string, publicKey: string) {
+		return this.manageGroup(conversationId, (c, me, name) => removeMember(c, me, publicKey, name));
+	}
+
+	setGroupAdmin(conversationId: string, publicKey: string, admin: boolean) {
+		return this.manageGroup(conversationId, (c, me, name) => (admin ? promoteAdmin : demoteAdmin)(c, me, publicKey, name));
+	}
+
+	renameGroup(conversationId: string, groupName: string) {
+		return this.manageGroup(conversationId, (c, me, name) => renameGroup(c, me, groupName, name));
+	}
+
+	leaveGroup(conversationId: string) {
+		return this.manageGroup(conversationId, (c, me, name) => leaveGroup(c, me, name));
 	}
 
 	/**

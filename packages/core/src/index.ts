@@ -61,6 +61,7 @@ export {
 } from './conversations/messaging.ts';
 export {
 	addMembers,
+	canDo,
 	createGroup,
 	demoteAdmin,
 	describeNotice,
@@ -77,9 +78,11 @@ export {
 	removeMember,
 	renameGroup,
 	storeGroupControl,
+	successor,
 	takeForwards,
 	type GroupAction,
 	type GroupChange,
+	type ManageAction,
 	type StoredGroupChange
 } from './conversations/groups.ts';
 export { BlossomError, COPIES, download, remove as removeFromBlossom, upload, type BlossomSigner } from './media/blossom.ts';

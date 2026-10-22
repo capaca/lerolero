@@ -3,9 +3,8 @@
 	import { resolve } from '$app/paths';
 	import { contactName, MAX_GROUP_MEMBERS, type ContactRecord } from '@lerolero/core';
 	import { onMount } from 'svelte';
-	import Avatar from '#lib/components/Avatar.svelte';
 	import BackLink from '#lib/components/BackLink.svelte';
-	import Icon from '#lib/components/Icon.svelte';
+	import ContactPicker from '#lib/components/ContactPicker.svelte';
 	import { friendlyError, session } from '#lib/session.svelte.ts';
 
 	// eu também conto no limite de 20 (RF-30)
@@ -21,11 +20,6 @@
 		const all = await session.listContacts();
 		contacts = all.filter((c) => c.state === 'aceito').sort((a, b) => contactName(a).localeCompare(contactName(b), 'pt-BR'));
 	});
-
-	function toggle(publicKey: string) {
-		error = '';
-		chosen = chosen.includes(publicKey) ? chosen.filter((k) => k !== publicKey) : [...chosen, publicKey];
-	}
 
 	async function create(event: SubmitEvent) {
 		event.preventDefault();
@@ -65,25 +59,7 @@
 				<a href={resolve('/contatos/meu-convite')}>Convidar alguém</a>
 			</div>
 		{:else}
-			<ul class="list">
-				{#each contacts as contact (contact.publicKey)}
-					{@const selected = chosen.includes(contact.publicKey)}
-					<li>
-						<button
-							type="button"
-							class="person"
-							class:selected
-							aria-pressed={selected}
-							disabled={!selected && chosen.length >= MAX_OTHERS}
-							onclick={() => toggle(contact.publicKey)}
-						>
-							<Avatar name={contactName(contact)} publicKey={contact.publicKey} />
-							<span class="text">{contactName(contact)}</span>
-							<span class="tick" aria-hidden="true">{#if selected}<Icon name="check" size={16} />{/if}</span>
-						</button>
-					</li>
-				{/each}
-			</ul>
+			<ContactPicker {contacts} bind:chosen max={MAX_OTHERS} onchange={() => (error = '')} />
 		{/if}
 
 		<p class="hint">
@@ -111,44 +87,5 @@
 		font-size: 0.85rem;
 		font-weight: 400;
 		color: var(--muted);
-	}
-	.list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-	.person {
-		display: flex;
-		align-items: center;
-		gap: 0.8rem;
-		width: 100%;
-		padding: 0.55rem 0;
-		border: none;
-		border-bottom: 1px solid var(--line);
-		border-radius: 0;
-		background: none;
-		text-align: left;
-		font-weight: 400;
-	}
-	.text {
-		flex: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.tick {
-		display: grid;
-		place-items: center;
-		width: 1.5rem;
-		height: 1.5rem;
-		border-radius: 50%;
-		border: 2px solid var(--line);
-		flex-shrink: 0;
-	}
-	.selected .tick {
-		background: var(--accent);
-		border-color: var(--accent);
-		color: var(--accent-fg);
 	}
 </style>
