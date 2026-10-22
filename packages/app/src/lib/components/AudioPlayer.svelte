@@ -1,3 +1,17 @@
+<script lang="ts" module>
+	// Um áudio por vez em todo o app: quando um começa, o que estava tocando pausa.
+	let playing: HTMLAudioElement | undefined;
+
+	function claimPlayback(audio: HTMLAudioElement) {
+		if (playing && playing !== audio) playing.pause();
+		playing = audio;
+	}
+
+	function releasePlayback(audio: HTMLAudioElement) {
+		if (playing === audio) playing = undefined;
+	}
+</script>
+
 <script lang="ts">
 	// Player de áudio de mensagem (RF-40): baixa só ao tocar, velocidade 1x / 1,5x / 2x.
 	import type { MessageMedia } from '@lerolero/core';
@@ -66,6 +80,10 @@
 
 	onDestroy(() => {
 		cancelAnimationFrame(frame);
+		if (audio) {
+			audio.pause();
+			releasePlayback(audio);
+		}
 		if (src) URL.revokeObjectURL(src);
 	});
 
@@ -91,9 +109,9 @@
 	<button class="speed" onclick={cycleSpeed} aria-label="Velocidade">{String(SPEEDS[speedIndex]).replace('.', ',')}x</button>
 	<audio
 		bind:this={audio}
-		onplay={() => ((phase = 'tocando'), followPlayback())}
+		onplay={() => (claimPlayback(audio!), (phase = 'tocando'), followPlayback())}
 		onpause={() => (phase = 'pausado')}
-		onended={() => ((phase = 'pausado'), (current = 0))}
+		onended={() => ((phase = 'pausado'), (current = 0), releasePlayback(audio!))}
 		ontimeupdate={() => (current = audio!.currentTime)}
 		onloadedmetadata={() => Number.isFinite(audio!.duration) && (loadedDuration = audio!.duration)}
 		preload="none"
