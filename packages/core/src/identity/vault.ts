@@ -67,7 +67,22 @@ export type NewIdentity = { publicKey: string; phrase: Sealed; words: string[] }
 /** Mensagem embrulhada (NIP-17): o rumor guardado localmente e os dois gift wraps a publicar. */
 export type WrappedMessage = { rumor: Rumor; toRecipient: NostrEvent; toSelf: NostrEvent };
 
+/** Mensagem de grupo embrulhada: um gift wrap por membro, mais a minha cópia. */
+export type WrappedGroupMessage = { rumor: Rumor; toRecipients: { recipient: string; wrap: NostrEvent }[]; toSelf: NostrEvent };
+
 export const MAX_TEXT_LENGTH = 4000;
+
+/** Membros de grupo além de mim que recebem um embrulho; 20 cobre os 19 outros membros e alguém que acabou de sair (RF-30). */
+const MAX_GROUP_RECIPIENTS = 20;
+
+const isPublicKey = (v: string) => /^[0-9a-f]{64}$/.test(v);
+
+/** Regras comuns a mensagens 1:1 e de grupo: o cofre não embrulha qualquer coisa. */
+function checkMessage(kind: number, content: string, tags: string[][]) {
+	if (kind === 14 && (!content.trim() || content.length > MAX_TEXT_LENGTH)) throw new Error('mensagem vazia ou longa demais');
+	if (kind === 15 && !/^https:\/\/\S+$/.test(content)) throw new Error('arquivo sem endereço https');
+	if (kind === 5 && !tags.some((t) => t[0] === 'e')) throw new Error('pedido de apagar sem a mensagem');
+}
 
 /**
  * Sessão aberta: a chave privada cifrada com uma chave AES não exportável, que o
@@ -166,15 +181,43 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 		 */
 		wrapDirectMessage(recipient: string, content: string, extraTags: string[][] = [], kind: 14 | 15 | 5 = 14): WrappedMessage {
 			if (!secretKey) throw new LockedError();
-			if (!/^[0-9a-f]{64}$/.test(recipient)) throw new Error('destinatário inválido');
-			if (kind === 14 && (!content.trim() || content.length > MAX_TEXT_LENGTH)) throw new Error('mensagem vazia ou longa demais');
-			if (kind === 15 && !/^https:\/\/\S+$/.test(content)) throw new Error('arquivo sem endereço https');
-			if (kind === 5 && !extraTags.some((t) => t[0] === 'e')) throw new Error('pedido de apagar sem a mensagem');
+			if (!isPublicKey(recipient)) throw new Error('destinatário inválido');
+			checkMessage(kind, content, extraTags);
 			const rumor = createRumor({ kind, content, tags: [['p', recipient], ...extraTags] }, secretKey) as Rumor;
 			const me = getPublicKey(secretKey);
 			return {
 				rumor,
 				toRecipient: createWrap(createSeal(rumor, secretKey, recipient), recipient),
+				toSelf: createWrap(createSeal(rumor, secretKey, me), me)
+			};
+		},
+
+		/**
+		 * Embrulha uma mensagem de grupo (docs/06 §3.3): o rumor leva a tag `g` e um `p` por
+		 * destinatário, e cada um recebe o seu gift wrap. Também os avisos de grupo (kind 4440),
+		 * com `createdAt` igual ao horário de entrada dos membros novos.
+		 */
+		wrapGroupMessage(
+			recipients: string[],
+			content: string,
+			tags: string[][],
+			kind: 14 | 15 | 5 | 4440 = 14,
+			createdAt?: number
+		): WrappedGroupMessage {
+			if (!secretKey) throw new LockedError();
+			const me = getPublicKey(secretKey);
+			const unique = [...new Set(recipients)].filter((r) => r !== me);
+			if (!unique.every(isPublicKey) || unique.length > MAX_GROUP_RECIPIENTS) throw new Error('destinatários inválidos');
+			if (!tags.some((t) => t[0] === 'g')) throw new Error('mensagem de grupo sem a tag g');
+			if (kind === 4440 && !tags.some((t) => t[0] === 'acao')) throw new Error('aviso de grupo sem ação');
+			checkMessage(kind, content, tags);
+			const rumor = createRumor(
+				{ kind, content, tags: [...unique.map((r) => ['p', r]), ...tags], ...(createdAt !== undefined ? { created_at: createdAt } : {}) },
+				secretKey
+			) as Rumor;
+			return {
+				rumor,
+				toRecipients: unique.map((recipient) => ({ recipient, wrap: createWrap(createSeal(rumor, secretKey!, recipient), recipient) })),
 				toSelf: createWrap(createSeal(rumor, secretKey, me), me)
 			};
 		},

@@ -2,6 +2,7 @@ import { Dexie, type EntityTable } from 'dexie';
 import type {
 	ContactRecord,
 	ConversationRecord,
+	GroupEventRecord,
 	IdentityRecord,
 	MediaRecord,
 	MessageRecord,
@@ -22,6 +23,7 @@ export class LeroleroDb extends Dexie {
 	sync!: EntityTable<SyncRecord, 'relay'>;
 	seen_wraps!: EntityTable<SeenWrapRecord, 'id'>;
 	media!: EntityTable<MediaRecord, 'ox'>;
+	group_events!: EntityTable<GroupEventRecord, 'id'>;
 
 	constructor(name = 'lerolero') {
 		super(name);
@@ -39,5 +41,7 @@ export class LeroleroDb extends Dexie {
 		this.version(2).stores({ media: 'ox, lastAccess' });
 		// exclusão: achar as mensagens que usam um arquivo, para não apagar arquivo em uso
 		this.version(3).stores({ messages: 'id, [conversationId+createdAt], status, media.ox' });
+		// grupos: os avisos de cada grupo, para refazer o estado (as conversas só ganham campos novos)
+		this.version(4).stores({ group_events: 'id, groupId' });
 	}
 }

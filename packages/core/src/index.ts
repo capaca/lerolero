@@ -26,6 +26,7 @@ export {
 	type OpenSession,
 	type Rumor,
 	type Vault,
+	type WrappedGroupMessage,
 	type WrappedMessage
 } from './identity/vault.ts';
 export { toNpub } from './identity/npub.ts';
@@ -58,6 +59,26 @@ export {
 	storeOutgoing,
 	type StoredMessage
 } from './conversations/messaging.ts';
+export {
+	addMembers,
+	createGroup,
+	demoteAdmin,
+	GROUP_CONTROL_KIND,
+	GROUP_TAG,
+	groupConversationId,
+	GroupPermissionError,
+	introduce,
+	isMember,
+	leaveGroup,
+	MAX_GROUP_MEMBERS,
+	promoteAdmin,
+	removeMember,
+	renameGroup,
+	storeGroupControl,
+	type GroupAction,
+	type GroupChange,
+	type StoredGroupChange
+} from './conversations/groups.ts';
 export { BlossomError, COPIES, download, remove as removeFromBlossom, upload, type BlossomSigner } from './media/blossom.ts';
 export { decryptFile, encryptFile, MediaIntegrityError, sha256 } from './media/crypto.ts';
 export { openMedia, prepareMedia, type MediaRef } from './media/media.ts';

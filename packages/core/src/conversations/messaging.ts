@@ -5,6 +5,7 @@ import type { Rumor } from '../identity/vault.ts';
 import { cleanName } from '../contacts/invite.ts';
 import type { Storage } from '../storage/repositories.ts';
 import type { ConversationRecord, MessageMedia, MessageRecord } from '../storage/records.ts';
+import { groupConversationId, groupIdOf, GROUP_TAG } from './groups.ts';
 
 /**
  * Tag própria com o nome de quem envia, só na primeira mensagem de cada conversa:
@@ -17,13 +18,13 @@ export const directConversationId = (other: string) => `direta:${other}`;
 
 const PREVIEW_LENGTH = 80;
 
-function kindOf(message: Pick<MessageRecord, 'media'>): 'texto' | 'audio' | 'arquivo' {
+export function kindOf(message: Pick<MessageRecord, 'media'>): 'texto' | 'audio' | 'arquivo' {
 	if (!message.media) return 'texto';
 	return message.media.type.startsWith('audio/') ? 'audio' : 'arquivo';
 }
 
 /** Prévia em texto; o ícone fica por conta da interface, pelo `lastMessageKind`. */
-function preview(message: Pick<MessageRecord, 'text' | 'media' | 'deleted'>): string {
+export function preview(message: Pick<MessageRecord, 'text' | 'media' | 'deleted'>): string {
 	if (message.deleted) return 'Mensagem apagada';
 	const kind = kindOf(message);
 	if (kind === 'audio') return 'Áudio';
@@ -79,17 +80,17 @@ export type StoredMessage = { message: MessageRecord; conversation: Conversation
 
 async function upsertConversation(
 	storage: Storage,
-	other: string,
 	message: MessageRecord,
-	changes: { unread?: number; nameSent?: boolean }
+	changes: { unread?: number; nameSent?: boolean },
+	fresh: Pick<ConversationRecord, 'type' | 'members'>
 ): Promise<ConversationRecord> {
-	const id = directConversationId(other);
+	const id = message.conversationId;
 	const existing = await storage.conversations.get(id);
 	const isLatest = !existing || message.createdAt >= existing.lastMessageAt;
 	const conversation: ConversationRecord = {
+		...fresh,
+		...existing,
 		id,
-		type: 'direta',
-		members: [other],
 		unread: (existing?.unread ?? 0) + (changes.unread ?? 0),
 		lastMessageAt: isLatest ? message.createdAt : existing.lastMessageAt,
 		lastMessagePreview: isLatest ? preview(message) : existing.lastMessagePreview,
@@ -115,9 +116,10 @@ export async function storeIncoming(
 	if (rumor.kind !== 14 && rumor.kind !== 15) return undefined;
 	const media = rumor.kind === 15 ? mediaFromRumor(rumor) : undefined;
 	if (rumor.kind === 15 && !media) return undefined; // arquivo que não sabemos abrir
+	if (rumor.tags.some((t) => t[0] === GROUP_TAG)) return storeGroupMessage(storage, me, rumor, media, options);
 	const others = new Set([rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])]);
 	others.delete(me);
-	if (others.size !== 1) return undefined; // grupo (M3) ou mensagem para mim mesmo
+	if (others.size !== 1) return undefined; // grupo de outro app (sem tag g) ou mensagem para mim mesmo
 	const [other] = others;
 	const mine = rumor.pubkey === me;
 
@@ -127,9 +129,19 @@ export async function storeIncoming(
 		return { message: known, conversation, isNew: false };
 	}
 
-	const message: MessageRecord = {
+	const message = incomingRecord(rumor, directConversationId(other), media, mine);
+	await storage.messages.put(message);
+
+	if (!mine) await rememberSender(storage, other, rumor);
+	const unread = !mine && options.openConversationId !== message.conversationId ? 1 : 0;
+	const conversation = await upsertConversation(storage, message, { unread }, { type: 'direta', members: [other] });
+	return { message, conversation, isNew: true };
+}
+
+function incomingRecord(rumor: Rumor, conversationId: string, media: MessageMedia | undefined, mine: boolean): MessageRecord {
+	return {
 		id: rumor.id,
-		conversationId: directConversationId(other),
+		conversationId,
 		sender: rumor.pubkey,
 		kind: rumor.kind,
 		text: media ? '' : rumor.content,
@@ -137,11 +149,35 @@ export async function storeIncoming(
 		status: mine ? 'enviada' : 'recebida',
 		...(media ? { media } : {})
 	};
-	await storage.messages.put(message);
+}
 
-	if (!mine) await rememberSender(storage, other, rumor);
-	const unread = !mine && options.openConversationId !== message.conversationId ? 1 : 0;
-	const conversation = await upsertConversation(storage, other, message, { unread });
+/**
+ * Mensagem de grupo: só vale de quem é ou já foi membro (mensagens antigas de quem saiu
+ * continuam). Se o aviso que me pôs no grupo ainda não chegou, a mensagem fica guardada
+ * sem conversa e entra quando ele chegar (groups.ts, adoptHeldMessages).
+ */
+async function storeGroupMessage(
+	storage: Storage,
+	me: string,
+	rumor: Rumor,
+	media: MessageMedia | undefined,
+	options: { openConversationId?: string }
+): Promise<StoredMessage | undefined> {
+	const groupId = groupIdOf(rumor);
+	if (!groupId) return undefined;
+	const id = groupConversationId(groupId);
+	const known = await storage.messages.get(rumor.id);
+	const existing = await storage.conversations.get(id);
+	if (known) return existing && { message: known, conversation: existing, isNew: false };
+
+	const mine = rumor.pubkey === me;
+	if (existing && !mine && !existing.group?.everMembers.includes(rumor.pubkey)) return undefined;
+	const message = incomingRecord(rumor, id, media, mine);
+	await storage.messages.put(message);
+	if (!existing) return undefined;
+
+	const unread = !mine && options.openConversationId !== id ? 1 : 0;
+	const conversation = await upsertConversation(storage, message, { unread }, existing);
 	return { message, conversation, isNew: true };
 }
 
@@ -157,12 +193,18 @@ async function rememberSender(storage: Storage, sender: string, rumor: Rumor) {
 	}
 }
 
-/** Guarda a mensagem que acabei de escrever, ainda na fila ("pendente", RNF-12: aparece na hora). */
-export async function storeOutgoing(storage: Storage, rumor: Rumor, recipient: string): Promise<StoredMessage> {
+/**
+ * Guarda a mensagem que acabei de escrever, ainda na fila ("pendente", RNF-12: aparece na hora).
+ * `recipient` é o contato, numa conversa 1:1; nos grupos, a conversa vem da tag `g`.
+ */
+export async function storeOutgoing(storage: Storage, rumor: Rumor, recipient?: string): Promise<StoredMessage> {
 	const media = rumor.kind === 15 ? mediaFromRumor(rumor) : undefined;
+	const groupId = groupIdOf(rumor);
+	const group = groupId ? await storage.conversations.get(groupConversationId(groupId)) : undefined;
+	if (!group && !recipient) throw new Error('conversa desconhecida');
 	const message: MessageRecord = {
 		id: rumor.id,
-		conversationId: directConversationId(recipient),
+		conversationId: group ? group.id : directConversationId(recipient!),
 		sender: rumor.pubkey,
 		kind: rumor.kind,
 		text: media ? '' : rumor.content,
@@ -172,7 +214,7 @@ export async function storeOutgoing(storage: Storage, rumor: Rumor, recipient: s
 	};
 	await storage.messages.put(message);
 	const nameSent = rumor.tags.some((t) => t[0] === NAME_TAG);
-	const conversation = await upsertConversation(storage, recipient, message, { nameSent });
+	const conversation = await upsertConversation(storage, message, { nameSent }, group ?? { type: 'direta', members: [recipient!] });
 	return { message, conversation, isNew: true };
 }
 

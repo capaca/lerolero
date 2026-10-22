@@ -6,6 +6,7 @@ import { LeroleroDb } from './db.ts';
 import type {
 	ContactRecord,
 	ConversationRecord,
+	GroupEventRecord,
 	IdentityRecord,
 	MediaRecord,
 	MessageRecord,
@@ -75,6 +76,12 @@ export interface MediaRepository {
 	delete(ox: string): Promise<void>;
 }
 
+export interface GroupEventRepository {
+	get(id: string): Promise<GroupEventRecord | undefined>;
+	put(event: GroupEventRecord): Promise<void>;
+	listByGroup(groupId: string): Promise<GroupEventRecord[]>;
+}
+
 export type Storage = {
 	identity: IdentityRepository;
 	settings: SettingsRepository;
@@ -85,6 +92,7 @@ export type Storage = {
 	sync: SyncRepository;
 	seenWraps: SeenWrapRepository;
 	media: MediaRepository;
+	groupEvents: GroupEventRepository;
 	close(): void;
 };
 
@@ -145,6 +153,11 @@ export function openStorage(name?: string): Storage {
 			put: async (media) => void (await db.media.put(media)),
 			touch: async (ox, at) => void (await db.media.update(ox, { lastAccess: at })),
 			delete: (ox) => db.media.delete(ox)
+		},
+		groupEvents: {
+			get: (id) => db.group_events.get(id),
+			put: async (event) => void (await db.group_events.put(event)),
+			listByGroup: (groupId) => db.group_events.where('groupId').equals(groupId).toArray()
 		},
 		close: () => db.close()
 	};

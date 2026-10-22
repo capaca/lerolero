@@ -81,7 +81,10 @@ O NIP-17 define uma conversa pelo **conjunto de participantes** (tags `p`), com 
 
 - Ação na tag `["acao", <ação>]`: `criar`, `adicionar`, `remover`, `sair`, `renomear`, `promover`, `rebaixar`, `apresentar`.
 - Todo evento leva o **estado completo** depois da ação: nome do grupo (`subject`), membros (`p`, com o horário de entrada), administradores e criador. Quem entra recebe tudo de uma vez.
-- O autor é o do selo (assinado). Cada aparelho aplica os eventos em ordem de horário do rumor (empate: menor id) e **só aceita a ação se o autor tinha permissão** no estado que ele conhece; senão, descarta.
+- O autor é o do selo (assinado). Cada aparelho guarda os avisos e refaz o estado aplicando-os em ordem de horário do rumor (empate: menor id), e **só aceita a mudança se o autor tinha permissão** no estado anterior; senão, descarta. A permissão é conferida pela diferença entre os dois estados, não pelo nome da ação.
+- O ponto de partida é a criação ou, para quem entrou depois, o **primeiro aviso que chegou** ao aparelho e o inclui, feito por um administrador. Assim um ex-membro não impõe um estado falso com horário antigo a quem acabou de entrar ([T17](02-modelo-de-ameacas.md)).
+- O horário de entrada de quem já está no grupo não muda; o de quem entra é o horário do próprio aviso. Assim ninguém forja antiguidade para herdar o título.
+- Mensagens de grupo só valem de quem é ou já foi membro. Se chegam antes do aviso que me pôs no grupo (os embrulhos chegam em qualquer ordem), ficam guardadas e entram quando ele chegar.
 - O evento vai para os membros do estado novo **e** para quem saiu ou foi removido, para que o app dele mostre "Você foi removido" e pare de enviar.
 - **Nomes dos membros** (decidido em 2026-10-22): cada membro manda o **próprio nome**, cifrado, só para o grupo, com a ação `apresentar`, ao entrar e ao receber a notícia de um membro novo (este último envio só para quem entrou). Quem não está nos contatos aparece como "~Nome", com a opção de adicionar. Entrar num grupo mostra o seu nome a todos os membros, como no WhatsApp.
 

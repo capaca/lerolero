@@ -29,10 +29,35 @@ export type ContactRecord = {
 	addedAt: number;
 };
 
+/** Membro de grupo; a antiguidade decide quem herda o título de criador (docs/06 §3.3). */
+export type GroupMember = { publicKey: string; joinedAt: number };
+
+/** Estado de um grupo, como vai em cada aviso de grupo (kind 4440). */
+export type GroupState = {
+	name: string;
+	members: GroupMember[];
+	/** inclui o criador */
+	admins: string[];
+	creator: string;
+};
+
+export type GroupInfo = {
+	state: GroupState;
+	/** nome que cada membro mandou (ação `apresentar`); quem não é contato aparece como "~Nome" */
+	names: Record<string, string>;
+	/** quem já foi membro: mensagens antigas dele continuam valendo depois que sai */
+	everMembers: string[];
+	/** eu ainda estou no grupo */
+	amMember: boolean;
+};
+
 export type ConversationRecord = {
 	id: string;
-	type: 'direta';
+	type: 'direta' | 'grupo';
+	/** quem recebe o que eu mando: o contato, ou os outros membros do grupo */
 	members: string[];
+	/** só nos grupos */
+	group?: GroupInfo;
 	lastMessageAt: number;
 	lastMessagePreview?: string;
 	/** tipo da última mensagem, para a lista mostrar o ícone certo */
@@ -108,6 +133,22 @@ export type MediaRecord = {
 	/** marcada para não expirar */
 	keep: boolean;
 	lastAccess: number;
+};
+
+/** Aviso de grupo já conferido e guardado: o estado do grupo é refeito a partir deles. */
+export type GroupEventRecord = {
+	/** id do rumor */
+	id: string;
+	groupId: string;
+	author: string;
+	createdAt: number;
+	/** quando chegou a este aparelho (ms); decide o ponto de partida de quem entrou depois */
+	receivedAt: number;
+	action: string;
+	/** ausente na ação `apresentar` */
+	state?: GroupState;
+	/** nome que o autor mandou junto */
+	name?: string;
 };
 
 export type SeenWrapRecord = { id: string; receivedAt: number };
