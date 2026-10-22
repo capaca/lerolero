@@ -79,6 +79,7 @@ Somando: **~33 semanas de desenvolvimento + 6 de beta** → MVP público por vol
 
 - ~~Grupos de até 20 com tag `g` e eventos de controle; administrador; remover membro (RF-30..33).~~ Adiantado para o M2 (2026-10-22).
 - Responder, reagir, editar, apagar para todos (RF-22..25).
+- Mencionar alguém no grupo com `@` (RF-35). Avaliar se a menção fura o modo foco, como exceção (RF-61).
 - Status de entrega com confirmações agrupadas; confirmação de leitura desativável (RF-50, 51).
 - Detecção de perdas: numeração por conversa + pedido de reenvio + prazo de 7 dias (RF-53).
 

@@ -60,6 +60,7 @@
 | RF-31 | Criar grupo, dar nome, adicionar e remover membros, sair do grupo; o criador é administrador e pode promover outros. Só o criador remove ou rebaixa administradores; se ele sair, o título passa ao administrador mais antigo (ou ao membro mais antigo). Regras completas em [06 §3.3](06-protocolo-e-dados.md) | Must | MVP |
 | RF-32 | Membro removido deixa de receber as mensagens novas | Must | MVP |
 | RF-33 | Todos os recursos de conversa (seção 3) e de mídia (seção 5) funcionam em grupos | Must | MVP |
+| RF-35 | **Mencionar** alguém no grupo digitando `@` e escolhendo a pessoa numa lista. A menção guarda a chave da pessoa, não o texto, e cada um vê o nome que conhece (o do contato, ou "~Nome"); quem foi mencionado vê a menção destacada. Pedido do Pedro em 2026-10-22 | Should | MVP |
 | RF-34 | Grupos grandes (centenas de membros), com protocolo de grupo dedicado (ex.: MLS) | — | Futuro |
 
 ## 5. Mídia
