@@ -14,6 +14,7 @@ rodam como estão (caminhos de uma pasta temporária, Chrome do macOS, relays re
 | `update.mjs`, `upgrade.mjs`, `branca.mjs`, `laco.mjs` | atualização do app, service worker, tela branca e autocorreção |
 | `gestao.mjs` | gestão do grupo com 4 pessoas: detalhes, renomear, adicionar, promover, remover, sair e herança do título |
 | `pin.mjs` | PIN em bolinhas: pular para a confirmação, PINs diferentes, PIN errado, ver a frase |
+| `baloes.mjs` | balões da mesma pessoa agrupados, pontinha só no último; regressão da ordem no mesmo segundo |
 | `teclado.mjs` | regressão: com o teclado aberto, as últimas mensagens continuam junto do campo |
 | `comentario.mjs`, `rede.mjs`, `copiar.mjs` | enviar comentário, kind 10050 na rede, copiar a frase |
 | `pages-server.mjs` | servidor estático que imita o GitHub Pages (404.html, `.html`, cache opcional) |

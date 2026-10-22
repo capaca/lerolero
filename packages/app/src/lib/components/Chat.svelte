@@ -131,16 +131,26 @@
 	}
 	const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-	type Item = { type: 'dia'; key: number; label: string } | { type: 'msg'; message: MessageRecord };
+	// first/last: começo e fim de uma sequência de balões da mesma pessoa no mesmo dia, sem aviso no meio.
+	// Só o último ganha a pontinha; nos grupos, o nome vai no primeiro.
+	type Item =
+		| { type: 'dia'; key: number; label: string }
+		| { type: 'msg'; message: MessageRecord; first: boolean; last: boolean };
 	const blocks = $derived.by(() => {
 		const items: Item[] = [];
 		let lastDay: number | undefined;
+		let previous: Extract<Item, { type: 'msg' }> | undefined;
 		for (const message of messages) {
 			const day = dayKey(message.createdAt);
 			if (day !== lastDay) items.push({ type: 'dia', key: day, label: formatDay(message.createdAt) });
+			const first =
+				day !== lastDay || !previous || !!previous.message.notice || !!message.notice || previous.message.sender !== message.sender;
+			if (first && previous) previous.last = true;
 			lastDay = day;
-			items.push({ type: 'msg', message });
+			previous = { type: 'msg', message, first, last: false };
+			items.push(previous);
 		}
+		if (previous) previous.last = true;
 		const out: Item[][] = [];
 		for (let i = 0; i < items.length; i += BLOCK_SIZE) out.push(items.slice(i, i + BLOCK_SIZE));
 		return out;
@@ -222,13 +232,6 @@
 			void send();
 		}
 	}
-
-	/** Nome em cima do balão: nos grupos, na primeira de uma sequência de mensagens da mesma pessoa. */
-	function showSender(m: MessageRecord, i: number, block: Item[]): boolean {
-		if (!nameOf || m.sender === me || m.notice) return false;
-		const previous = block[i - 1];
-		return previous?.type !== 'msg' || previous.message.sender !== m.sender || !!previous.message.notice;
-	}
 </script>
 
 <div class="chat">
@@ -244,14 +247,14 @@
 		{/if}
 		{#each blocks as block, b (b)}
 			<div class="block" style:--block-estimate="{block.length * 56}px">
-				{#each block as item, i (item.type === 'dia' ? `d${item.key}` : item.message.id)}
+				{#each block as item (item.type === 'dia' ? `d${item.key}` : item.message.id)}
 					{#if item.type === 'dia'}
 						<p class="day">{item.label}</p>
 					{:else if item.message.notice}
 						<p class="notice-line">{nameOf ? describeNotice(item.message.notice, item.message.sender, nameOf) : item.message.text}</p>
 					{:else}
 						{@const m = item.message}
-						<div class="row" class:mine={m.sender === me}>
+						<div class="row" class:mine={m.sender === me} class:first={item.first} class:last={item.last}>
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div
 								class="bubble"
@@ -262,7 +265,13 @@
 								{onpointermove}
 								oncontextmenu={(e) => (e.preventDefault(), openMenu(m))}
 							>
-								{#if showSender(m, i, block)}
+								{#if item.last}
+									<svg class="tail" viewBox="0 0 10 12" aria-hidden="true">
+										<path class="tail-fill" d="M10 0C10 7 6 11 0 12H10Z" />
+										<path class="tail-line" d="M9.5 0C9.5 7 6 11 0.5 11.5H10" />
+									</svg>
+								{/if}
+								{#if nameOf && item.first && m.sender !== me}
 									<span class="sender" style:--h={hue(m.sender)}>{nameOf!(m.sender)}</span>
 								{/if}
 								{#if m.deleted}
@@ -378,7 +387,7 @@
 	.messages {
 		flex: 1;
 		overflow-y: auto;
-		padding: 0.5rem 0.8rem;
+		padding: 0.5rem 0.3rem;
 		overflow-anchor: none;
 		display: flex;
 		flex-direction: column;
@@ -387,7 +396,9 @@
 	.messages > :first-child {
 		margin-top: auto;
 	}
+	/* o padding dá espaço para a pontinha: content-visibility corta o que passa da borda */
 	.block {
+		padding: 0 0.5rem;
 		content-visibility: auto;
 		contain-intrinsic-size: auto var(--block-estimate);
 	}
@@ -407,21 +418,69 @@
 	}
 	.row {
 		display: flex;
-		margin: 2px 0;
+		margin-top: 2px;
+		--bubble: var(--surface);
+		--bubble-line: var(--line);
+	}
+	.row.first {
+		margin-top: 0.5rem;
 	}
 	.row.mine {
 		justify-content: flex-end;
+		--bubble: color-mix(in srgb, var(--accent) 18%, var(--surface));
+		--bubble-line: transparent;
 	}
 	.bubble {
+		position: relative;
 		max-width: 80%;
 		padding: 0.4rem 0.7rem 0.3rem;
 		border-radius: 12px;
-		background: var(--surface);
-		border: 1px solid var(--line);
+		background: var(--bubble);
+		border: 1px solid var(--bubble-line);
 	}
-	.mine .bubble {
-		background: color-mix(in srgb, var(--accent) 18%, var(--surface));
-		border-color: transparent;
+	/* balões seguidos: o canto do lado de quem escreveu fica mais reto */
+	.row:not(.first) .bubble {
+		border-top-left-radius: 4px;
+	}
+	.row:not(.last) .bubble {
+		border-bottom-left-radius: 4px;
+	}
+	.row.last .bubble {
+		border-bottom-left-radius: 0;
+	}
+	.row.mine .bubble {
+		border-radius: 12px;
+	}
+	.row.mine:not(.first) .bubble {
+		border-top-right-radius: 4px;
+	}
+	.row.mine:not(.last) .bubble {
+		border-bottom-right-radius: 4px;
+	}
+	.row.mine.last .bubble {
+		border-bottom-right-radius: 0;
+	}
+	/* a pontinha passa 1px por cima da borda do balão para emendar sem risco */
+	.tail {
+		position: absolute;
+		bottom: -1px;
+		left: -10px;
+		width: 10px;
+		height: 12px;
+		overflow: visible;
+	}
+	.mine .tail {
+		left: auto;
+		right: -10px;
+		transform: scaleX(-1);
+	}
+	.tail-fill {
+		fill: var(--bubble);
+	}
+	.tail-line {
+		fill: none;
+		stroke: var(--bubble-line);
+		stroke-width: 1;
 	}
 	.bubble {
 		-webkit-touch-callout: none;
