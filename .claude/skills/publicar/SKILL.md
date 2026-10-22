@@ -33,8 +33,7 @@ Nunca sugira ao Pedro ou aos testadores "limpar os dados do site": a identidade 
 ## 2. Verificar
 
 ```bash
-eval "$(fnm env --version-file-strategy=recursive --shell bash)" && fnm use
-pnpm check && pnpm test && BASE_PATH=/lerolero pnpm build
+scripts/verificar.sh   # check, test e build como a CI; mostra só os erros
 ```
 
 Se algo falhar, pare e conserte. Mudança visível na interface ou no fluxo: confira no navegador com a skill

@@ -134,3 +134,19 @@ button:disabled {
 	margin-top: 0.5rem;
 	align-items: baseline;
 }
+
+/* botão redondo só com ícone (enviar, gravar, ir para o fim) */
+.round {
+	width: 2.9rem;
+	height: 2.9rem;
+	border-radius: 50%;
+	padding: 0;
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+}
+.round.ghost {
+	border-color: transparent;
+	background: transparent;
+	color: var(--muted);
+}

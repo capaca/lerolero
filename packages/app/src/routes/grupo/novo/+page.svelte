@@ -5,7 +5,8 @@
 	import { onMount } from 'svelte';
 	import BackLink from '#lib/components/BackLink.svelte';
 	import ContactPicker from '#lib/components/ContactPicker.svelte';
-	import { friendlyError, session } from '#lib/session.svelte.ts';
+	import { friendlyError } from '#lib/errors.ts';
+	import { session } from '#lib/session.svelte.ts';
 
 	// eu também conto no limite de 20 (RF-30)
 	const MAX_OTHERS = MAX_GROUP_MEMBERS - 1;

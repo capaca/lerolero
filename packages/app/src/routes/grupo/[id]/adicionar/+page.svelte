@@ -6,7 +6,8 @@
 	import { contactName, groupConversationId, MAX_GROUP_MEMBERS, type ContactRecord, type GroupState } from '@lerolero/core';
 	import BackLink from '#lib/components/BackLink.svelte';
 	import ContactPicker from '#lib/components/ContactPicker.svelte';
-	import { friendlyError, session } from '#lib/session.svelte.ts';
+	import { friendlyError } from '#lib/errors.ts';
+	import { session } from '#lib/session.svelte.ts';
 
 	const groupId = $derived(page.params.id ?? '');
 	const conversationId = $derived(groupConversationId(groupId));

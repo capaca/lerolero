@@ -3,7 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { version } from '$app/env';
-	import { friendlyError, session } from '#lib/session.svelte.ts';
+	import { friendlyError } from '#lib/errors.ts';
+	import { session } from '#lib/session.svelte.ts';
 	import { FEEDBACK_CONTACT_NAME, FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
 
 	const KINDS = ['Bug', 'Sugestão', 'Outro'] as const;
