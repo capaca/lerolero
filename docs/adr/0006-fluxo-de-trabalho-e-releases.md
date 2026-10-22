@@ -39,11 +39,13 @@ Escolhas do Pedro em 2026-10-22:
 
 - **Push direto na `main` bloqueado para todos**, inclusive o dono (ruleset sem exceção). Merge só por PR, **squash**
   (cada PR vira um commit com o título do PR); o branch é apagado depois do merge.
-- **Checagens obrigatórias:** `verificar` (tipos, testes unitários e build, a cada commit, em `ci.yml`) e
-  `testes de integração`. Sem revisão obrigatória.
+- **Checagens obrigatórias:** `verificar` (tipos, testes unitários e build, a cada commit, em `ci.yml`),
+  `testes de integração` e `testes e2e`. Sem revisão obrigatória.
 - **Testes lentos por rótulo** (`testes-sob-demanda.yml`): `integration-tests` roda `pnpm test:rede` (relays e Blossom
-  reais); `e2e-tests` vai rodar a suíte e2e quando ela existir e, a partir daí, o status `testes e2e` também passa a ser
-  exigido. O resultado é um status gravado no commit pela API, e não o próprio job, porque um job pulado conta como
+  reais); `e2e-tests` roda a suíte e2e (`packages/e2e`, desde 2026-10-22) e o status `testes e2e` também é exigido para o
+  merge. A suíte usa relays e Blossom locais (escolha do Pedro em 2026-10-22: rápida e sem falhas de relay público; a
+  rede real fica com `integration-tests`). Rodar a suíte a cada commit foi descartado pelo Pedro: ela roda uma vez, no
+  último commit do PR, antes do merge. O resultado é um status gravado no commit pela API, e não o próprio job, porque um job pulado conta como
   aprovado para o GitHub. Um commit novo deixa o status pendente outra vez; o rótulo sai depois de cada rodada.
 - **Mudança só de documentação** (`docs/` ou arquivos `.md`) dispensa os testes de integração e pula os passos do
   `verificar`. O job roda e termina verde, porque uma checagem obrigatória que não roda deixa o PR esperando para sempre.

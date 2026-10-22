@@ -1,6 +1,6 @@
 ---
 name: testar-no-navegador
-description: Confere o Lero-lero num Chrome de verdade (Puppeteer) servido como no GitHub Pages, com microfone e câmera simulados, sem tocar nos dados do Pedro. Use para verificar uma mudança de interface ou fluxo (cadastro, PIN, conversa, áudio, atualização do app) antes de publicar, ou para reproduzir um bug que o Pedro viu no celular. Vale até existir a suíte e2e em packages/e2e.
+description: Confere o Lero-lero num Chrome de verdade (Puppeteer) servido como no GitHub Pages, com microfone e câmera simulados, sem tocar nos dados do Pedro. Use para verificar uma mudança de interface ou fluxo (cadastro, PIN, conversa, áudio, atualização do app) antes de publicar, ou para reproduzir um bug que o Pedro viu no celular. Para o que ainda não está na suíte e2e (packages/e2e) ou precisa de olho humano (capturas de tela); o que vira teste permanente vai para a suíte.
 ---
 
 # Testar no navegador

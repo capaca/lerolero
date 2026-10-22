@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Roda check, test e build como a CI, mostrando uma linha por etapa e só o fim da saída de quem falhar.
 # A saída completa fica em arquivos de log, para ler só se precisar (economiza contexto do assistente).
-# Uso: scripts/verificar.sh [check] [test] [build]   (sem argumentos roda as três)
+# Uso: scripts/verificar.sh [check] [test] [build] [e2e]   (sem argumentos roda as três primeiras)
+# e2e usa o build da etapa anterior: peça `build e2e` depois de mudar o app.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -21,7 +22,8 @@ for etapa in "${etapas[@]}"; do
 		check) pnpm check >"$log" 2>&1 ;;
 		test) pnpm test >"$log" 2>&1 ;;
 		build) BASE_PATH=/lerolero pnpm build >"$log" 2>&1 ;;
-		*) echo "etapa desconhecida: $etapa (use check, test ou build)"; exit 2 ;;
+		e2e) (cd packages/e2e && pnpm e2e) >"$log" 2>&1 ;;
+		*) echo "etapa desconhecida: $etapa (use check, test, build ou e2e)"; exit 2 ;;
 	esac
 	status=$?
 	if [ $status -eq 0 ]; then
@@ -30,7 +32,7 @@ for etapa in "${etapas[@]}"; do
 		falhou=1
 		echo "✗ $etapa ($((SECONDS - inicio)) s) — log completo: $log"
 		# Erros do tsc/svelte-check e falhas do vitest; se não achar nada, o fim do log.
-		erros=$(grep -E 'error|Error|FAIL|✗|×|AssertionError|expected' "$log" | grep -v 'svelte-check found 0 errors' | head -40)
+		erros=$(grep -E 'error|Error|FAIL|✗|×|✘|AssertionError|expected|Expected|Received' "$log" | grep -v 'svelte-check found 0 errors' | head -40)
 		if [ -n "$erros" ]; then echo "$erros"; else tail -30 "$log"; fi
 	fi
 done

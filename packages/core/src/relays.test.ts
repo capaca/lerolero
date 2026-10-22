@@ -29,7 +29,15 @@ describe('parseRelayList', () => {
 		expect(list.dm).toEqual(['wss://a.example']);
 	});
 
+	it('aceita relay e Blossom sem TLS só no próprio aparelho (suíte e2e)', () => {
+		const list = parseRelayList({ ...valid, dm: ['ws://127.0.0.1:7000'], blossom: ['http://localhost:7001'] });
+		expect(list.dm).toEqual(['ws://127.0.0.1:7000']);
+		expect(list.blossom).toEqual(['http://localhost:7001']);
+	});
+
 	it.each([
+		['relay sem TLS fora do aparelho', { ...valid, dm: ['ws://a.example'] }, /"dm" só aceita wss/],
+		['Blossom sem TLS fora do aparelho', { ...valid, blossom: ['http://d.example'] }, /"blossom" só aceita https/],
 		['versão desconhecida', { ...valid, versao: 2 }, /versão/],
 		['relay sem wss', { ...valid, dm: ['https://a.example'] }, /"dm" só aceita wss/],
 		['Blossom sem https', { ...valid, blossom: ['wss://d.example'] }, /"blossom" só aceita https/],
