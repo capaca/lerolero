@@ -26,8 +26,10 @@ export type Recording = {
 export async function startRecording(): Promise<Recording> {
 	const mimeType = opusRecordingType();
 	if (!mimeType) throw Object.assign(new Error('Sem Opus'), { name: 'NoOpusError' });
+	// Sem controle automático de volume: no Motorola do Pedro, em lugar barulhento, ele cortava a
+	// voz no começo do áudio (2026-10-22); antes dele, sem cortes.
 	const stream = await navigator.mediaDevices.getUserMedia({
-		audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }
+		audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false, channelCount: 1 }
 	});
 	const recorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: BITRATE });
 	const chunks: Blob[] = [];
