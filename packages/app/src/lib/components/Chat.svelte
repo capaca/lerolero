@@ -135,19 +135,23 @@
 	// Só o último ganha a pontinha; nos grupos, o nome vai no primeiro.
 	type Item =
 		| { type: 'dia'; key: number; label: string }
-		| { type: 'msg'; message: MessageRecord; first: boolean; last: boolean };
+		| { type: 'msg'; message: MessageRecord; first: boolean; last: boolean; day: string };
 	const blocks = $derived.by(() => {
 		const items: Item[] = [];
 		let lastDay: number | undefined;
+		let dayLabel = '';
 		let previous: Extract<Item, { type: 'msg' }> | undefined;
 		for (const message of messages) {
 			const day = dayKey(message.createdAt);
-			if (day !== lastDay) items.push({ type: 'dia', key: day, label: formatDay(message.createdAt) });
+			if (day !== lastDay) {
+				dayLabel = formatDay(message.createdAt);
+				items.push({ type: 'dia', key: day, label: dayLabel });
+			}
 			const first =
 				day !== lastDay || !previous || !!previous.message.notice || !!message.notice || previous.message.sender !== message.sender;
 			if (first && previous) previous.last = true;
 			lastDay = day;
-			previous = { type: 'msg', message, first, last: false };
+			previous = { type: 'msg', message, first, last: false, day: dayLabel };
 			items.push(previous);
 		}
 		if (previous) previous.last = true;
@@ -160,7 +164,44 @@
 
 	// O teclado encolhe a área das mensagens: quem estava no fim continua vendo as últimas.
 	let atEnd = true;
-	const onscroll = () => (atEnd = !!scroller && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 8);
+	function onscroll() {
+		atEnd = !!scroller && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 8;
+		if (!dayFrame) dayFrame = requestAnimationFrame(updateFloatingDay);
+	}
+
+	// Data presa no topo ao rolar, com o dia da mensagem lá em cima; some quando a rolagem para.
+	// Não dá para usar position: sticky: um dia atravessa vários blocos e ficaria preso a cada um.
+	let floatingDay = $state('');
+	let showDay = $state(false);
+	let dayFrame = 0;
+	let hideDay: ReturnType<typeof setTimeout> | undefined;
+	function updateFloatingDay() {
+		dayFrame = 0;
+		clearTimeout(hideDay);
+		// no fim da conversa (inclusive quando o app rola sozinho ao abrir) não precisa
+		if (!scroller || atEnd) return void (showDay = false);
+		const box = scroller.getBoundingClientRect();
+		for (let y = box.top + 8; y < box.top + 80; y += 6) {
+			const el = document.elementFromPoint(box.left + box.width / 2, y)?.closest<HTMLElement>('[data-day]');
+			if (el) {
+				floatingDay = el.dataset.day!;
+				showDay = true;
+				break;
+			}
+		}
+		hideDay = setTimeout(() => (showDay = false), 1500);
+	}
+	// Numa rolagem longa, o bloco que entra na tela só é desenhado depois e cresce do tamanho
+	// estimado para o real, mudando o que fica no topo sem novo evento de rolagem.
+	$effect(() => {
+		if (!scroller) return;
+		const el = scroller;
+		const recheck = () => showDay && !dayFrame && (dayFrame = requestAnimationFrame(updateFloatingDay));
+		// o evento não sobe pela árvore: só a captura o pega no contêiner
+		el.addEventListener('contentvisibilityautostatechange', recheck, true);
+		return () => el.removeEventListener('contentvisibilityautostatechange', recheck, true);
+	});
+	onDestroy(() => (cancelAnimationFrame(dayFrame), clearTimeout(hideDay)));
 	$effect(() => {
 		if (!scroller) return;
 		const el = scroller;
@@ -238,68 +279,71 @@
 	{@render header()}
 	{@render banner?.()}
 
-	<div class="messages" bind:this={scroller} {onscroll} aria-live="polite">
-		{#if hasOlder}
-			<button class="link older" onclick={loadOlder}>Carregar mensagens anteriores</button>
-		{/if}
-		{#if messages.length === 0 && loaded}
-			<p class="hint empty">Nenhuma mensagem ainda. Diga oi!</p>
-		{/if}
-		{#each blocks as block, b (b)}
-			<div class="block" style:--block-estimate="{block.length * 56}px">
-				{#each block as item (item.type === 'dia' ? `d${item.key}` : item.message.id)}
-					{#if item.type === 'dia'}
-						<p class="day">{item.label}</p>
-					{:else if item.message.notice}
-						<p class="notice-line">{nameOf ? describeNotice(item.message.notice, item.message.sender, nameOf) : item.message.text}</p>
-					{:else}
-						{@const m = item.message}
-						<div class="row" class:mine={m.sender === me} class:first={item.first} class:last={item.last}>
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div
-								class="bubble"
-								class:deleted={m.deleted}
-								onpointerdown={(e) => onpointerdown(e, m)}
-								onpointerup={cancelPress}
-								onpointerleave={cancelPress}
-								{onpointermove}
-								oncontextmenu={(e) => (e.preventDefault(), openMenu(m))}
-							>
-								{#if item.last}
-									<svg class="tail" viewBox="0 0 10 12" aria-hidden="true">
-										<path class="tail-fill" d="M10 0C10 7 6 11 0 12H10Z" />
-										<path class="tail-line" d="M9.5 0C9.5 7 6 11 0.5 11.5H10" />
-									</svg>
-								{/if}
-								{#if nameOf && item.first && m.sender !== me}
-									<span class="sender" style:--h={hue(m.sender)}>{nameOf!(m.sender)}</span>
-								{/if}
-								{#if m.deleted}
-									<p class="deleted-text">
-										<Icon name="trash" size={14} />
-										{m.sender === me ? 'Você apagou esta mensagem' : 'Esta mensagem foi apagada'}
-									</p>
-								{:else if m.media?.type.startsWith('audio/')}
-									<AudioPlayer media={m.media} />
-								{:else if m.media}
-									<p class="hint file"><Icon name="paperclip" size={16} /> Arquivo (ainda não suportado nesta versão)</p>
-								{:else}
-									<p>{m.text}</p>
-								{/if}
-								<span class="meta">
-									{formatTime(m.createdAt)}
-									{#if m.sender === me}
-										<span class="status" title={m.status === 'pendente' ? 'Enviando' : 'Enviada'}>
-											<Icon name={m.status === 'pendente' ? 'clock' : 'check'} size={13} label={m.status === 'pendente' ? 'enviando' : 'enviada'} />
-										</span>
+	<div class="area">
+		<p class="floating-day" class:visible={showDay} aria-hidden="true">{floatingDay}</p>
+		<div class="messages" bind:this={scroller} {onscroll} aria-live="polite">
+			{#if hasOlder}
+				<button class="link older" onclick={loadOlder}>Carregar mensagens anteriores</button>
+			{/if}
+			{#if messages.length === 0 && loaded}
+				<p class="hint empty">Nenhuma mensagem ainda. Diga oi!</p>
+			{/if}
+			{#each blocks as block, b (b)}
+				<div class="block" style:--block-estimate="{block.length * 56}px">
+					{#each block as item (item.type === 'dia' ? `d${item.key}` : item.message.id)}
+						{#if item.type === 'dia'}
+							<p class="day" data-day={item.label}>{item.label}</p>
+						{:else if item.message.notice}
+							<p class="notice-line">{nameOf ? describeNotice(item.message.notice, item.message.sender, nameOf) : item.message.text}</p>
+						{:else}
+							{@const m = item.message}
+							<div class="row" class:mine={m.sender === me} class:first={item.first} class:last={item.last} data-day={item.day}>
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div
+									class="bubble"
+									class:deleted={m.deleted}
+									onpointerdown={(e) => onpointerdown(e, m)}
+									onpointerup={cancelPress}
+									onpointerleave={cancelPress}
+									{onpointermove}
+									oncontextmenu={(e) => (e.preventDefault(), openMenu(m))}
+								>
+									{#if item.last}
+										<svg class="tail" viewBox="0 0 10 12" aria-hidden="true">
+											<path class="tail-fill" d="M10 0C10 7 6 11 0 12H10Z" />
+											<path class="tail-line" d="M9.5 0C9.5 7 6 11 0.5 11.5H10" />
+										</svg>
 									{/if}
-								</span>
+									{#if nameOf && item.first && m.sender !== me}
+										<span class="sender" style:--h={hue(m.sender)}>{nameOf!(m.sender)}</span>
+									{/if}
+									{#if m.deleted}
+										<p class="deleted-text">
+											<Icon name="trash" size={14} />
+											{m.sender === me ? 'Você apagou esta mensagem' : 'Esta mensagem foi apagada'}
+										</p>
+									{:else if m.media?.type.startsWith('audio/')}
+										<AudioPlayer media={m.media} />
+									{:else if m.media}
+										<p class="hint file"><Icon name="paperclip" size={16} /> Arquivo (ainda não suportado nesta versão)</p>
+									{:else}
+										<p>{m.text}</p>
+									{/if}
+									<span class="meta">
+										{formatTime(m.createdAt)}
+										{#if m.sender === me}
+											<span class="status" title={m.status === 'pendente' ? 'Enviando' : 'Enviada'}>
+												<Icon name={m.status === 'pendente' ? 'clock' : 'check'} size={13} label={m.status === 'pendente' ? 'enviando' : 'enviada'} />
+											</span>
+										{/if}
+									</span>
+								</div>
 							</div>
-						</div>
-					{/if}
-				{/each}
-			</div>
-		{/each}
+						{/if}
+					{/each}
+				</div>
+			{/each}
+		</div>
 	</div>
 
 	{#if menuFor}
@@ -383,6 +427,34 @@
 	.closed {
 		text-align: center;
 		margin: 0.4rem 0;
+	}
+	.area {
+		flex: 1;
+		min-height: 0;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+	}
+	.floating-day {
+		position: absolute;
+		top: 0.5rem;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 1;
+		margin: 0;
+		padding: 0.15rem 0.7rem;
+		border-radius: 8px;
+		background: var(--surface);
+		border: 1px solid var(--line);
+		color: var(--muted);
+		font-size: 0.8rem;
+		/* não atrapalha o toque nem a busca do dia por elementFromPoint */
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 0.2s;
+	}
+	.floating-day.visible {
+		opacity: 1;
 	}
 	.messages {
 		flex: 1;
