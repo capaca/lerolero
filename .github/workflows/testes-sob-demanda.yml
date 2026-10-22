@@ -28,8 +28,14 @@ jobs:
       SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       # PR só de documentação (docs/ ou arquivos .md) não precisa dos testes lentos
+      # com a fila do Actions lenta, este job pode rodar depois da rodada pedida pelo rótulo; não
+      # sobrescreve o resultado dela
       - name: Marca o status do commit
         run: |
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/statuses" \
+              --jq '[.[] | select(.context == "testes de integração")] | length')" != 0 ]; then
+            echo "o commit já tem status de integração"; exit 0
+          fi
           if gh pr diff ${{ github.event.pull_request.number }} -R "$GITHUB_REPOSITORY" --name-only \
               | grep -qvE '^docs/|\.md$'; then
             state=pending; desc="Ponha o rótulo integration-tests para rodar"
