@@ -13,8 +13,20 @@ export {
 	pickCheckPositions,
 	suggestWords
 } from './identity/phrase.ts';
-export { createVault, InvalidPinError, LockedError, PhraseMismatchError, type NewIdentity, type Vault } from './identity/vault.ts';
+export {
+	createVault,
+	InvalidPinError,
+	InvalidWrapError,
+	LockedError,
+	PhraseMismatchError,
+	type NewIdentity,
+	type Rumor,
+	type Vault
+} from './identity/vault.ts';
 export { toNpub } from './identity/npub.ts';
 export { DELAYS_MS, FREE_ATTEMPTS, NO_FAILURES, recordFailure, waitTime, type AttemptState } from './identity/attempts.ts';
 export { cleanName, InvalidInviteError, inviteLink, parseInvite, type Invite } from './contacts/invite.ts';
 export { addContact, contactName, listContacts, renameContact, SelfInviteError } from './contacts/contacts.ts';
+export { RelayConnection, RelayError, type PublishResult, type Signer, type SocketFactory } from './net/connection.ts';
+export { IDLE_CLOSE_MS, RECONNECT_DELAYS_MS, RelayPool, type PoolOptions } from './net/pool.ts';
+export { dmRelayListTemplate, fetchDmRelays, SyncEngine, type SyncEvents, type SyncOptions } from './sync/engine.ts';

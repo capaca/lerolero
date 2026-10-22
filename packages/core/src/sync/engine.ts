@@ -1,0 +1,204 @@
+// Motor de sincronização (docs/06 §3.9, RF-80, RF-81, RNF-30..35).
+//
+// Receber: assina os gift wraps endereçados a mim em cada um dos meus relays de DM,
+// a partir do cursor daquele relay menos 2 dias (o NIP-59 recua o horário do embrulho
+// em até 2 dias). Cada embrulho é processado uma única vez, mesmo vindo de vários relays.
+//
+// Enviar: o que sai vai para a fila (outbox) e só sai dela quando relays confirmam.
+// Sem conexão, fica guardado e é tentado de novo com espera crescente (offline primeiro).
+
+import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
+import type { Filter } from 'nostr-tools/filter';
+import type { RelayPool } from '../net/pool.ts';
+import type { Storage } from '../storage/repositories.ts';
+import type { OutboxRecord } from '../storage/records.ts';
+
+const DAY = 24 * 60 * 60;
+
+/** Margem do cursor: o horário dos embrulhos é embaralhado em até 2 dias (NIP-59). */
+export const CURSOR_MARGIN_S = 2 * DAY;
+/** Sem cursor (primeira vez neste aparelho): busca tudo o que os relays ainda guardam. */
+export const FIRST_SYNC_WINDOW_S = 9 * DAY;
+/** Ids de embrulhos já vistos são guardados por 7 dias de retenção + 2 de margem. */
+export const SEEN_RETENTION_S = 9 * DAY;
+
+/** Espera antes de tentar de novo um envio; a última se repete. */
+export const RETRY_DELAYS_MS = [5_000, 15_000, 60_000, 5 * 60_000, 15 * 60_000];
+/**
+ * Depois que um relay aceitou, ainda tentamos os outros algumas vezes: espalhar por
+ * vários relays é o que protege contra um relay que perde mensagens (RNF-30).
+ */
+export const EXTRA_ATTEMPTS_AFTER_ACCEPTED = 3;
+
+export type SyncEvents = {
+	/** um embrulho novo chegou (já sem repetidos). Erros aqui não travam a sincronização. */
+	onWrap: (wrap: NostrEvent, relay: string) => Promise<void>;
+	/** um item da fila foi aceito pelo primeiro relay (a mensagem passa a "enviada") */
+	onSent?: (item: OutboxRecord) => Promise<void>;
+};
+
+export type SyncOptions = {
+	storage: Storage;
+	pool: RelayPool;
+	myPublicKey: string;
+	events: SyncEvents;
+	now?: () => number;
+};
+
+export class SyncEngine {
+	private readonly storage: Storage;
+	private readonly pool: RelayPool;
+	private readonly myPublicKey: string;
+	private readonly events: SyncEvents;
+	private readonly now: () => number;
+	private subscription?: { close: () => void };
+	private cursors = new Map<string, number>();
+	private flushing?: Promise<void>;
+	private retryTimer?: ReturnType<typeof setTimeout>;
+	/** processa um embrulho por vez: o mesmo pode chegar de dois relays ao mesmo tempo */
+	private queue: Promise<void> = Promise.resolve();
+
+	constructor(options: SyncOptions) {
+		this.storage = options.storage;
+		this.pool = options.pool;
+		this.myPublicKey = options.myPublicKey;
+		this.events = options.events;
+		this.now = options.now ?? Date.now;
+	}
+
+	/** Começa a receber nos relays indicados (os meus relays de DM). */
+	async start(relays: string[]) {
+		this.stop();
+		for (const relay of relays) {
+			const cursor = await this.storage.sync.getCursor(relay);
+			if (cursor !== undefined) this.cursors.set(relay, cursor);
+		}
+		this.subscription = this.pool.subscribe(
+			relays,
+			(relay) => [this.filterFor(relay)],
+			(relay) => ({ onevent: (event) => this.receive(relay, event) })
+		);
+		void this.storage.seenWraps.prune(this.seconds() - SEEN_RETENTION_S);
+		void this.flush();
+	}
+
+	stop() {
+		this.subscription?.close();
+		this.subscription = undefined;
+		clearTimeout(this.retryTimer);
+	}
+
+	/** O app voltou para a tela ou a internet voltou (RF-80): reconecta e esvazia a fila. */
+	resume() {
+		this.pool.reconnectNow();
+		void this.flush();
+	}
+
+	/** Coloca na fila e tenta enviar já. */
+	async enqueue(event: NostrEvent, relays: string[], messageId?: string) {
+		await this.storage.outbox.put({
+			id: event.id,
+			event,
+			relays: [...new Set(relays)],
+			acceptedBy: [],
+			messageId,
+			attempts: 0,
+			nextAttemptAt: this.now()
+		});
+		await this.flush();
+	}
+
+	/** Tenta enviar o que está na fila e já pode ser tentado. Chamadas simultâneas esperam a mesma rodada. */
+	flush(): Promise<void> {
+		this.flushing ??= this.flushOnce().finally(() => (this.flushing = undefined));
+		return this.flushing;
+	}
+
+	private filterFor(relay: string): Filter {
+		const cursor = this.cursors.get(relay);
+		const since = cursor !== undefined ? cursor - CURSOR_MARGIN_S : this.seconds() - FIRST_SYNC_WINDOW_S;
+		return { kinds: [1059], '#p': [this.myPublicKey], since };
+	}
+
+	private receive(relay: string, wrap: NostrEvent) {
+		this.queue = this.queue.then(() => this.process(relay, wrap)).catch(() => undefined);
+	}
+
+	private async process(relay: string, wrap: NostrEvent) {
+		if (wrap.kind !== 1059 || !wrap.tags.some((t) => t[0] === 'p' && t[1] === this.myPublicKey)) return;
+		if (!(await this.storage.seenWraps.has(wrap.id))) {
+			// marca antes de processar: um embrulho inválido não deve ser tentado de novo a cada sincronização
+			await this.storage.seenWraps.add({ id: wrap.id, receivedAt: this.seconds() });
+			try {
+				await this.events.onWrap(wrap, relay);
+			} catch {
+				// embrulho que não abre ou não é para nós: descartado, o resto segue
+			}
+		}
+		const cursor = this.cursors.get(relay);
+		if (cursor === undefined || wrap.created_at > cursor) {
+			this.cursors.set(relay, wrap.created_at);
+			await this.storage.sync.setCursor(relay, wrap.created_at);
+		}
+	}
+
+	private async flushOnce() {
+		clearTimeout(this.retryTimer);
+		for (const item of await this.storage.outbox.due(this.now())) {
+			const pending = item.relays.filter((r) => !item.acceptedBy.includes(r));
+			const results = await this.pool.publish(pending, item.event);
+			const newlyAccepted = pending.filter((r) => results[r]?.ok);
+			const acceptedBy = [...item.acceptedBy, ...newlyAccepted];
+			const attempts = item.attempts + 1;
+			const updated: OutboxRecord = { ...item, acceptedBy, attempts, nextAttemptAt: this.now() + this.retryDelay(attempts) };
+
+			if (item.acceptedBy.length === 0 && acceptedBy.length > 0) await this.events.onSent?.(updated);
+
+			const allAccepted = acceptedBy.length === item.relays.length;
+			const enoughExtra = item.acceptedBy.length > 0 && attempts >= EXTRA_ATTEMPTS_AFTER_ACCEPTED;
+			if (allAccepted || enoughExtra) await this.storage.outbox.delete(item.id);
+			else await this.storage.outbox.put(updated);
+		}
+		await this.scheduleNextRetry();
+	}
+
+	private async scheduleNextRetry() {
+		const next = (await this.storage.outbox.due(Infinity))[0];
+		if (!next) return;
+		const wait = Math.max(0, next.nextAttemptAt - this.now());
+		this.retryTimer = setTimeout(() => void this.flush(), wait);
+	}
+
+	private retryDelay(attempts: number) {
+		return RETRY_DELAYS_MS[Math.min(attempts, RETRY_DELAYS_MS.length) - 1];
+	}
+
+	private seconds() {
+		return Math.floor(this.now() / 1000);
+	}
+}
+
+/** Evento kind 10050 (NIP-17): onde recebo mensagens. Assinado pelo cofre. */
+export function dmRelayListTemplate(relays: string[], now = Date.now()) {
+	return {
+		kind: 10050,
+		created_at: Math.floor(now / 1000),
+		tags: relays.map((r) => ['relay', r]),
+		content: ''
+	};
+}
+
+/**
+ * Descobre onde um contato recebe mensagens: o kind 10050 mais recente dele nos
+ * relays gerais. Usado quando o convite não trouxe relays (ex.: npub de outro app).
+ */
+export async function fetchDmRelays(pool: RelayPool, generalRelays: string[], publicKey: string): Promise<string[]> {
+	// sem `limit: 1`: um relay poderia servir só um evento falso mais novo e esconder o verdadeiro
+	const events = await pool.query(generalRelays, [{ kinds: [10050], authors: [publicKey] }]);
+	// o relay poderia inventar um 10050 para desviar as mensagens: só vale o assinado pelo contato
+	const latest = events
+		.filter((e) => e.pubkey === publicKey && e.kind === 10050 && verifyEvent(e))
+		.sort((a, b) => b.created_at - a.created_at)[0];
+	if (!latest) return [];
+	return latest.tags.filter((t) => t[0] === 'relay' && /^wss:\/\//.test(t[1] ?? '')).map((t) => t[1]).slice(0, 3);
+}

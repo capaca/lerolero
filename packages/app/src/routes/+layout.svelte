@@ -28,7 +28,17 @@
 		]
 	};
 
-	onMount(() => void session.init());
+	onMount(() => {
+		void session.init();
+		// RF-80: ao voltar para o app ou quando a internet volta, reconecta e esvazia a fila
+		const resume = () => document.visibilityState === 'visible' && session.resumeNetwork();
+		document.addEventListener('visibilitychange', resume);
+		addEventListener('online', resume);
+		return () => {
+			document.removeEventListener('visibilitychange', resume);
+			removeEventListener('online', resume);
+		};
+	});
 
 	$effect(() => {
 		if (session.status === 'carregando') return;

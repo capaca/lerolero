@@ -10,6 +10,14 @@
 
 	const relays = relayList();
 
+	// estado da rede, atualizado a cada 2 s enquanto a tela está aberta
+	let connected = $state<string[]>([]);
+	$effect(() => {
+		connected = session.connectedRelays();
+		const timer = setInterval(() => (connected = session.connectedRelays()), 2000);
+		return () => clearInterval(timer);
+	});
+
 	async function copy() {
 		await navigator.clipboard.writeText(npub);
 		copied = true;
@@ -57,10 +65,23 @@
 		{:catch}
 			<p class="error">Não foi possível carregar a lista de servidores.</p>
 		{/await}
+		<p>
+			Conectado agora a <strong>{connected.length}</strong>
+			{connected.length === 1 ? 'servidor' : 'servidores'}.
+		</p>
+		{#if connected.length}
+			<ul class="hint relays">
+				{#each connected as url (url)}<li>{url.replace('wss://', '')}</li>{/each}
+			</ul>
+		{/if}
 	</section>
 </main>
 
 <style>
+	.relays {
+		margin: 0;
+		padding-left: 1.2rem;
+	}
 	.key {
 		font-family: ui-monospace, monospace;
 		font-size: 0.85rem;

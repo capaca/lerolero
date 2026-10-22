@@ -4,11 +4,14 @@
 import {
 	addContact,
 	connect,
+	dmRelayListTemplate,
 	listContacts,
 	NO_FAILURES,
 	openStorage,
 	recordFailure,
+	RelayPool,
 	renameContact,
+	SyncEngine,
 	waitTime,
 	type AttemptState,
 	type ContactRecord,
@@ -43,8 +46,11 @@ async function requestPersistence() {
 	}
 }
 
+const DM_LIST_ID = 'relays-dm';
+
 class Session {
 	status = $state<Status>('carregando');
+	private network?: { pool: RelayPool; engine: SyncEngine };
 	// $state.raw: o registro tem bytes que vão para o worker e para o IndexedDB, que não aceitam proxies
 	identity = $state.raw<IdentityRecord | undefined>();
 
@@ -69,6 +75,7 @@ class Session {
 		await this.save({ id: 'eu', publicKey, phrase, phraseConfirmed: false, displayName, createdAt: Date.now() });
 		this.status = 'desbloqueado';
 		void requestPersistence();
+		void this.startNetwork();
 		return words;
 	}
 
@@ -78,6 +85,7 @@ class Session {
 		await this.save({ id: 'eu', publicKey, phrase, phraseConfirmed: true, displayName, createdAt: Date.now() });
 		this.status = 'desbloqueado';
 		void requestPersistence();
+		void this.startNetwork();
 	}
 
 	/**
@@ -104,9 +112,11 @@ class Session {
 	async unlock(pin: string) {
 		await this.withPinAttempt(() => vault.unlock(this.current.phrase, pin));
 		this.status = 'desbloqueado';
+		void this.startNetwork();
 	}
 
 	async lock() {
+		this.stopNetwork();
 		await vault.lock();
 		this.status = 'bloqueado';
 	}
@@ -117,6 +127,7 @@ class Session {
 		await this.save({ ...this.current, phrase, phraseConfirmed: true });
 		await storage.settings.set(ATTEMPTS_KEY, NO_FAILURES);
 		this.status = 'desbloqueado';
+		void this.startNetwork();
 	}
 
 	reveal(pin: string): Promise<string[]> {
@@ -125,6 +136,57 @@ class Session {
 
 	async confirmPhrase() {
 		await this.save({ ...this.current, phraseConfirmed: true });
+	}
+
+	// ---------- rede ----------
+
+	/**
+	 * Conecta aos relays, envia o que ficou na fila e publica onde recebo mensagens.
+	 * A recepção só liga na etapa 5, junto com a tela de conversa: ligada antes,
+	 * as mensagens seriam marcadas como vistas sem ter onde ficar guardadas.
+	 */
+	private async startNetwork() {
+		if (this.network) return;
+		const pool = new RelayPool({ signer: (template) => vault.sign(template) });
+		const engine = new SyncEngine({
+			storage,
+			pool,
+			myPublicKey: this.current.publicKey,
+			events: {
+				onWrap: async () => {},
+				onSent: async (item) => {
+					if (item.messageId === DM_LIST_ID) await storage.settings.set('relaysDmPublicados', relaysOf(item.event.tags));
+				}
+			}
+		});
+		this.network = { pool, engine };
+		void engine.flush();
+		await this.publishDmRelays();
+	}
+
+	private stopNetwork() {
+		this.network?.engine.stop();
+		this.network?.pool.close();
+		this.network = undefined;
+	}
+
+	/** O app voltou para a tela ou a internet voltou (RF-80). */
+	resumeNetwork() {
+		this.network?.engine.resume();
+	}
+
+	/** kind 10050 (NIP-17): publicado nos relays gerais e nos meus, só quando a lista muda. */
+	private async publishDmRelays() {
+		const relays = await this.myDmRelays();
+		const published = await storage.settings.get<string[]>('relaysDmPublicados');
+		if (published && published.join(' ') === relays.join(' ')) return;
+		const event = await vault.sign(dmRelayListTemplate(relays));
+		const general = (await relayList()).geral;
+		await this.network?.engine.enqueue(event, [...general, ...relays], DM_LIST_ID);
+	}
+
+	connectedRelays(): string[] {
+		return this.network?.pool.connectedUrls() ?? [];
 	}
 
 	// ---------- contatos ----------
@@ -201,3 +263,5 @@ function formatWait(ms: number): string {
 	const m = Math.ceil(s / 60);
 	return m === 1 ? '1 minuto' : `${m} minutos`;
 }
+
+const relaysOf = (tags: string[][]) => tags.filter((t) => t[0] === 'relay').map((t) => t[1]);

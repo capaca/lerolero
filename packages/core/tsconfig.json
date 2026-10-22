@@ -15,5 +15,7 @@
 		"verbatimModuleSyntax": true,
 		"resolveJsonModule": true
 	},
-	"include": ["src"]
+	"include": ["src"],
+	// testes e o relay falso usam APIs do Node; o código do núcleo não pode (tsconfig.test.json)
+	"exclude": ["src/**/*.test.ts", "src/testing"]
 }

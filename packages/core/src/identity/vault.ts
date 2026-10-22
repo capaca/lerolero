@@ -1,8 +1,9 @@
 // Cofre da identidade. Roda dentro do Web Worker: a chave privada nasce, vive e
 // morre aqui, e a interface só recebe a chave pública e lacres já cifrados.
 
-import { getPublicKey } from 'nostr-tools/pure';
+import { finalizeEvent, getEventHash, getPublicKey, type EventTemplate, type NostrEvent } from 'nostr-tools/pure';
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06';
+import { unwrapEvent } from 'nostr-tools/nip59';
 import { DEFAULT_KDF, seal, unseal, type KdfParams, type Sealed } from '../crypto/seal.ts';
 import { generatePhrase, parsePhrase } from './phrase.ts';
 
@@ -27,6 +28,27 @@ export class LockedError extends Error {
 		this.name = 'LockedError';
 	}
 }
+
+/** A mensagem dentro do gift wrap não é válida (id adulterado, assinatura errada…). */
+export class InvalidWrapError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'InvalidWrapError';
+	}
+}
+
+/** Um rumor (NIP-59): evento sem assinatura, com o id calculado. */
+export type Rumor = Omit<NostrEvent, 'sig'>;
+
+/**
+ * O cofre só assina o que o app precisa assinar diretamente. Mensagens não passam
+ * por aqui: são embrulhadas dentro do cofre. Assim, nem um bug na interface
+ * consegue fazer a chave assinar outra coisa em nome da pessoa.
+ */
+const SIGNABLE_KINDS = new Set([
+	22242, // autenticação em relay (NIP-42)
+	10050 // relays onde recebo mensagens (NIP-17)
+]);
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -88,6 +110,30 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 			const phrase = await sealWords(words, newPin, kdf);
 			unlockWith(words);
 			return phrase;
+		},
+
+		/** Assina um dos tipos permitidos (SIGNABLE_KINDS). */
+		sign(template: EventTemplate): NostrEvent {
+			if (!secretKey) throw new LockedError();
+			if (!SIGNABLE_KINDS.has(template.kind)) throw new Error(`o cofre não assina eventos do tipo ${template.kind}`);
+			return finalizeEvent(template, secretKey);
+		},
+
+		/**
+		 * Abre um gift wrap endereçado a mim. O nostr-tools confere a assinatura do selo
+		 * e se o autor do rumor é quem assinou; aqui conferimos também o id do rumor,
+		 * que vira chave no banco: um id forjado poderia sobrescrever outra mensagem.
+		 */
+		unwrap(wrap: NostrEvent): Rumor {
+			if (!secretKey) throw new LockedError();
+			let rumor: Rumor;
+			try {
+				rumor = unwrapEvent(wrap, secretKey) as Rumor;
+			} catch (err) {
+				throw new InvalidWrapError(err instanceof Error ? err.message : String(err));
+			}
+			if (getEventHash(rumor) !== rumor.id) throw new InvalidWrapError('id do rumor não confere com o conteúdo');
+			return rumor;
 		},
 
 		lock() {

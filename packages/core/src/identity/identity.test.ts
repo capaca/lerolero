@@ -8,7 +8,10 @@ import {
 	pickCheckPositions,
 	suggestWords
 } from './phrase.ts';
-import { createVault, InvalidPinError, PhraseMismatchError } from './vault.ts';
+import { createVault, InvalidPinError, InvalidWrapError, LockedError, PhraseMismatchError } from './vault.ts';
+import { getEventHash, getPublicKey, generateSecretKey, finalizeEvent } from 'nostr-tools/pure';
+import { wrapEvent, createWrap } from 'nostr-tools/nip59';
+import { encrypt, getConversationKey } from 'nostr-tools/nip44';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 
@@ -104,5 +107,52 @@ describe('cofre da identidade', () => {
 		const vault = createVault({ kdf: FAST });
 		const { publicKey } = await vault.create('123456');
 		await expect(vault.resetPin(PHRASE, '777777', publicKey)).rejects.toBeInstanceOf(PhraseMismatchError);
+	});
+});
+
+describe('cofre: assinar e abrir mensagens', () => {
+	const now = () => Math.floor(Date.now() / 1000);
+
+	it('assina só os tipos permitidos e só desbloqueado', async () => {
+		const vault = createVault({ kdf: FAST });
+		const { publicKey } = await vault.create('123456');
+		const auth = vault.sign({ kind: 22242, created_at: now(), tags: [], content: '' });
+		expect(auth.pubkey).toBe(publicKey);
+		expect(() => vault.sign({ kind: 1, created_at: now(), tags: [], content: 'post público' })).toThrow(/não assina/);
+		vault.lock();
+		expect(() => vault.sign({ kind: 10050, created_at: now(), tags: [], content: '' })).toThrow(LockedError);
+	});
+
+	it('abre um gift wrap endereçado a mim', async () => {
+		const vault = createVault({ kdf: FAST });
+		const { publicKey } = await vault.create('123456');
+		const sender = generateSecretKey();
+		const wrap = wrapEvent({ kind: 14, content: 'oi', tags: [['p', publicKey]] }, sender, publicKey);
+		const rumor = vault.unwrap(wrap);
+		expect(rumor.content).toBe('oi');
+		expect(rumor.pubkey).toBe(getPublicKey(sender));
+	});
+
+	it('recusa rumor com id forjado (poderia sobrescrever outra mensagem)', async () => {
+		const vault = createVault({ kdf: FAST });
+		const { publicKey } = await vault.create('123456');
+		const sender = generateSecretKey();
+		const rumor = { kind: 14, content: 'oi', tags: [], created_at: now(), pubkey: getPublicKey(sender) };
+		const forged = { ...rumor, id: 'a'.repeat(64) };
+		expect(getEventHash(rumor)).not.toBe(forged.id);
+		// selo e embrulho montados à mão, com o id falso no rumor
+		const seal = finalizeEvent(
+			{ kind: 13, created_at: now(), tags: [], content: encrypt(JSON.stringify(forged), getConversationKey(sender, publicKey)) },
+			sender
+		);
+		expect(() => vault.unwrap(createWrap(seal, publicKey))).toThrow(InvalidWrapError);
+	});
+
+	it('recusa embrulho que não é para mim', async () => {
+		const vault = createVault({ kdf: FAST });
+		await vault.create('123456');
+		const other = getPublicKey(generateSecretKey());
+		const wrap = wrapEvent({ kind: 14, content: 'oi', tags: [] }, generateSecretKey(), other);
+		expect(() => vault.unwrap(wrap)).toThrow(InvalidWrapError);
 	});
 });
