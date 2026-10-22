@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4 # versão do pnpm vem do campo packageManager
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Tipos
+        run: pnpm check
+      - name: Testes
+        run: pnpm test
+      - name: Build do app
+        run: pnpm build
+        env:
+          BASE_PATH: /lerolero
+      - name: Build do protótipo de medição
+        working-directory: prototipos/medicao
+        run: npm ci && npm run build
+      # o app ocupa a raiz do site; o protótipo fica em /medicao/
+      - name: Monta o site
+        run: |
+          cp -rL packages/app/build site
+          cp -r prototipos/medicao/dist site/medicao
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  publicar:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: verificar
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

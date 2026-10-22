@@ -35,3 +35,9 @@ O MVP é um PWA, e a v1 traz Android e desktop nativos reaproveitando o mesmo c�
 - No macOS, notificações e distribuição sem avisos de segurança exigem app assinado e notarizado pela Apple (conta de desenvolvedor de US$ 99/ano), o que conflita com o orçamento zero. Vale para qualquer ferramenta de desktop ([Q-N5](../04-requisitos-nao-funcionais.md#questões-em-aberto)).
 - Capacitor depende do WebView do Android; em aparelhos antigos com WebView desatualizado, o desempenho pode cair. Medir no aparelho de referência.
 - Rever se o desempenho do Capacitor no aparelho de referência não atingir as metas: a alternativa é um app Android nativo em Kotlin reaproveitando só o núcleo.
+
+## Versões (2026-10-22, M0)
+
+- **SvelteKit 3** (lançado em 2026-10-01): sem `svelte.config.js`, a configuração fica no plugin do Vite. Escolhido para evitar uma migração de versão grande no meio do projeto.
+- **TypeScript 6**: o SvelteKit 3 e o `svelte-check` ainda não aceitam o TypeScript 7 (reescrito em Go, sem a API em JavaScript). Migrar quando o ecossistema do Svelte suportar.
+- **Node 24 LTS** (arquivo `.node-version`) e **pnpm** com workspaces, versão fixada no campo `packageManager` (via Corepack).

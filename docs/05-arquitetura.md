@@ -157,6 +157,7 @@ lerolero/
 ├── platforms/
 │   ├── android/           # Capacitor (v1)
 │   └── desktop/           # Tauri (Rust) (v1)
+├── prototipos/            # medições e pesquisas descartáveis, fora do workspace
 └── relays.json            # lista padrão de relays e Blossom
 ```
 

@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		// APIs da plataforma web (URL, WebSocket, Web Crypto), presentes no navegador e no Node;
+		// o núcleo não deve usar o DOM em si (document, window), que é coisa da interface
+		"lib": ["ES2022", "DOM"],
+		"types": [],
+		"strict": true,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"skipLibCheck": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"resolveJsonModule": true
+	},
+	"include": ["src"]
+}
