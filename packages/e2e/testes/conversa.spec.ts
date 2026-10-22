@@ -1,20 +1,11 @@
 // Conversa entre duas pessoas pelo relay local: convite, envio, recebimento sem recarregar, não lidas e
 // o nome que viaja cifrado na primeira mensagem (RF-10..14, RF-20).
-import { expect, test } from '../ajudantes.ts';
+import { adicionarPeloConvite, expect, test } from '../ajudantes.ts';
 
 test('Maria convida, João adiciona e os dois conversam', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
 
-	await maria.page.goto('./contatos/meu-convite');
-	await maria.page.getByRole('button', { name: 'Copiar link' }).click();
-	const convite = await maria.page.evaluate(() => navigator.clipboard.readText());
-	expect(convite).toContain('/convite#npub1');
-
-	await joao.page.goto(convite);
-	await expect(joao.page.getByText('Se apresenta como: Maria')).toBeVisible();
-	await joao.page.getByRole('button', { name: 'Adicionar' }).click();
-	await joao.page.getByRole('link', { name: 'Conversar' }).click();
-	await expect(joao.page.getByText('Nenhuma mensagem ainda')).toBeVisible();
+	await adicionarPeloConvite(maria, joao);
 
 	await joao.page.getByLabel('Mensagem').fill('Oi Maria! Aqui é o João.');
 	await joao.page.getByRole('button', { name: 'Enviar', exact: true }).click();

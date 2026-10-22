@@ -166,7 +166,10 @@ Monorepo com workspaces (ex.: pnpm).
 
 A lista de relays só aceita `wss://` e `https://`, com uma exceção decidida em 2026-10-22: `ws://` e `http://` em
 `127.0.0.1` e `localhost`, para a suíte e2e apontar o app de produção para servidores locais sem build especial. O
-risco é nulo: no máximo o app conversaria com o próprio aparelho.
+risco é nulo: no máximo o app conversaria com o próprio aparelho. A exceção não vale para o endereço da mídia nas
+mensagens (kind 15), que continua só `https://`: ali o endereço vem de outra pessoa, e aceitar `http://127.0.0.1`
+deixaria uma mensagem fazer o app de quem recebe chamar serviços do próprio aparelho. Por isso os Blossom da suíte e2e
+servem em https, com certificado autoassinado que só o navegador da suíte aceita (decidido em 2026-10-22).
 
 ## Questões em aberto
 

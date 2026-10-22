@@ -9,8 +9,6 @@ rodam como estão (caminhos de uma pasta temporária, Chrome do macOS, relays re
 | `identidade.mjs` | cadastro, PIN errado, bloquear, esqueci o PIN, ver a frase, restaurar, lembrete, limite de tentativas |
 | `contatos.mjs` | convite (link e QR com câmera simulada, leitor nativo e jsQR), nome local, convite pendente |
 | `conversa.mjs` | conversa entre duas pessoas pela rede real, não lidas, pedido de contato |
-| `audio.mjs`, `audio2.mjs` | gravar (microfone simulado), enviar, tocar, velocidade, um áudio por vez |
-| `apagar.mjs` | apagar para mim e para todos, remoção no Blossom (branch `exclusao-de-mensagens`) |
 | `update.mjs`, `upgrade.mjs`, `branca.mjs`, `laco.mjs` | atualização do app, service worker, tela branca e autocorreção |
 | `gestao.mjs` | gestão do grupo com 4 pessoas: detalhes, renomear, adicionar, promover, remover, sair e herança do título |
 | `pin.mjs` | PIN em bolinhas: pular para a confirmação, PINs diferentes, PIN errado, ver a frase |

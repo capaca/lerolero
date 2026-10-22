@@ -33,6 +33,41 @@ export async function criarConta(page: Page, nome: string, pin = PIN): Promise<s
 	return frase;
 }
 
+/** `quem` abre o convite de `de`, adiciona e fica na conversa com ele, ainda vazia. */
+export async function adicionarPeloConvite(de: Pessoa, quem: Pessoa) {
+	await de.page.goto('./contatos/meu-convite');
+	await de.page.getByRole('button', { name: 'Copiar link' }).click();
+	const convite = await de.page.evaluate(() => navigator.clipboard.readText());
+	expect(convite).toContain('/convite#npub1');
+	await quem.page.goto(convite);
+	await expect(quem.page.getByText(`Se apresenta como: ${de.nome}`)).toBeVisible();
+	await quem.page.getByRole('button', { name: 'Adicionar' }).click();
+	await quem.page.getByRole('link', { name: 'Conversar' }).click();
+	await expect(quem.page.getByText('Nenhuma mensagem ainda')).toBeVisible();
+}
+
+export async function enviarTexto(page: Page, texto: string) {
+	await page.getByLabel('Mensagem').fill(texto);
+	await page.getByRole('button', { name: 'Enviar', exact: true }).click();
+	await expect(page.locator('.row.mine', { hasText: texto }).getByLabel('enviada')).toBeVisible();
+}
+
+/** Grava pelo microfone simulado e envia; espera o áudio sair (cifrado, nos dois Blossom, no relay). */
+export async function enviarAudio(page: Page, segundos = 2) {
+	const antes = await page.locator('.row.mine .player').count();
+	await page.getByRole('button', { name: 'Gravar áudio' }).click();
+	await expect(page.getByText(/Gravando/)).toBeVisible();
+	await page.waitForTimeout(segundos * 1000);
+	await page.getByRole('button', { name: 'Enviar áudio' }).click();
+	await expect(page.locator('.row.mine:has(.player)').nth(antes).getByLabel('enviada')).toBeVisible({ timeout: 20_000 });
+}
+
+/** Abre a primeira conversa da lista do início. */
+export async function abrirConversa(page: Page, com: string) {
+	await page.goto('./');
+	await page.locator('.conversations a', { hasText: com }).click();
+}
+
 /** Esquece a sessão aberta (vale 5 min): a próxima abertura do app pede o PIN. */
 export const vencerSessao = (page: Page) =>
 	page.evaluate(
@@ -60,9 +95,9 @@ export const test = base.extend<Fixtures>({
 		const erros: string[] = [];
 		const contextos: BrowserContext[] = [];
 		await use(async () => {
-			const { baseURL, viewport, locale } = info.project.use;
-			const contexto = await browser.newContext({ baseURL, viewport, locale });
-			await contexto.grantPermissions(['clipboard-read', 'clipboard-write']);
+			const { baseURL, viewport, locale, ignoreHTTPSErrors } = info.project.use;
+			const contexto = await browser.newContext({ baseURL, viewport, locale, ignoreHTTPSErrors });
+			await contexto.grantPermissions(['clipboard-read', 'clipboard-write', 'microphone']);
 			contextos.push(contexto);
 			const page = await contexto.newPage();
 			page.on('pageerror', (e) => erros.push(e.message));
