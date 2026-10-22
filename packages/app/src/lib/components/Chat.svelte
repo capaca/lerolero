@@ -129,9 +129,13 @@
 
 	// O teclado encolhe a área das mensagens: quem estava no fim continua vendo as últimas.
 	let atEnd = true;
+	// altura da área quando o ResizeObserver a viu pela última vez
+	let seenHeight = 0;
 	function onscroll() {
 		const distance = scroller ? scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight : 0;
-		atEnd = distance < 8;
+		// a rolagem é entregue antes do ResizeObserver: se a área acabou de encolher, a distância já é a
+		// da área menor e "esqueceria" que a pessoa estava no fim; quem decide é o observer, logo depois
+		if (scroller && scroller.clientHeight === seenHeight) atEnd = distance < 8;
 		farFromEnd = distance > 300;
 		if (atEnd) pending = 0;
 		if (!dayFrame) dayFrame = requestAnimationFrame(updateFloatingDay);
@@ -174,6 +178,7 @@
 		if (!scroller) return;
 		const el = scroller;
 		const observer = new ResizeObserver(() => {
+			seenHeight = el.clientHeight;
 			if (atEnd) el.scrollTop = el.scrollHeight;
 		});
 		observer.observe(el);
