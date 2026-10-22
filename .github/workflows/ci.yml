@@ -1,5 +1,10 @@
 name: CI
 
+# Roda a cada commit de PR e na main: tipos, testes unitários e build. Não publica: o deploy sai só na release
+# (release.yml), e os testes com a rede real rodam por rótulo no PR (testes-sob-demanda.yml).
+# Mudança só de documentação (docs/ ou arquivos .md) pula os passos, mas o job roda e termina
+# verde: se o workflow inteiro fosse pulado, a checagem obrigatória ficaria esperando para sempre.
+
 on:
   push:
     branches: [main]
@@ -19,61 +24,36 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # para comparar com a base do PR ou com o push anterior
+      - name: Só documentação?
+        id: docs
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then base=${{ github.event.pull_request.base.sha }}
+          elif [ "$GITHUB_EVENT_NAME" = push ]; then base=${{ github.event.before }}
+          else base=; fi
+          if [ -n "$base" ] && git cat-file -e "$base" 2>/dev/null \
+              && ! git diff --name-only "$base" HEAD | grep -qvE '^docs/|\.md$'; then
+            echo "Só documentação: pulando tipos, testes e build"
+            echo "so=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: pnpm/action-setup@v4 # versão do pnpm vem do campo packageManager
+        if: steps.docs.outputs.so != 'true'
       - uses: actions/setup-node@v5
+        if: steps.docs.outputs.so != 'true'
         with:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        if: steps.docs.outputs.so != 'true'
       - name: Tipos
+        if: steps.docs.outputs.so != 'true'
         run: pnpm check
       - name: Testes
+        if: steps.docs.outputs.so != 'true'
         run: pnpm test
       - name: Build do app
+        if: steps.docs.outputs.so != 'true'
         run: pnpm build
         env:
           BASE_PATH: /lerolero
-      # o protótipo fica fora do workspace (npm); o cache evita baixar tudo a cada execução,
-      # e o fetch-timeout curto faz um download travado ser repetido em 30 s, não em 5 min
-      - uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: npm-medicao-${{ hashFiles('prototipos/medicao/package-lock.json') }}
-      - name: Build do protótipo de medição
-        working-directory: prototipos/medicao
-        run: npm ci --prefer-offline --no-audit --no-fund --fetch-timeout=30000 && npm run build
-      # o app ocupa a raiz do site; o protótipo fica em /medicao/
-      - name: Monta o site
-        run: |
-          cp -rL packages/app/build site
-          cp -r prototipos/medicao/dist site/medicao
-      # Mantém no ar o código da versão publicada até agora. Logo depois de publicar, páginas
-      # antigas guardadas (no navegador, na CDN do GitHub ou no service worker) ainda pedem os
-      # arquivos da versão anterior; sem isto eles somem e o app abre em branco. Os arquivos
-      # têm o hash no nome, então as duas versões convivem sem conflito.
-      - name: Preserva o código da versão anterior
-        run: |
-          base=https://capaca.github.io/lerolero
-          curl -sf "$base/service-worker.js" | grep -o '_app/immutable/[^"`]*' | sort -u > anteriores.txt || true
-          kept=0
-          while read -r f; do
-            if [ ! -f "site/$f" ] && curl -sf --create-dirs -o "site/$f" "$base/$f"; then kept=$((kept+1)); fi
-          done < anteriores.txt
-          echo "arquivos da versão anterior mantidos: $kept"
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: site
-
-  publicar:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: verificar
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4

@@ -87,9 +87,14 @@
 			</ul>
 		{/if}
 	</section>
+
+	<p class="hint release">Lero-lero {__APP_RELEASE__}</p>
 </main>
 
 <style>
+	.release {
+		text-align: center;
+	}
 	.relays {
 		margin: 0;
 		padding-left: 1.2rem;

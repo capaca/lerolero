@@ -6,6 +6,9 @@ import { defineConfig } from 'vite';
 const base = (process.env.BASE_PATH ?? '') as '' | `/${string}`;
 
 export default defineConfig({
+	// número da release (SemVer), definido pelo workflow de release; fora dele, "dev".
+	// O `version` do SvelteKit continua sendo o do build e nomeia o cache do service worker.
+	define: { __APP_RELEASE__: JSON.stringify(process.env.APP_RELEASE ?? 'dev') },
 	plugins: [
 		sveltekit({
 			compilerOptions: {

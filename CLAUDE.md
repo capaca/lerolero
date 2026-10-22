@@ -25,7 +25,9 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
   mídia/Blossom (`media/`), conversas (`conversations/`).
 - `packages/app`: SvelteKit 3 estático (SPA). Imports via `#lib/...`; estado da sessão em `src/lib/session.svelte.ts`.
 - `prototipos/`: pesquisas fora do workspace (usam npm). `prototipos/e2e-rascunho` tem os testes de navegador em Puppeteer.
-- CI em `.github/workflows/ci.yml`: tipos, testes, build e deploy no Pages a cada push na main.
+- Fluxo (ADR-0006): push direto na `main` é bloqueado; tudo entra por PR com squash. `ci.yml` (tipos, testes, build)
+  roda a cada commit; `testes-sob-demanda.yml` roda pelos rótulos `integration-tests` e `e2e-tests`; só
+  `release.yml` (manual, SemVer 0.x) publica no Pages.
 
 ## Convenções
 

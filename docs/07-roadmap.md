@@ -79,7 +79,7 @@ Critério escolhido pelo Pedro: **uso no dia a dia**, o que faz um grupo de amig
 - Fotos: compressão, prévia leve, download sob demanda (RF-41, 71).
 - Cifra e envio ao Blossom; deduplicação por hash; encaminhar sem reenviar (RF-42, 70).
 - ~~Expiração de mídia (30 dias, "guardar") e painel de armazenamento (RF-72, 73).~~ Adiado para a v1 (2026-10-22).
-- **Suite de testes de ponta a ponta** (`packages/e2e`, Playwright): cadastro e PIN, restauração, convite e QR, conversa entre duas pessoas, áudio, atualização do app e comentário. Roda na CI a cada push contra o relay e o Blossom falsos (sem internet) e, uma vez por dia ou sob demanda, contra a rede real. Daqui em diante, cada funcionalidade nova entra com o seu teste.
+- **Suite de testes de ponta a ponta** (`packages/e2e`, Playwright): cadastro e PIN, restauração, convite e QR, conversa entre duas pessoas, áudio, atualização do app e comentário. Roda sob demanda, com o rótulo `e2e-tests` no PR, e passa a ser exigida para o merge ([ADR-0006](adr/0006-fluxo-de-trabalho-e-releases.md), 2026-10-22). Daqui em diante, cada funcionalidade nova entra com o seu teste.
 - ~~Cartão de perfil privado com nome e foto (Q-P5, RF-02).~~ Passou para o M3 (2026-10-22).
 - **Excluir áudio e mídia:** apagar para mim (mensagem e arquivo no aparelho) e apagar para todos (pedido cifrado ao contato, como no RF-25, e remoção do arquivo dos servidores Blossom por quem enviou).
 - **Melhorias de UX/UI** (escolhidas pelo Pedro em 2026-10-22), em 3 etapas:
