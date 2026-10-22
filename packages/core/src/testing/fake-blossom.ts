@@ -2,6 +2,7 @@
 // kind 24242, GET /<sha256>. Dá para simular recusa e arquivo adulterado.
 
 import { createServer, type Server } from 'node:http';
+import { createServer as createTlsServer } from 'node:https';
 import { createHash } from 'node:crypto';
 import { verifyEvent, type NostrEvent } from 'nostr-tools/pure';
 
@@ -14,12 +15,16 @@ export class FakeBlossom {
 	private server?: Server;
 	private port = 0;
 
+	/** com `tls`, serve em https: o app só aceita mídia em endereço https (suíte e2e) */
+	constructor(private readonly tls?: { key: string; cert: string }) {}
+
 	get url() {
-		return `http://127.0.0.1:${this.port}`;
+		return `${this.tls ? 'https' : 'http'}://127.0.0.1:${this.port}`;
 	}
 
 	async start(): Promise<this> {
-		this.server = createServer((req, res) => void this.handle(req, res));
+		const handler = (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => void this.handle(req, res);
+		this.server = this.tls ? createTlsServer(this.tls, handler) : createServer(handler);
 		await new Promise<void>((resolve) => this.server!.listen(0, '127.0.0.1', resolve));
 		this.port = (this.server.address() as { port: number }).port;
 		return this;
@@ -31,6 +36,12 @@ export class FakeBlossom {
 
 	private async handle(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) {
 		const path = new URL(req.url!, 'http://x').pathname;
+		// o app no navegador (suíte e2e) chama de outra origem, como os servidores Blossom de verdade (BUD-01)
+		res.setHeader('access-control-allow-origin', '*');
+		if (req.method === 'OPTIONS') {
+			res.writeHead(204, { 'access-control-allow-methods': 'GET, PUT, DELETE', 'access-control-allow-headers': '*', 'access-control-max-age': '86400' });
+			return res.end();
+		}
 		if (req.method === 'PUT' && path === '/upload') {
 			const chunks: Buffer[] = [];
 			for await (const c of req) chunks.push(c as Buffer);

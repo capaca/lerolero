@@ -19,8 +19,12 @@ export default defineConfig({
 		baseURL: APP_URL,
 		// o Chrome instalado (Mac do Pedro e ubuntu-latest da CI): sem baixar navegador
 		channel: 'chrome',
+		// microfone simulado (um tom) para gravar áudio; tocar sem gesto do usuário
+		launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] },
 		viewport: { width: 400, height: 850 },
 		locale: 'pt-BR',
+		// os Blossom locais usam certificado autoassinado (servidores.ts)
+		ignoreHTTPSErrors: true,
 		trace: 'retain-on-failure',
 		screenshot: 'only-on-failure'
 	}
