@@ -60,6 +60,16 @@
 		session.openConversationId = directConversationId(publicKey);
 		void load();
 	});
+	// conecta já aos relays do contato, para a primeira mensagem não esperar a conexão
+	$effect(() => {
+		let release: (() => void) | undefined;
+		let gone = false;
+		void session.prepareConversation(publicKey).then((r) => (gone ? r() : (release = r)));
+		return () => {
+			gone = true;
+			release?.();
+		};
+	});
 	onDestroy(() => (session.openConversationId = undefined));
 
 	async function loadOlder() {

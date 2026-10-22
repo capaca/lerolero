@@ -241,6 +241,21 @@ class Session {
 		return found;
 	}
 
+	/**
+	 * Conversa aberta na tela: conecta já aos relays do contato e mantém enquanto ela
+	 * estiver aberta, para a primeira mensagem sair em ~200 ms em vez de ~1,5 s.
+	 * Devolve a função que libera ao sair da conversa.
+	 */
+	async prepareConversation(publicKey: string): Promise<() => void> {
+		const network = this.network;
+		if (!network) return () => {};
+		try {
+			return network.pool.hold(await this.deliveryRelays(publicKey)).release;
+		} catch {
+			return () => {}; // sem relays conhecidos: o envio mostra o erro
+		}
+	}
+
 	listConversations(): Promise<ConversationRecord[]> {
 		return storage.conversations.listByRecent();
 	}

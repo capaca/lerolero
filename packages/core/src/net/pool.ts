@@ -135,6 +135,31 @@ export class RelayPool {
 		return [...found.values()];
 	}
 
+	/**
+	 * Abre e mantém conexões antes de precisar delas (ex.: ao abrir uma conversa, os relays
+	 * do contato): a primeira mensagem não paga conexão + TLS + autenticação (~1,5 s).
+	 * Conta como assinatura para o fechamento por inatividade até `release` ser chamado.
+	 */
+	hold(urls: string[]): { release: () => void } {
+		const held: Array<[ManagedRelay, PoolSubscription]> = [];
+		for (const url of urls) {
+			const relay = this.relay(url);
+			// marcador sem filtros: não assina nada, só segura a conexão aberta
+			const marker: PoolSubscription = { filters: () => [], handlers: { onevent: () => {} } };
+			relay.subs.add(marker);
+			clearTimeout(relay.idleTimer);
+			held.push([relay, marker]);
+		}
+		return {
+			release: () => {
+				for (const [relay, marker] of held) {
+					relay.subs.delete(marker);
+					this.closeWhenIdle(relay);
+				}
+			}
+		};
+	}
+
 	/** Volta a conectar já, sem esperar o próximo intervalo (ex.: o app voltou para a tela, RF-80). */
 	reconnectNow() {
 		for (const relay of this.relays.values()) {
@@ -218,8 +243,10 @@ export class RelayPool {
 
 	private activate(relay: ManagedRelay, sub: PoolSubscription) {
 		sub.active?.close();
+		const filters = sub.filters();
+		if (filters.length === 0) return; // marcador de hold(): nada a assinar
 		try {
-			sub.active = relay.conn.subscribe(sub.filters(), sub.handlers);
+			sub.active = relay.conn.subscribe(filters, sub.handlers);
 		} catch {
 			sub.active = undefined; // caiu no meio: a reconexão tenta de novo
 		}

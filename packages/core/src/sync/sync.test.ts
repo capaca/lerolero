@@ -219,6 +219,19 @@ describe('motor de sincronização', () => {
 });
 
 describe('pool', () => {
+	it('hold() abre e segura a conexão até ser liberada', async () => {
+		const r = await relay();
+		const me = await person();
+		const pool = new RelayPool({ signer: async (t) => me.vault.sign(t), socket, idleCloseMs: 100 });
+		cleanup.push(() => pool.close());
+		const held = pool.hold([r.url]);
+		await until(() => pool.connectedUrls().length === 1);
+		await new Promise((resolve) => setTimeout(resolve, 300));
+		expect(pool.connectedUrls()).toEqual([r.url]);
+		held.release();
+		await until(() => pool.connectedUrls().length === 0);
+	});
+
 	it('fecha conexões paradas sem assinatura, mas mantém as que assinam', async () => {
 		const [publishOnly, subscribed] = [await relay(), await relay()];
 		const me = await person();
