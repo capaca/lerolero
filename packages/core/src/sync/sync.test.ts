@@ -138,8 +138,8 @@ describe('motor de sincronização', () => {
 		const alice = await person();
 		const good = wrapFor(bob.publicKey, 'boa');
 		await alice.pool.publish([r.url], good);
-		await until(() => ok.includes(good.id));
-		expect(await bob.storage.seenWraps.has(broken.id)).toBe(true);
+		// a ordem de chegada varia: o NIP-59 sorteia o horário de cada embrulho
+		await until(async () => ok.includes(good.id) && (await bob.storage.seenWraps.has(broken.id)));
 		expect(ok).toEqual([good.id]);
 	});
 
