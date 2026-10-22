@@ -15,6 +15,7 @@
 		<a class="button primary" href={resolve('/cadastro')}>Criar minha conta</a>
 		<a class="button" href={resolve('/restaurar')}>Já tenho uma conta (tenho a frase)</a>
 	</div>
+	<p class="hint">Está participando do teste? Veja <a href={resolve('/teste')}>como testar</a>.</p>
 </main>
 
 <style>

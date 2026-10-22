@@ -4,6 +4,7 @@
 import {
 	addContact,
 	connect,
+	parseInvite,
 	directConversationId,
 	dmRelayListTemplate,
 	fetchDmRelays,
@@ -254,6 +255,18 @@ class Session {
 		} catch {
 			return () => {}; // sem relays conhecidos: o envio mostra o erro
 		}
+	}
+
+	/**
+	 * Comentário de teste: vai como mensagem cifrada para a conta de comentários,
+	 * que entra nos contatos com um nome fixo para a resposta aparecer na conversa.
+	 */
+	async sendFeedback(invite: string, contactName: string, text: string): Promise<string> {
+		const recipient = parseInvite(invite);
+		const existing = await storage.contacts.get(recipient.publicKey);
+		if (existing?.state !== 'aceito') await this.addContact(recipient, contactName);
+		await this.sendText(recipient.publicKey, text);
+		return recipient.publicKey;
 	}
 
 	listConversations(): Promise<ConversationRecord[]> {

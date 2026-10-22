@@ -4,6 +4,7 @@
 	import { toNpub } from '@lerolero/core';
 	import { relayList } from '#lib/relays.ts';
 	import { session } from '#lib/session.svelte.ts';
+	import { FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
 
 	const npub = $derived(session.identity ? toNpub(session.identity.publicKey) : '');
 	let copied = $state(false);
@@ -50,6 +51,16 @@
 				{session.identity?.phraseConfirmed ? 'Ver minha frase de recuperação' : 'Conferir minha frase de recuperação'}
 			</a>
 			<button onclick={lock}>Bloquear agora</button>
+		</div>
+	</section>
+
+	<section class="card">
+		<h2>Teste</h2>
+		<div class="actions stack">
+			{#if FEEDBACK_INVITE || FEEDBACK_FORM_URL}
+				<a href={resolve('/ajustes/comentario')}>Enviar comentário (bug ou sugestão)</a>
+			{/if}
+			<a href={resolve('/teste')}>Como testar</a>
 		</div>
 	</section>
 

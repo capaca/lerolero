@@ -20,6 +20,7 @@
 			'/cadastro',
 			'/ajustes',
 			'/ajustes/frase',
+			'/ajustes/comentario',
 			'/contatos',
 			'/contatos/meu-convite',
 			'/contatos/ler',
@@ -28,6 +29,9 @@
 			'/conversa/[chave]'
 		]
 	};
+
+	// abertas em qualquer estado, sem conta: o guia e o roteiro do teste
+	const PUBLIC = ['/teste', '/teste/roteiro'];
 
 	onMount(() => {
 		void session.init();
@@ -45,7 +49,7 @@
 		if (session.status === 'carregando') return;
 		const allowed = ALLOWED[session.status];
 		const route = page.route.id ?? '';
-		if (allowed.includes(route)) return;
+		if (allowed.includes(route) || PUBLIC.includes(route)) return;
 		// convite aberto sem estar dentro do app: retomado no início, depois de entrar
 		if (route === '/convite') savePendingInvite(location.hash);
 		void goto(resolve(allowed[0] as '/'), { replaceState: true });
