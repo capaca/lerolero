@@ -41,7 +41,10 @@ export {
 	type SyncOptions
 } from './sync/engine.ts';
 export {
+	deleteForMe,
+	deletionTags,
 	directConversationId,
+	markDeleted,
 	markRead,
 	markSent,
 	mediaFromRumor,
@@ -52,6 +55,6 @@ export {
 	storeOutgoing,
 	type StoredMessage
 } from './conversations/messaging.ts';
-export { BlossomError, COPIES, download, upload, type BlossomSigner } from './media/blossom.ts';
+export { BlossomError, COPIES, download, remove as removeFromBlossom, upload, type BlossomSigner } from './media/blossom.ts';
 export { decryptFile, encryptFile, MediaIntegrityError, sha256 } from './media/crypto.ts';
 export { openMedia, prepareMedia, type MediaRef } from './media/media.ts';

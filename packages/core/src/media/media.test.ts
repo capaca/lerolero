@@ -4,7 +4,7 @@ import type { KdfParams } from '../crypto/seal.ts';
 import { createVault } from '../identity/vault.ts';
 import { openStorage } from '../storage/repositories.ts';
 import { FakeBlossom } from '../testing/fake-blossom.ts';
-import { BlossomError } from './blossom.ts';
+import { BlossomError, remove } from './blossom.ts';
 import { decryptFile, encryptFile, MediaIntegrityError } from './crypto.ts';
 import { openMedia, prepareMedia } from './media.ts';
 
@@ -106,5 +106,13 @@ describe('envio e recebimento pelo Blossom', () => {
 		await openMedia(other, ref);
 		s.blossoms.forEach((b) => (b.tamper = true)); // se baixasse de novo, falharia
 		expect(await openMedia(other, ref)).toBeInstanceOf(Blob);
+	});
+
+	it('quem enviou consegue remover o arquivo dos servidores', async () => {
+		const s = await setup();
+		const ref = await prepareMedia(s.storage, audio(), { servers: s.servers, signer: s.signer });
+		const removed = await remove(ref.urls, ref.x, s.signer);
+		expect(removed).toHaveLength(2);
+		expect(s.blossoms.every((b) => !b.files.has(ref.x))).toBe(true);
 	});
 });

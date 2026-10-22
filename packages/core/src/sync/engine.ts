@@ -36,8 +36,9 @@ export const EXTRA_ATTEMPTS_AFTER_ACCEPTED = 3;
  * sem isto, depois de atualizar, essas mensagens nunca apareceriam.
  *   1: texto (kind 14)
  *   2: áudio e arquivos (kind 15)
+ *   3: apagar para todos (kind 5)
  */
-export const SYNC_GENERATION = 2;
+export const SYNC_GENERATION = 3;
 
 /**
  * Se o aparelho sincronizou com uma geração anterior, esquece cursores e embrulhos

@@ -79,6 +79,42 @@ export async function upload(servers: string[], data: Uint8Array<ArrayBuffer>, x
 	return urls;
 }
 
+/**
+ * Remove o arquivo dos servidores (BUD-02: só quem enviou pode). Tenta todos e devolve
+ * em quais conseguiu; servidor fora do ar ou que recusa não impede os outros.
+ */
+export async function remove(urls: string[], x: string, signer: BlossomSigner): Promise<string[]> {
+	const now = Math.floor(Date.now() / 1000);
+	const event = await signer({
+		kind: 24242,
+		created_at: now,
+		tags: [
+			['t', 'delete'],
+			['x', x],
+			['expiration', String(now + 600)]
+		],
+		content: 'Lero-lero: apagar mídia'
+	});
+	const bytes = new TextEncoder().encode(JSON.stringify(event));
+	let binary = '';
+	for (const b of bytes) binary += String.fromCharCode(b);
+	const auth = `Nostr ${btoa(binary)}`;
+	const removed = await Promise.all(
+		urls.map(async (url) => {
+			const t = withTimeout(TIMEOUT_MS);
+			try {
+				const res = await fetch(`${new URL(url).origin}/${x}`, { method: 'DELETE', headers: { Authorization: auth }, signal: t.signal });
+				return res.ok || res.status === 404 ? url : undefined;
+			} catch {
+				return undefined;
+			} finally {
+				t.done();
+			}
+		})
+	);
+	return removed.filter((u): u is string => !!u);
+}
+
 /** Baixa do primeiro endereço que responder com o arquivo certo (hash `x`). */
 export async function download(urls: string[], x: string): Promise<Uint8Array<ArrayBuffer>> {
 	for (const url of urls) {

@@ -37,5 +37,7 @@ export class LeroleroDb extends Dexie {
 		});
 		// M2: mídia (as tabelas anteriores seguem iguais; o Dexie migra sozinho)
 		this.version(2).stores({ media: 'ox, lastAccess' });
+		// exclusão: achar as mensagens que usam um arquivo, para não apagar arquivo em uso
+		this.version(3).stores({ messages: 'id, [conversationId+createdAt], status, media.ox' });
 	}
 }

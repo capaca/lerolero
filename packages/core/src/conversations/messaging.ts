@@ -23,7 +23,8 @@ function kindOf(message: Pick<MessageRecord, 'media'>): 'texto' | 'audio' | 'arq
 }
 
 /** Prévia em texto; o ícone fica por conta da interface, pelo `lastMessageKind`. */
-function preview(message: Pick<MessageRecord, 'text' | 'media'>): string {
+function preview(message: Pick<MessageRecord, 'text' | 'media' | 'deleted'>): string {
+	if (message.deleted) return 'Mensagem apagada';
 	const kind = kindOf(message);
 	if (kind === 'audio') return 'Áudio';
 	if (kind === 'arquivo') return 'Arquivo';
@@ -110,6 +111,7 @@ export async function storeIncoming(
 	rumor: Rumor,
 	options: { openConversationId?: string } = {}
 ): Promise<StoredMessage | undefined> {
+	if (rumor.kind === 5) return applyDeletion(storage, rumor);
 	if (rumor.kind !== 14 && rumor.kind !== 15) return undefined;
 	const media = rumor.kind === 15 ? mediaFromRumor(rumor) : undefined;
 	if (rumor.kind === 15 && !media) return undefined; // arquivo que não sabemos abrir
@@ -189,4 +191,68 @@ export async function markRead(storage: Storage, conversationId: string) {
 export async function nameTagFor(storage: Storage, recipient: string, myName: string): Promise<string[][]> {
 	const conversation = await storage.conversations.get(directConversationId(recipient));
 	return conversation?.nameSent ? [] : [[NAME_TAG, cleanName(myName)]];
+}
+
+// ---------- apagar (RF-25) ----------
+
+/** Tags do pedido de apagar (NIP-09, kind 5) para uma mensagem minha. */
+export const deletionTags = (message: MessageRecord): string[][] => [
+	['e', message.id],
+	['k', String(message.kind)]
+];
+
+/** Recalcula a prévia da conversa depois que uma mensagem sumiu ou foi apagada. */
+async function refreshConversation(storage: Storage, conversationId: string) {
+	const conversation = await storage.conversations.get(conversationId);
+	if (!conversation) return;
+	const [latest] = await storage.messages.listByConversation(conversationId, 1);
+	await storage.conversations.put({
+		...conversation,
+		lastMessageAt: latest?.createdAt ?? conversation.lastMessageAt,
+		lastMessagePreview: latest ? preview(latest) : undefined,
+		lastMessageKind: latest && !latest.deleted ? kindOf(latest) : 'texto'
+	});
+}
+
+/** Apaga o arquivo do aparelho se nenhuma outra mensagem usa o mesmo (o hash `ox`). */
+async function dropMediaIfUnused(storage: Storage, ox: string | undefined) {
+	if (ox && (await storage.messages.countUsingMedia(ox)) === 0) await storage.media.delete(ox);
+}
+
+/** Troca a mensagem pelo aviso "apagada": some o texto e o arquivo, fica o lugar na conversa. */
+export async function markDeleted(storage: Storage, message: MessageRecord): Promise<MessageRecord> {
+	const deleted: MessageRecord = { ...message, text: '', media: undefined, deleted: true };
+	await storage.messages.put(deleted);
+	await dropMediaIfUnused(storage, message.media?.ox);
+	// a prévia só muda se a apagada era a mais recente (sem depender da ordem de empates no mesmo segundo)
+	const conversation = await storage.conversations.get(message.conversationId);
+	if (conversation && message.createdAt >= conversation.lastMessageAt) {
+		await storage.conversations.put({ ...conversation, lastMessagePreview: preview(deleted), lastMessageKind: 'texto' });
+	}
+	return deleted;
+}
+
+/** Apagar para mim: some do aparelho, sem aviso a ninguém. */
+export async function deleteForMe(storage: Storage, messageId: string) {
+	const message = await storage.messages.get(messageId);
+	if (!message) return;
+	await storage.messages.delete(messageId);
+	await dropMediaIfUnused(storage, message.media?.ox);
+	await refreshConversation(storage, message.conversationId);
+}
+
+/**
+ * Pedido de apagar recebido: só vale se veio de quem escreveu a mensagem. Um contato
+ * não consegue apagar mensagens de outra pessoa, nem as minhas.
+ */
+async function applyDeletion(storage: Storage, rumor: Rumor): Promise<StoredMessage | undefined> {
+	let result: StoredMessage | undefined;
+	for (const id of rumor.tags.filter((t) => t[0] === 'e').map((t) => t[1])) {
+		const message = await storage.messages.get(id);
+		if (!message || message.deleted || message.sender !== rumor.pubkey) continue;
+		const deleted = await markDeleted(storage, message);
+		const conversation = (await storage.conversations.get(message.conversationId))!;
+		result = { message: deleted, conversation, isNew: true };
+	}
+	return result;
 }

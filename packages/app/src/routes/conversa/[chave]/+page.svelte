@@ -5,6 +5,7 @@
 	import { onDestroy, tick } from 'svelte';
 	import AudioPlayer from '#lib/components/AudioPlayer.svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import MessageMenu from '#lib/components/MessageMenu.svelte';
 	import { dayKey, formatDay, formatTime } from '#lib/format.ts';
 	import { MAX_SECONDS, startRecording, type Recording } from '#lib/recorder.ts';
 	import { friendlyError, session } from '#lib/session.svelte.ts';
@@ -76,6 +77,42 @@
 	}
 
 	onDestroy(cancelAudio);
+
+	// menu da mensagem: toque longo (celular) ou botão direito (computador)
+	let menuFor = $state.raw<MessageRecord>();
+	let pressTimer: ReturnType<typeof setTimeout> | undefined;
+	let pressStart = { x: 0, y: 0 };
+
+	function openMenu(message: MessageRecord) {
+		if (message.deleted) return;
+		menuFor = message;
+	}
+
+	function onpointerdown(event: PointerEvent, message: MessageRecord) {
+		// botões e a barra do áudio continuam funcionando normalmente
+		if ((event.target as HTMLElement).closest('button, input, a')) return;
+		pressStart = { x: event.clientX, y: event.clientY };
+		pressTimer = setTimeout(() => openMenu(message), 500);
+	}
+
+	const cancelPress = () => clearTimeout(pressTimer);
+
+	// o dedo sempre treme um pouco: só cancela se andar de verdade (rolagem)
+	function onpointermove(event: PointerEvent) {
+		if (Math.hypot(event.clientX - pressStart.x, event.clientY - pressStart.y) > 10) cancelPress();
+	}
+
+	async function deleteMessage(forEveryone: boolean) {
+		const message = menuFor;
+		menuFor = undefined;
+		if (!message) return;
+		try {
+			if (forEveryone) await session.deleteForEveryone(publicKey, message.id);
+			else await session.deleteForMe(message.id);
+		} catch (err) {
+			error = friendlyError(err);
+		}
+	}
 	const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 	type Item = { type: 'dia'; key: number; label: string } | { type: 'msg'; message: MessageRecord };
@@ -199,8 +236,22 @@
 					{:else}
 						{@const m = item.message}
 						<div class="row" class:mine={m.sender === me}>
-							<div class="bubble">
-								{#if m.media?.type.startsWith('audio/')}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div
+								class="bubble"
+								class:deleted={m.deleted}
+								onpointerdown={(e) => onpointerdown(e, m)}
+								onpointerup={cancelPress}
+								onpointerleave={cancelPress}
+								{onpointermove}
+								oncontextmenu={(e) => (e.preventDefault(), openMenu(m))}
+							>
+								{#if m.deleted}
+									<p class="deleted-text">
+										<Icon name="trash" size={14} />
+										{m.sender === me ? 'Você apagou esta mensagem' : 'Esta mensagem foi apagada'}
+									</p>
+								{:else if m.media?.type.startsWith('audio/')}
 									<AudioPlayer media={m.media} />
 								{:else if m.media}
 									<p class="hint file"><Icon name="paperclip" size={16} /> Arquivo (ainda não suportado nesta versão)</p>
@@ -222,6 +273,15 @@
 			</div>
 		{/each}
 	</div>
+
+	{#if menuFor}
+		<MessageMenu
+			mine={menuFor.sender === me}
+			onclose={() => (menuFor = undefined)}
+			ondeleteForMe={() => deleteMessage(false)}
+			ondeleteForEveryone={() => deleteMessage(true)}
+		/>
+	{/if}
 
 	<form class="composer" onsubmit={send}>
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
@@ -328,6 +388,17 @@
 	.mine .bubble {
 		background: color-mix(in srgb, var(--accent) 18%, var(--surface));
 		border-color: transparent;
+	}
+	.bubble {
+		-webkit-touch-callout: none;
+		user-select: none;
+	}
+	.deleted-text {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-style: italic;
+		color: var(--muted);
 	}
 	.bubble p {
 		margin: 0;

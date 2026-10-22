@@ -4,10 +4,13 @@
 import {
 	addContact,
 	connect,
+	deleteForMe,
+	deletionTags,
 	parseInvite,
 	directConversationId,
 	dmRelayListTemplate,
 	fetchDmRelays,
+	markDeleted,
 	markRead,
 	markSent,
 	mediaTags,
@@ -19,6 +22,7 @@ import {
 	openStorage,
 	recordFailure,
 	RelayPool,
+	removeFromBlossom,
 	renameContact,
 	storeIncoming,
 	storeOutgoing,
@@ -259,6 +263,34 @@ class Session {
 		this.version++;
 		void network.engine.enqueue(wrapped.toRecipient, relays, wrapped.rumor.id);
 		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+	}
+
+	/** Apagar para mim (RF-25): some deste aparelho, sem avisar ninguém. */
+	async deleteForMe(messageId: string) {
+		await deleteForMe(storage, messageId);
+		this.version++;
+	}
+
+	/**
+	 * Apagar para todos (RF-25): troca pelo aviso aqui, manda o pedido cifrado ao contato
+	 * e aos meus outros aparelhos e, se ninguém mais usa o arquivo, tira dos servidores.
+	 * É um pedido: o Lero-lero do contato apaga, mas apps de terceiros podem ignorar.
+	 */
+	async deleteForEveryone(recipient: string, messageId: string) {
+		const network = this.network;
+		if (!network) throw new Error('Sem conexão com a rede');
+		const message = await storage.messages.get(messageId);
+		if (!message || message.deleted || message.sender !== this.current.publicKey) return;
+		await markDeleted(storage, message);
+		this.version++;
+		const wrapped = await vault.wrapDirectMessage(recipient, '', deletionTags(message), 5);
+		void network.engine.enqueue(wrapped.toRecipient, await this.deliveryRelays(recipient));
+		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+		// arquivo que nenhuma outra mensagem usa (markDeleted já tirou do aparelho): sai dos servidores
+		const media = message.media;
+		if (media && !(await storage.media.get(media.ox))) {
+			void removeFromBlossom(media.urls, media.x, (template) => vault.sign(template)).catch(() => {});
+		}
 	}
 
 	/** Arquivo de uma mensagem: do aparelho, ou baixado, conferido e decifrado na hora. */

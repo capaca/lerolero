@@ -5,7 +5,19 @@ import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import type { KdfParams } from '../crypto/seal.ts';
 import { createVault, type Rumor } from '../identity/vault.ts';
 import { openStorage } from '../storage/repositories.ts';
-import { directConversationId, markRead, markSent, mediaTags, NAME_TAG, nameTagFor, storeIncoming, storeOutgoing } from './messaging.ts';
+import {
+	deleteForMe,
+	deletionTags,
+	directConversationId,
+	markDeleted,
+	markRead,
+	markSent,
+	mediaTags,
+	NAME_TAG,
+	nameTagFor,
+	storeIncoming,
+	storeOutgoing
+} from './messaging.ts';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 const closers: Array<() => void> = [];
@@ -163,5 +175,66 @@ describe('conversas 1:1', () => {
 		expect(() => alice.vault.wrapDirectMessage('xyz', 'oi')).toThrow(/destinatário/);
 		expect(() => alice.vault.wrapDirectMessage(getPublicKey(generateSecretKey()), '   ')).toThrow(/vazia/);
 		expect(() => alice.vault.wrapDirectMessage(getPublicKey(generateSecretKey()), 'x'.repeat(4001))).toThrow(/longa/);
+	});
+});
+
+describe('apagar mensagens (RF-25)', () => {
+	async function conversation() {
+		const alice = await device();
+		const bob = await device();
+		const send = async (text: string) => {
+			const w = alice.vault.wrapDirectMessage(bob.publicKey, text);
+			await storeOutgoing(alice.storage, w.rumor, bob.publicKey);
+			await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(w.toRecipient));
+			return w.rumor.id;
+		};
+		return { alice, bob, send };
+	}
+
+	it('apagar para todos: o contato troca a mensagem pelo aviso, e a prévia acompanha', async () => {
+		const { alice, bob, send } = await conversation();
+		await send('primeira');
+		const id = await send('mensagem errada');
+		const mine = (await alice.storage.messages.get(id))!;
+		await markDeleted(alice.storage, mine);
+		const request = alice.vault.wrapDirectMessage(bob.publicKey, '', deletionTags(mine), 5);
+
+		const got = await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(request.toRecipient));
+		expect(got?.message).toMatchObject({ id, deleted: true, text: '' });
+		const conv = await bob.storage.conversations.get(directConversationId(alice.publicKey));
+		expect(conv?.lastMessagePreview).toBe('Mensagem apagada');
+		expect((await alice.storage.messages.get(id))?.deleted).toBe(true);
+	});
+
+	it('o pedido de apagar só vale para mensagens de quem pediu', async () => {
+		const { alice, bob, send } = await conversation();
+		const fromAlice = await send('da Alice');
+		// Bob escreve para a Alice e tenta apagar a mensagem dela no aparelho dela
+		const fake = bob.vault.wrapDirectMessage(alice.publicKey, '', [['e', fromAlice]], 5);
+		expect(await storeIncoming(alice.storage, alice.publicKey, alice.vault.unwrap(fake.toRecipient))).toBeUndefined();
+		expect((await alice.storage.messages.get(fromAlice))?.deleted).toBeUndefined();
+	});
+
+	it('apagar para mim: some do aparelho e a prévia volta para a anterior', async () => {
+		const { bob, send } = await conversation();
+		await send('fica');
+		const id = await send('some');
+		await deleteForMe(bob.storage, id);
+		expect(await bob.storage.messages.get(id)).toBeUndefined();
+		const conv = (await bob.storage.conversations.listByRecent())[0];
+		expect(conv.lastMessagePreview).toBe('fica');
+	});
+
+	it('arquivo em uso por outra mensagem não é apagado do aparelho', async () => {
+		const { bob } = await conversation();
+		const media = { ox: 'e'.repeat(64), x: 'f'.repeat(64), type: 'audio/ogg', size: 1, urls: ['https://x.example/f'], key: '0'.repeat(64), nonce: '0'.repeat(24) };
+		await bob.storage.media.put({ ...media, file: new Blob(['x']), keep: false, lastAccess: 0 });
+		const base = { conversationId: 'c', sender: 's', kind: 15, text: '', createdAt: 1, status: 'recebida' as const, media };
+		await bob.storage.messages.put({ ...base, id: 'm1' });
+		await bob.storage.messages.put({ ...base, id: 'm2', createdAt: 2 });
+		await deleteForMe(bob.storage, 'm1');
+		expect(await bob.storage.media.get(media.ox)).toBeDefined(); // m2 ainda usa
+		await deleteForMe(bob.storage, 'm2');
+		expect(await bob.storage.media.get(media.ox)).toBeUndefined();
 	});
 });
