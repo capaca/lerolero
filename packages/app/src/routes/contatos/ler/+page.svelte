@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { inviteLink, parseInvite } from '@lerolero/core';
+	import { parseInvite } from '@lerolero/core';
 	import { onDestroy } from 'svelte';
-	import { appUrl } from '#lib/app-url.ts';
 	import { startScanner } from '#lib/scanner.ts';
 	import { friendlyError } from '#lib/session.svelte.ts';
 
@@ -13,10 +12,14 @@
 	let error = $state('');
 	let stop: (() => void) | undefined;
 
-	// o convite segue para a mesma tela de quem abre um link: um único lugar decide o que fazer
+	// o convite segue, como veio, para a mesma tela de quem abre um link: um único lugar decide
+	// o que fazer, e um convite antigo (nprofile) não perde os relays no caminho
 	async function open(text: string) {
 		try {
-			await goto(inviteLink(appUrl(), parseInvite(text)));
+			parseInvite(text); // valida antes de sair desta tela
+			const raw = text.trim();
+			const fragment = raw.includes('#') ? raw.slice(raw.indexOf('#') + 1) : raw;
+			await goto(resolve('/convite') + '#' + fragment);
 		} catch (err) {
 			error = friendlyError(err);
 		}

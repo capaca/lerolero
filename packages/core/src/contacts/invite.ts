@@ -1,13 +1,14 @@
-// Convite (QR e link, RF-10 e RF-11): chave pública, nome e relays de DM de quem convida,
-// para quem recebe poder escrever sem consultar a rede (docs/06 §2).
+// Convite (QR e link, RF-10 e RF-11): chave pública e nome de quem convida (docs/06 §2).
 //
-// Formato: <endereço do app>/convite#<nprofile>&n=<nome>
-// - nprofile (NIP-19) é o padrão do Nostr para chave + relays: outros apps entendem;
-// - o nome vai à parte porque o nprofile não tem campo para ele;
-// - tudo depois do # fica no aparelho: o servidor que hospeda o app não vê.
+// Formato: <endereço do app>/convite#<npub>&n=<nome>
+// - npub (NIP-19) é a chave pública no padrão do Nostr: outros apps entendem;
+// - os relays de DM não vão no link (ficaria com ~330 caracteres): quem recebe busca
+//   o kind 10050 que o app publica, com a lista padrão de reserva;
+// - links antigos com nprofile (chave + relays) continuam valendo;
+// - o nome vai à parte, e tudo depois do # fica no aparelho: o servidor não vê.
 // O QR contém o próprio link, então a câmera comum do celular também abre o app.
 
-import { decode, nprofileEncode } from 'nostr-tools/nip19';
+import { decode, npubEncode } from 'nostr-tools/nip19';
 
 export type Invite = { publicKey: string; name?: string; relays: string[] };
 
@@ -33,10 +34,9 @@ export function cleanName(name: string): string {
 const onlyWss = (relays: string[]) => relays.filter((r) => /^wss:\/\/[^\s]+$/.test(r)).slice(0, MAX_RELAYS);
 
 /** `appUrl` é o endereço do app, terminado em barra (ex.: https://capaca.github.io/lerolero/). */
-export function inviteLink(appUrl: string, invite: Invite): string {
-	const profile = nprofileEncode({ pubkey: invite.publicKey, relays: onlyWss(invite.relays) });
+export function inviteLink(appUrl: string, invite: Pick<Invite, 'publicKey' | 'name'>): string {
 	const name = invite.name ? `&n=${encodeURIComponent(cleanName(invite.name))}` : '';
-	return `${appUrl}convite#${profile}${name}`;
+	return `${appUrl}convite#${npubEncode(invite.publicKey)}${name}`;
 }
 
 /**

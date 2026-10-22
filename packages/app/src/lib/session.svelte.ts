@@ -232,14 +232,22 @@ class Session {
 		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
 	}
 
-	/** Onde o contato recebe: o que veio no convite; senão o kind 10050 dele na rede. */
+	/**
+	 * Onde o contato recebe: o que veio no convite; senão o kind 10050 dele na rede;
+	 * senão a lista padrão, que quase todo mundo usa (o convite curto não traz relays).
+	 * A reserva não é guardada no contato, para a busca ser tentada de novo da próxima vez.
+	 */
 	private async deliveryRelays(publicKey: string): Promise<string[]> {
 		const contact = await storage.contacts.get(publicKey);
 		if (contact?.dmRelays.length) return contact.dmRelays;
-		const found = await fetchDmRelays(this.network!.pool, (await relayList()).geral, publicKey);
-		if (!found.length) throw new NoRelaysError();
-		if (contact) await storage.contacts.put({ ...contact, dmRelays: found });
-		return found;
+		const list = await relayList();
+		const found = await fetchDmRelays(this.network!.pool, list.geral, publicKey);
+		if (found.length) {
+			if (contact) await storage.contacts.put({ ...contact, dmRelays: found });
+			return found;
+		}
+		if (!list.dm.length) throw new NoRelaysError();
+		return list.dm;
 	}
 
 	/**

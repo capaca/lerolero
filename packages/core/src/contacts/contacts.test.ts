@@ -10,11 +10,18 @@ const APP = 'https://capaca.github.io/lerolero/';
 const key = () => getPublicKey(generateSecretKey());
 
 describe('convite', () => {
-	it('vai e volta pelo link, com nome acentuado e relays', () => {
-		const invite = { publicKey: key(), name: 'Conceição Araújo', relays: ['wss://a.example', 'wss://b.example'] };
-		const link = inviteLink(APP, invite);
-		expect(link.startsWith(`${APP}convite#nprofile1`)).toBe(true);
-		expect(parseInvite(link)).toEqual(invite);
+	it('vai e volta pelo link curto (npub + nome acentuado), sem os relays', () => {
+		const publicKey = key();
+		const link = inviteLink(APP, { publicKey, name: 'Conceição Araújo' });
+		expect(link.startsWith(`${APP}convite#npub1`)).toBe(true);
+		expect(link.length).toBeLessThan(160); // eram ~330 com o nprofile
+		expect(parseInvite(link)).toEqual({ publicKey, name: 'Conceição Araújo', relays: [] });
+	});
+
+	it('continua aceitando o link antigo, com nprofile e relays', () => {
+		const publicKey = key();
+		const old = `${APP}convite#${nprofileEncode({ pubkey: publicKey, relays: ['wss://a.example'] })}&n=Ana`;
+		expect(parseInvite(old)).toEqual({ publicKey, name: 'Ana', relays: ['wss://a.example'] });
 	});
 
 	it('aceita nprofile e npub de outros apps Nostr, com ou sem "nostr:"', () => {
