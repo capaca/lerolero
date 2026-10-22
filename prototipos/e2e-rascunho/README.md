@@ -10,7 +10,6 @@ rodam como estão (caminhos de uma pasta temporária, Chrome do macOS, relays re
 | `contatos.mjs` | convite (link e QR com câmera simulada, leitor nativo e jsQR), nome local, convite pendente |
 | `conversa.mjs` | conversa entre duas pessoas pela rede real, não lidas, pedido de contato |
 | `update.mjs`, `upgrade.mjs`, `branca.mjs`, `laco.mjs` | atualização do app, service worker, tela branca e autocorreção |
-| `gestao.mjs` | gestão do grupo com 4 pessoas: detalhes, renomear, adicionar, promover, remover, sair e herança do título |
 | `pin.mjs` | PIN em bolinhas: pular para a confirmação, PINs diferentes, PIN errado, ver a frase |
 | `data.mjs` | data do dia no topo ao rolar: aparece, troca de dia, some ao parar e no fim, rolagem longa |
 | `novas.mjs` | linha "Mensagens novas" ao abrir e ao chegar, botão de ir para o fim com contagem (duas pessoas, relays reais); regressão da ordem com a fila de envio |
