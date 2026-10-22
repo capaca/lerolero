@@ -20,7 +20,10 @@ export {
 	LockedError,
 	MAX_TEXT_LENGTH,
 	PhraseMismatchError,
+	SESSION_IDLE_MS,
+	sessionIsOpen,
 	type NewIdentity,
+	type OpenSession,
 	type Rumor,
 	type Vault,
 	type WrappedMessage

@@ -26,6 +26,7 @@ import {
 	renameContact,
 	storeIncoming,
 	storeOutgoing,
+	sessionIsOpen,
 	SyncEngine,
 	upgradeSyncGeneration,
 	waitTime,
@@ -36,6 +37,7 @@ import {
 	type MessageMedia,
 	type MessageRecord,
 	type Invite,
+	type OpenSession,
 	type Vault
 } from '@lerolero/core';
 import { relayList } from './relays.ts';
@@ -43,6 +45,7 @@ import { relayList } from './relays.ts';
 export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
 
 const ATTEMPTS_KEY = 'tentativasPin';
+const OPEN_SESSION_KEY = 'sessaoAberta';
 
 /** O contato não publicou onde recebe mensagens e o convite não trouxe: não há para onde enviar. */
 export class NoRelaysError extends Error {
@@ -84,10 +87,45 @@ class Session {
 	openConversationId: string | undefined;
 	// $state.raw: o registro tem bytes que vão para o worker e para o IndexedDB, que não aceitam proxies
 	identity = $state.raw<IdentityRecord | undefined>();
+	/** gravação da sessão aberta em andamento: bloquear espera, senão ela voltaria depois de apagada */
+	private savingSession?: Promise<void>;
 
 	async init() {
 		this.identity = await storage.identity.get();
-		this.status = this.identity ? 'bloqueado' : 'sem-identidade';
+		if (!this.identity) this.status = 'sem-identidade';
+		else if (await this.resumeOpenSession()) this.unlocked();
+		else this.status = 'bloqueado';
+	}
+
+	/** Desbloqueado: entra e conecta. Também guarda a sessão, para recarregar sem pedir o PIN. */
+	private unlocked() {
+		this.status = 'desbloqueado';
+		void this.startNetwork();
+		this.savingSession = vault
+			.openSession(Date.now())
+			.then((open) => storage.settings.set(OPEN_SESSION_KEY, open))
+			.catch(() => {}); // sem sessão, só pede o PIN na próxima recarga
+	}
+
+	/** Recarregou a página pouco depois de usar o app (SESSION_IDLE_MS): entra sem o PIN. */
+	private async resumeOpenSession(): Promise<boolean> {
+		const open = await storage.settings.get<OpenSession>(OPEN_SESSION_KEY);
+		if (!open) return false;
+		try {
+			if (sessionIsOpen(open, Date.now()) && (await vault.resumeSession(open)) === this.current.publicKey) return true;
+		} catch {
+			// sessão estragada: cai no PIN
+		}
+		await vault.lock();
+		await storage.settings.set(OPEN_SESSION_KEY, undefined);
+		return false;
+	}
+
+	/** O app está em uso: o prazo da sessão aberta conta a partir de agora. */
+	async touchSession() {
+		if (this.status !== 'desbloqueado') return;
+		const open = await storage.settings.get<OpenSession>(OPEN_SESSION_KEY);
+		if (open) await storage.settings.set(OPEN_SESSION_KEY, { ...open, lastSeen: Date.now() });
 	}
 
 	private async save(identity: IdentityRecord) {
@@ -104,9 +142,8 @@ class Session {
 	async create(displayName: string, pin: string): Promise<string[]> {
 		const { publicKey, phrase, words } = await vault.create(pin);
 		await this.save({ id: 'eu', publicKey, phrase, phraseConfirmed: false, displayName, createdAt: Date.now() });
-		this.status = 'desbloqueado';
+		this.unlocked();
 		void requestPersistence();
-		void this.startNetwork();
 		return words;
 	}
 
@@ -114,9 +151,8 @@ class Session {
 		const { publicKey, phrase } = await vault.restore(phraseInput, pin);
 		// quem restaurou digitou a frase: está provado que ela foi guardada
 		await this.save({ id: 'eu', publicKey, phrase, phraseConfirmed: true, displayName, createdAt: Date.now() });
-		this.status = 'desbloqueado';
+		this.unlocked();
 		void requestPersistence();
-		void this.startNetwork();
 	}
 
 	/**
@@ -142,12 +178,13 @@ class Session {
 
 	async unlock(pin: string) {
 		await this.withPinAttempt(() => vault.unlock(this.current.phrase, pin));
-		this.status = 'desbloqueado';
-		void this.startNetwork();
+		this.unlocked();
 	}
 
 	async lock() {
 		this.stopNetwork();
+		await this.savingSession;
+		await storage.settings.set(OPEN_SESSION_KEY, undefined);
 		await vault.lock();
 		this.status = 'bloqueado';
 	}
@@ -157,8 +194,7 @@ class Session {
 		const phrase = await vault.resetPin(phraseInput, newPin, this.current.publicKey);
 		await this.save({ ...this.current, phrase, phraseConfirmed: true });
 		await storage.settings.set(ATTEMPTS_KEY, NO_FAILURES);
-		this.status = 'desbloqueado';
-		void this.startNetwork();
+		this.unlocked();
 	}
 
 	reveal(pin: string): Promise<string[]> {

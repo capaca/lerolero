@@ -8,7 +8,15 @@ import {
 	pickCheckPositions,
 	suggestWords
 } from './phrase.ts';
-import { createVault, InvalidPinError, InvalidWrapError, LockedError, PhraseMismatchError } from './vault.ts';
+import {
+	createVault,
+	InvalidPinError,
+	InvalidWrapError,
+	LockedError,
+	PhraseMismatchError,
+	SESSION_IDLE_MS,
+	sessionIsOpen
+} from './vault.ts';
 import { getEventHash, getPublicKey, generateSecretKey, finalizeEvent } from 'nostr-tools/pure';
 import { wrapEvent, createWrap } from 'nostr-tools/nip59';
 import { encrypt, getConversationKey } from 'nostr-tools/nip44';
@@ -107,6 +115,39 @@ describe('cofre da identidade', () => {
 		const vault = createVault({ kdf: FAST });
 		const { publicKey } = await vault.create('123456');
 		await expect(vault.resetPin(PHRASE, '777777', publicKey)).rejects.toBeInstanceOf(PhraseMismatchError);
+	});
+});
+
+describe('cofre: sessão aberta (recarregar sem PIN)', () => {
+	it('desbloqueia pela sessão depois de recarregar, sem o PIN', async () => {
+		const vault = createVault({ kdf: FAST });
+		const { publicKey } = await vault.create('123456');
+		const session = await vault.openSession(1000);
+		// recarregar a página: um cofre novo, que só tem a sessão guardada
+		const reloaded = createVault({ kdf: FAST });
+		expect(await reloaded.resumeSession(session)).toBe(publicKey);
+		expect(reloaded.isUnlocked()).toBe(true);
+	});
+
+	it('a chave da sessão não sai do navegador', async () => {
+		const vault = createVault({ kdf: FAST });
+		await vault.create('123456');
+		const { key } = await vault.openSession(0);
+		expect(key.extractable).toBe(false);
+		await expect(crypto.subtle.exportKey('raw', key)).rejects.toThrow();
+	});
+
+	it('só abre sessão desbloqueado', async () => {
+		await expect(createVault({ kdf: FAST }).openSession(0)).rejects.toBeInstanceOf(LockedError);
+	});
+
+	it('vale por alguns minutos sem uso, e não com o relógio voltado', async () => {
+		const vault = createVault({ kdf: FAST });
+		await vault.create('123456');
+		const session = await vault.openSession(10_000);
+		expect(sessionIsOpen(session, 10_000 + SESSION_IDLE_MS - 1)).toBe(true);
+		expect(sessionIsOpen(session, 10_000 + SESSION_IDLE_MS)).toBe(false);
+		expect(sessionIsOpen(session, 9_000)).toBe(false);
 	});
 });
 

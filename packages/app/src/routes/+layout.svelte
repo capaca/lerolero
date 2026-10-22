@@ -54,11 +54,18 @@
 			session.resumeNetwork();
 			checkForUpdate();
 		};
-		document.addEventListener('visibilitychange', resume);
+		// sessão aberta (recarregar sem PIN): o prazo conta de quando o app saiu da tela
+		const touch = () => void session.touchSession();
+		const onVisibility = () => (document.visibilityState === 'visible' ? resume() : touch());
+		const touchTimer = setInterval(touch, 60_000);
+		document.addEventListener('visibilitychange', onVisibility);
+		addEventListener('pagehide', touch);
 		addEventListener('online', resume);
 		return () => {
+			clearInterval(touchTimer);
+			removeEventListener('pagehide', touch);
 			navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
-			document.removeEventListener('visibilitychange', resume);
+			document.removeEventListener('visibilitychange', onVisibility);
 			removeEventListener('online', resume);
 		};
 	});

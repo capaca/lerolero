@@ -36,7 +36,7 @@ Metas de qualidade que valem para todo o app. Os números são propostas iniciai
 |---|---|---|
 | RNF-20 | Sincronizar ao abrir o app sem mensagens novas | < 50 KB |
 | RNF-21 | Peso extra por mensagem de texto (criptografia, envelope, padding), por destinatário | < 2 KB |
-| RNF-22 | Áudio em codec de voz eficiente (ex.: Opus ~16 kbps) | ~120 KB por minuto |
+| RNF-22 | Áudio em codec de voz eficiente (Opus ~28 kbps, que ainda soa bem em lugar barulhento) | ~210 KB por minuto |
 | RNF-23 | Foto comprimida antes do envio (ex.: lado maior 1600 px) | ≤ 200 KB |
 | RNF-24 | Prévia leve de imagem | ≤ 5 KB |
 | RNF-25 | PWA não gera tráfego com o app fechado | 0 |

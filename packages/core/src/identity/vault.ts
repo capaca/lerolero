@@ -69,6 +69,22 @@ export type WrappedMessage = { rumor: Rumor; toRecipient: NostrEvent; toSelf: No
 
 export const MAX_TEXT_LENGTH = 4000;
 
+/**
+ * Sessão aberta: a chave privada cifrada com uma chave AES não exportável, que o
+ * app guarda no aparelho para recarregar a página sem pedir o PIN de novo. Nem o
+ * código do app consegue ler a chave AES, só usá-la; quem copia os dados do
+ * navegador consegue (T15, já aceito no PWA). `lastSeen` é quando o app saiu da tela.
+ */
+export type OpenSession = { key: CryptoKey; iv: Uint8Array<ArrayBuffer>; ciphertext: Uint8Array<ArrayBuffer>; lastSeen: number };
+
+/** Sem uso por mais que isto, o PIN volta a ser pedido. */
+export const SESSION_IDLE_MS = 5 * 60_000;
+
+/** A sessão ainda vale? Um `lastSeen` no futuro (relógio mexido) não vale. */
+export function sessionIsOpen(session: OpenSession, now: number): boolean {
+	return session.lastSeen <= now && now - session.lastSeen < SESSION_IDLE_MS;
+}
+
 export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 	let secretKey: Uint8Array | undefined;
 
@@ -161,6 +177,22 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 				toRecipient: createWrap(createSeal(rumor, secretKey, recipient), recipient),
 				toSelf: createWrap(createSeal(rumor, secretKey, me), me)
 			};
+		},
+
+		/** Guarda a chave desbloqueada numa sessão (ver OpenSession). */
+		async openSession(now: number): Promise<OpenSession> {
+			if (!secretKey) throw new LockedError();
+			const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+			const iv = crypto.getRandomValues(new Uint8Array(12));
+			const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new Uint8Array(secretKey)));
+			return { key, iv, ciphertext, lastSeen: now };
+		},
+
+		/** Desbloqueia por uma sessão aberta, sem PIN. Devolve a chave pública. */
+		async resumeSession(session: OpenSession): Promise<string> {
+			const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: session.iv }, session.key, session.ciphertext);
+			secretKey = new Uint8Array(raw);
+			return getPublicKey(secretKey);
 		},
 
 		lock() {
