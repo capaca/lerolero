@@ -1,0 +1,30 @@
+{
+  "versao": 1,
+  "atualizado": "2026-10-22",
+  "status": "provisório: falta confirmar a retenção de 7 dias (conferir a partir de 2026-10-29)",
+  "dm": [
+    "wss://auth.nostr1.com",
+    "wss://relay.monostr.com",
+    "wss://relay.nmail.li"
+  ],
+  "dmReserva": [
+    "wss://relay.formstr.app",
+    "wss://relay.psstpsst.chat",
+    "wss://mihhdu.org/nostr"
+  ],
+  "geral": [
+    "wss://relay.primal.net",
+    "wss://nos.lol",
+    "wss://purplepag.es"
+  ],
+  "blossom": [
+    "https://nostr.download",
+    "https://blossom.data.haus"
+  ],
+  "blossomReserva": [
+    "https://blossom.ditto.pub",
+    "https://files.sovbit.host",
+    "https://cdn.hzrd149.com",
+    "https://blossom.nmail.li"
+  ]
+}

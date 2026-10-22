@@ -26,4 +26,5 @@ Relays Nostr aceitam eventos pequenos (64–128 KB), insuficientes para fotos e 
 - Mídia nunca é visível para o operador do Blossom.
 - Servidores Blossom públicos têm limites e políticas de retenção próprias: mídia antiga pode sumir do servidor. Aceitável, pois o destinatário baixa em até 7 dias (mesma meta dos relays).
 - Mais uma peça para voluntários brasileiros operarem.
+- Medição de 2026-10-22: os servidores Blossom mais usados (Primal, nostrcheck, nostr.media, nostr.build, blossom.band) **recusam arquivos que não são mídia reconhecível** (`application/octet-stream`), o que inclui a nossa mídia cifrada. Sobram servidores menores que aceitam qualquer arquivo (ver [prototipos/relays](../../prototipos/relays/README.md)). Disfarçar o tipo do arquivo não é uma opção: fere a política desses operadores. Isso reforça a importância de servidores operados por voluntários.
 - Encaminhar reaproveitando a mesma chave permite que quem conhece o arquivo original saiba que é o mesmo arquivo; aceitável no nível de proteção escolhido ([02](../02-modelo-de-ameacas.md)).

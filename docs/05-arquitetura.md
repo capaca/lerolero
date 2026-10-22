@@ -166,6 +166,6 @@ Monorepo com workspaces (ex.: pnpm).
 
 | # | Questão | Responsável |
 |---|---|---|
-| Q-R1 | Quais relays e servidores Blossom entram na lista padrão do MVP? Critérios: aceitam gift wraps (kind 1059), retêm por 7 dias, exigem autenticação para leitura (NIP-42), preferencialmente no Brasil (Q-D2) | Implementação (aprovado deixar para essa fase) |
+| Q-R1 | Quais relays e servidores Blossom entram na lista padrão do MVP? Critérios: aceitam gift wraps (kind 1059), retêm por 7 dias, exigem autenticação para leitura (NIP-42), preferencialmente no Brasil (Q-D2). **Em andamento (2026-10-22):** lista provisória em `relays.json`; dos 100 relays de DM mais usados, só 7 protegem os gift wraps de quem não é o destinatário, e nenhum fica no Brasil. Falta confirmar a retenção. Detalhes em [prototipos/relays](../prototipos/relays/README.md) | Implementação |
 | Q-R2 | Formato do áudio entre navegadores: Chrome e Firefox gravam Opus nativamente; o Safari historicamente grava AAC. Opções: aceitar formatos mistos ou usar um codificador Opus em WebAssembly carregado só quando necessário | Implementação |
 | Q-R3 | ✅ No PWA, a chave privada é cifrada com um **PIN** escolhido pelo usuário no cadastro e pedido ao abrir o app. No nativo, o cofre do sistema substitui o PIN (que vira opcional, RF-07) | — |
