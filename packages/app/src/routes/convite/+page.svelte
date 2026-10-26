@@ -5,6 +5,7 @@
 	import { contactName, parseInvite, toNpub, type ContactRecord, type Invite } from '@lerolero/core';
 	import { onMount } from 'svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { phraseOfferDue } from '#lib/phrase-reminder.ts';
 	import { session } from '#lib/session.svelte.ts';
 
 	let invite = $state.raw<Invite>();
@@ -36,7 +37,11 @@
 		busy = true;
 		try {
 			const contact = await session.addContact(invite!, localName);
-			await goto(resolve('/contatos/[chave]', { chave: contact.publicKey }), { replaceState: true });
+			// o primeiro contato é a hora de guardar a frase (Q-U1)
+			const next = (await phraseOfferDue())
+				? resolve('/guardar-frase') + '?contato=' + contact.publicKey
+				: resolve('/contatos/[chave]', { chave: contact.publicKey });
+			await goto(next, { replaceState: true });
 		} catch (err) {
 			error = friendlyError(err);
 			busy = false;

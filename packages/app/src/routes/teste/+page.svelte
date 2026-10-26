@@ -45,16 +45,16 @@
 			vão ver) e crie um PIN de 6 números.
 		</li>
 		<li>
-			<strong>Guarde a frase de 12 palavras.</strong> Anote num papel guardado em casa, ou salve num gerenciador de
-			senhas. Depois o app pede duas palavras para conferir.
+			<strong>Adicione quem te convidou.</strong> Toque no link de convite que você recebeu, ou vá em
+			<strong>+ → Adicionar contato</strong> e leia o QR code da pessoa com a câmera.
+		</li>
+		<li>
+			<strong>Guarde a frase de 12 palavras.</strong> Ao adicionar o primeiro contato, o app mostra a frase. Anote
+			num papel guardado em casa, ou salve num gerenciador de senhas. Depois o app pede duas palavras para conferir.
 			<ul>
 				<li>Sem a frase, perder o celular ou esquecer o PIN significa perder a conta. Ninguém consegue recuperar para você.</li>
 				<li>Nunca mande a frase para ninguém, nem para quem te convidou.</li>
 			</ul>
-		</li>
-		<li>
-			<strong>Adicione quem te convidou.</strong> Toque no link de convite que você recebeu, ou vá em
-			<strong>+ → Adicionar contato</strong> e leia o QR code da pessoa com a câmera.
 		</li>
 		<li>
 			<strong>Mande seu convite</strong>, se quiser falar com mais alguém do teste: <strong>+ → Convidar alguém</strong>,

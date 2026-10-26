@@ -7,7 +7,7 @@ export { expect };
 
 export const PIN = '123456';
 
-export type Pessoa = { nome: string; page: Page; frase: string[] };
+export type Pessoa = { nome: string; page: Page };
 
 /** Digita no PIN em bolinhas: o campo de verdade é invisível, então foca e digita pelo teclado. */
 export async function digitarPin(page: Page, id: string, pin: string) {
@@ -17,27 +17,42 @@ export async function digitarPin(page: Page, id: string, pin: string) {
 
 export const noInicio = (page: Page) => expect(page.getByRole('button', { name: 'Nova conversa' })).toBeVisible({ timeout: 20_000 });
 
-/** Cria a conta pela interface, guarda a frase e deixa a conferência para depois (fica no início). */
-export async function criarConta(page: Page, nome: string, pin = PIN): Promise<string[]> {
+/** Cria a conta pela interface (fica no início). */
+export async function criarConta(page: Page, nome: string, pin = PIN) {
 	await page.goto('./');
-	const frase = await cadastrar(page, nome, pin);
+	await cadastrar(page, nome, pin);
 	await noInicio(page);
-	return frase;
 }
 
-/** O cadastro a partir das boas-vindas, até deixar a conferência da frase para depois. */
-export async function cadastrar(page: Page, nome: string, pin = PIN): Promise<string[]> {
+/** O cadastro a partir das boas-vindas: nome e PIN, sem a frase (ela vem com o primeiro contato). */
+export async function cadastrar(page: Page, nome: string, pin = PIN) {
 	await page.getByRole('link', { name: 'Criar minha conta' }).or(page.getByRole('button', { name: 'Criar minha conta' })).click();
 	await page.locator('#nome').fill(nome);
 	await page.getByRole('button', { name: 'Continuar' }).click();
 	await digitarPin(page, 'pin', pin);
 	await page.keyboard.type(pin); // o foco pula sozinho para a confirmação
-	await expect(page.getByRole('heading', { name: 'Sua frase de recuperação' })).toBeVisible({ timeout: 20_000 });
-	const frase = (await page.locator('ol li').allTextContents()).map((t) => t.replace(/^\d+/, '').trim());
-	await page.getByLabel('Guardei as 12 palavras').check();
-	await page.getByRole('button', { name: 'Continuar' }).click();
-	await page.getByRole('button', { name: 'Fazer depois' }).click();
-	return frase;
+	await expect(page.getByRole('heading', { name: 'Crie um PIN' })).toBeHidden({ timeout: 20_000 });
+}
+
+/** As 12 palavras, lidas em Ajustes › Frase de recuperação (pede o PIN). */
+export async function verFrase(page: Page, pin = PIN): Promise<string[]> {
+	await page.goto('./ajustes/frase');
+	await digitarPin(page, 'pin', pin);
+	await expect(page.locator('ol li')).toHaveCount(12, { timeout: 20_000 });
+	return (await page.locator('ol li').allTextContents()).map((t) => t.replace(/^\d+/, '').trim());
+}
+
+/**
+ * Adiciona o contato aberto em /convite. O primeiro contato de cada pessoa passa antes por
+ * "Guarde sua frase" (Q-U1), que aqui fica para depois.
+ */
+export async function confirmarConvite(page: Page) {
+	await page.getByRole('button', { name: 'Adicionar' }).click();
+	const aviso = page.getByRole('heading', { name: 'Guarde sua frase de recuperação' });
+	const contato = page.getByRole('button', { name: 'Salvar nome' });
+	await expect(aviso.or(contato)).toBeVisible({ timeout: 20_000 });
+	if (await aviso.isVisible()) await page.getByRole('button', { name: 'Depois' }).click();
+	await expect(contato).toBeVisible();
 }
 
 /** O link do convite, copiado pelo botão em "Meu convite" (a página fica lá). */
@@ -53,7 +68,7 @@ export async function meuConvite(page: Page): Promise<string> {
 export async function adicionarPeloConvite(de: Pessoa, quem: Pessoa) {
 	await quem.page.goto(await meuConvite(de.page));
 	await expect(quem.page.getByText(`Se apresenta como: ${de.nome}`)).toBeVisible();
-	await quem.page.getByRole('button', { name: 'Adicionar' }).click();
+	await confirmarConvite(quem.page);
 	await quem.page.getByRole('link', { name: 'Conversar' }).click();
 	await expect(quem.page.getByText('Nenhuma mensagem ainda')).toBeVisible();
 }
@@ -80,20 +95,24 @@ export async function abrirConversa(page: Page, com: string) {
 	await page.locator('.conversations a', { hasText: com }).click();
 }
 
-/** Esquece a sessão aberta (vale 5 min): a próxima abertura do app pede o PIN. */
-export const vencerSessao = (page: Page) =>
+/** Apaga uma configuração guardada no aparelho, como se o prazo dela tivesse passado. */
+export const esquecerAjuste = (page: Page, chave: string) =>
 	page.evaluate(
-		() =>
+		(chave) =>
 			new Promise<void>((ok, falha) => {
 				const req = indexedDB.open('lerolero');
 				req.onerror = () => falha(req.error);
 				req.onsuccess = () => {
 					const tx = req.result.transaction('settings', 'readwrite');
-					tx.objectStore('settings').delete('sessaoAberta');
+					tx.objectStore('settings').delete(chave);
 					tx.oncomplete = () => ok();
 				};
-			})
+			}),
+		chave
 	);
+
+/** Esquece a sessão aberta (vale 5 min): a próxima abertura do app pede o PIN. */
+export const vencerSessao = (page: Page) => esquecerAjuste(page, 'sessaoAberta');
 
 /** Endereços de relays de fora (ex.: os do convite de comentários) que a suíte desviou para o relay local. */
 export const desviados: string[] = [];
@@ -156,7 +175,8 @@ export const test = base.extend<Fixtures>({
 	novaPessoa: async ({ novoAparelho }, use) => {
 		await use(async (nome) => {
 			const page = await novoAparelho();
-			return { nome, page, frase: await criarConta(page, nome) };
+			await criarConta(page, nome);
+			return { nome, page };
 		});
 	}
 });

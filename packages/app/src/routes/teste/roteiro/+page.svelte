@@ -4,8 +4,9 @@
 
 	// Passos do critério de aceite do M1 (docs/07-roadmap.md)
 	const steps = [
-		['A e B criam a conta: nome, PIN, frase e conferir 2 palavras', 'Chegam à tela de conversas, sem lembrete da frase'],
-		['B lê o QR de A (A em + → Convidar alguém; B em + → Adicionar contato → Abrir a câmera)', 'B vê "Se apresenta como" com o nome de A; depois de Adicionar, A está nos contatos de B'],
+		['A e B criam a conta: nome e PIN', 'Chegam à tela de conversas, sem pedir a frase nem mostrar o lembrete'],
+		['B lê o QR de A (A em + → Convidar alguém; B em + → Adicionar contato → Abrir a câmera)', 'B vê "Se apresenta como" com o nome de A; ao tocar em Adicionar, aparece "Guarde sua frase de recuperação"'],
+		['B toca em Guardar agora: PIN, frase, Guardei e conferir 2 palavras', 'Vai para o contato A; na tela de conversas, sem lembrete da frase'],
 		['B abre A, toca em Conversar e envia "oi"', 'A mensagem aparece na hora com o relógio, que vira ✓ em até 2 s'],
 		['A abre o app', 'A conversa com B está na lista, com o nome de B e 1 não lida; ao abrir, aviso "não está nos seus contatos" e Adicionar aos contatos funciona'],
 		['A e B trocam 5 mensagens com a conversa aberta', 'Cada uma chega sem recarregar, em poucos segundos, na ordem e sem repetir'],
@@ -45,7 +46,7 @@
 		<li>Leiam antes o guia <a href={resolve('/teste')}>Como testar</a>.</li>
 		<li>Se a tela inicial não tiver o quadro <strong>Conversas</strong>, fechem e abram de novo: o app guarda a versão anterior por uma abertura.</li>
 		<li>No iPhone, instalem na tela de início antes de criar a conta.</li>
-		<li>A pessoa A precisa da frase de 12 palavras para o passo de restauração: guarde-a no cadastro.</li>
+		<li>A pessoa A precisa da frase de 12 palavras para o passo de restauração: guarde-a quando o app pedir, ao adicionar o primeiro contato, ou em Ajustes › Frase de recuperação.</li>
 	</ul>
 
 	<h2>Roteiro</h2>
