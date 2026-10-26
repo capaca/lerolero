@@ -41,7 +41,7 @@ async function setPending(storage: Storage, id: string, pending: boolean) {
 /** Guarda o áudio no aparelho e o balão provisório "enviando"; o envio de verdade é `tryPendingUpload`. */
 export async function startPendingAudio(
 	storage: Storage,
-	input: { conversationId: string; me: string; file: Blob; duration: number; now?: number }
+	input: { conversationId: string; me: string; file: Blob; duration: number; start?: number; now?: number }
 ): Promise<MessageRecord> {
 	const now = input.now ?? Date.now();
 	const ox = await sha256(new Uint8Array(await input.file.arrayBuffer()));
@@ -51,7 +51,7 @@ export async function startPendingAudio(
 	if (!known) {
 		await storage.media.put({ ox, type, size: input.file.size, file: input.file, urls: [], x: '', key: '', nonce: '', keep: false, lastAccess: now });
 	}
-	const media: MessageMedia = { ox, x: '', type, size: input.file.size, urls: [], key: '', nonce: '', duration: input.duration };
+	const media: MessageMedia = { ox, x: '', type, size: input.file.size, urls: [], key: '', nonce: '', duration: input.duration, ...(input.start ? { start: input.start } : {}) };
 	const message: MessageRecord = {
 		id: `${PENDING_UPLOAD_PREFIX}${crypto.randomUUID()}`,
 		conversationId: input.conversationId,
@@ -85,7 +85,7 @@ export async function tryPendingUpload(
 		servers: string[];
 		signer: BlossomSigner;
 		/** manda a mensagem de verdade (kind 15, pela fila de sempre) */
-		send: (media: MediaRef & { duration?: number }) => Promise<void>;
+		send: (media: MediaRef & { duration?: number; start?: number }) => Promise<void>;
 		now?: () => number;
 		random?: () => number;
 	}
@@ -97,7 +97,7 @@ export async function tryPendingUpload(
 		const file = (await storage.media.get(message.media.ox))?.file;
 		if (!file) throw new Error('arquivo não está mais no aparelho');
 		const ref = await prepareMedia(storage, file, { servers: deps.servers, signer: deps.signer, now: now() });
-		await deps.send({ ...ref, duration: message.media.duration });
+		await deps.send({ ...ref, duration: message.media.duration, start: message.media.start });
 	} catch {
 		const attempts = message.upload.attempts + 1;
 		const at = now() + uploadRetryDelay(attempts, deps.random);

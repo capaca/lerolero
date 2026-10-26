@@ -1,6 +1,8 @@
 // Gravação de áudio em Opus (RF-40, Q-R2): nativa onde o navegador grava Opus
 // (Chrome, Firefox, Edge, Safari 18.4+). Sem Opus, o app avisa em vez de gravar outro formato.
 
+import { rms, VoiceStartDetector } from '@lerolero/core';
+
 const OPUS_TYPES = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4;codecs=opus'];
 
 /**
@@ -18,8 +20,8 @@ export function opusRecordingType(): string | undefined {
 
 export type Recording = {
 	startedAt: number;
-	/** termina e devolve o arquivo e a duração em segundos */
-	stop(): Promise<{ file: Blob; duration: number }>;
+	/** termina e devolve o arquivo, a duração e os segundos de silêncio do começo (0 se não há o que pular) */
+	stop(): Promise<{ file: Blob; duration: number; start: number }>;
 	cancel(): void;
 };
 
@@ -34,8 +36,12 @@ export async function startRecording(): Promise<Recording> {
 	const recorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: BITRATE });
 	const chunks: Blob[] = [];
 	recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-	const release = () => stream.getTracks().forEach((t) => t.stop());
 	const startedAt = performance.now();
+	const watcher = watchVoiceStart(stream, startedAt);
+	const release = () => {
+		watcher.close();
+		stream.getTracks().forEach((t) => t.stop());
+	};
 	recorder.start(1000);
 	return {
 		startedAt,
@@ -45,7 +51,8 @@ export async function startRecording(): Promise<Recording> {
 					release();
 					resolve({
 						file: new Blob(chunks, { type: recorder.mimeType || mimeType }),
-						duration: (performance.now() - startedAt) / 1000
+						duration: (performance.now() - startedAt) / 1000,
+						start: watcher.skip()
 					});
 				};
 				recorder.stop();
@@ -54,6 +61,36 @@ export async function startRecording(): Promise<Recording> {
 			recorder.onstop = release;
 			if (recorder.state !== 'inactive') recorder.stop();
 			else release();
+		}
+	};
+}
+
+/**
+ * Lê o nível do microfone enquanto grava para achar onde a voz começa (core: media/voice-start.ts). Qualquer
+ * falha aqui (sem AudioContext, por exemplo) só significa "não pular nada": a gravação não depende disto.
+ */
+function watchVoiceStart(stream: MediaStream, startedAt: number) {
+	const detector = new VoiceStartDetector();
+	let context: AudioContext | undefined;
+	let timer: ReturnType<typeof setInterval> | undefined;
+	try {
+		context = new AudioContext();
+		const analyser = context.createAnalyser();
+		analyser.fftSize = 1024;
+		context.createMediaStreamSource(stream).connect(analyser);
+		const samples = new Float32Array(analyser.fftSize);
+		timer = setInterval(() => {
+			analyser.getFloatTimeDomainData(samples);
+			detector.push(rms(samples), (performance.now() - startedAt) / 1000);
+		}, 20);
+	} catch {
+		// sem análise: o áudio toca inteiro
+	}
+	return {
+		skip: () => detector.skip,
+		close: () => {
+			clearInterval(timer);
+			void context?.close().catch(() => {});
 		}
 	};
 }

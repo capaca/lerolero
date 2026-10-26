@@ -183,6 +183,32 @@ describe('conversas 1:1', () => {
 		expect(got?.message).toMatchObject({ kind: 15, text: '', media });
 	});
 
+	it('áudio com silêncio no começo: o ponto de início vai na mensagem; valor estranho vira "toca inteiro"', async () => {
+		const alice = await device();
+		const bob = await device();
+		const base = {
+			ox: 'a'.repeat(64),
+			x: 'b'.repeat(64),
+			type: 'audio/webm;codecs=opus',
+			size: 100,
+			urls: ['https://um.example/' + 'b'.repeat(64)],
+			key: 'c'.repeat(64),
+			nonce: 'd'.repeat(24),
+			duration: 10
+		};
+		const send = async (start: number | undefined, tags?: string[][]) => {
+			const wrapped = alice.vault.wrapDirectMessage(bob.publicKey, base.urls[0], tags ?? mediaTags({ ...base, start }), 15);
+			return (await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(wrapped.toRecipient)))?.message.media;
+		};
+		expect((await send(2.4))?.start).toBe(2.4);
+		expect(mediaTags({ ...base }).some((t) => t[0] === 'start')).toBe(false); // sem início, sem tag
+		// de quem escreveu: além da duração, negativo ou texto não valem
+		for (const bad of ['10', '99', '-1', 'abc']) {
+			const tags = [...mediaTags({ ...base }), ['start', bad]];
+			expect((await send(undefined, tags))?.start).toBeUndefined();
+		}
+	});
+
 	it('ignora arquivo sem chave ou com outra cifra', async () => {
 		const bob = await device();
 		const key = generateSecretKey();

@@ -45,7 +45,7 @@ kind 1059  Gift wrap — assinado por chave descartável; tag ["p", <destinatár
 | Uso | Kind | Padrão | Observações |
 |---|---|---|---|
 | Mensagem de texto | `14` | NIP-17 | Resposta: tag `["e", <id do rumor citado>]`. Tags próprias: `seq`, `g` (ver abaixo) e `["nome", <nome>]` na primeira mensagem de cada conversa: como o nome é privado, ele chega ao contato só dentro da mensagem cifrada |
-| Mídia (foto, áudio) | `15` | NIP-17 | Tags do NIP-17 para arquivos: `file-type`, `encryption-algorithm` (`aes-gcm`), `decryption-key`, `decryption-nonce`, `x` (hash do arquivo cifrado), `ox` (hash do original), `size`, `dim`, `blurhash`/`thumb` (prévia), URLs do Blossom |
+| Mídia (foto, áudio) | `15` | NIP-17 | Tags do NIP-17 para arquivos: `file-type`, `encryption-algorithm` (`aes-gcm`), `decryption-key`, `decryption-nonce`, `x` (hash do arquivo cifrado), `ox` (hash do original), `size`, `dim`, `blurhash`/`thumb` (prévia), URLs do Blossom. Áudio: `duration` (segundos) e `start` (segundos de silêncio no começo, que o player pula; só vale se for maior que 0 e menor que `duration`; cliente que não conhece a tag toca o áudio inteiro, então não muda `SYNC_GENERATION`) |
 | Reação | `7` | NIP-25 | Tag `["e", <id do rumor>]`; conteúdo = emoji |
 | Apagar para todos | `5` | NIP-09 | Pedido de apagamento; outros apps podem ignorar (RF-25) |
 | Edição | próprio | — | Kind a definir; tag `["e", <id original>]` + novo texto + `alt` |

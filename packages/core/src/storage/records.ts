@@ -80,6 +80,8 @@ export type MessageMedia = {
 	nonce: string;
 	/** duração em segundos (áudio) */
 	duration?: number;
+	/** segundos de silêncio no começo do áudio, que o player pula (media/voice-start.ts) */
+	start?: number;
 };
 
 export type MessageRecord = {
