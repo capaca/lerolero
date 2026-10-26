@@ -77,6 +77,9 @@
 				<Icon name="trash" size={14} />
 				{mine ? 'Você apagou esta mensagem' : 'Esta mensagem foi apagada'}
 			</p>
+		{:else if m.media?.type.startsWith('audio/') && links === 'texto'}
+			<!-- pedido de mensagem (RF-12): nada é baixado nem tocado até a pessoa aceitar -->
+			<p class="hint file"><Icon name="mic" size={16} /> Áudio de quem não é seu contato. Aceite o pedido para ouvir.</p>
 		{:else if m.media?.type.startsWith('audio/')}
 			<AudioPlayer media={m.media} />
 			{#if m.upload?.failed}

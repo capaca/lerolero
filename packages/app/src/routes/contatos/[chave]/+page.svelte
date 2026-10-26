@@ -1,5 +1,6 @@
 <script lang="ts">
 	import BackLink from '#lib/components/BackLink.svelte';
+	import Sheet from '#lib/components/Sheet.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { contactName, toNpub, type ContactRecord } from '@lerolero/core';
@@ -15,6 +16,19 @@
 			localName = c?.localName ?? '';
 		});
 	});
+
+	let confirmingBlock = $state(false);
+
+	async function block() {
+		confirmingBlock = false;
+		await session.blockContact(contact!.publicKey);
+		contact = await session.getContact(contact!.publicKey);
+	}
+
+	async function unblock() {
+		await session.unblockContact(contact!.publicKey);
+		contact = await session.getContact(contact!.publicKey);
+	}
 
 	async function rename(event: SubmitEvent) {
 		event.preventDefault();
@@ -45,13 +59,40 @@
 			</div>
 		</form>
 
-		<div class="actions">
-			<a class="primary-link" href={resolve('/conversa/[chave]', { chave: contact.publicKey })}>Conversar</a>
-		</div>
+		{#if contact.state === 'bloqueado'}
+			<p class="hint">Você bloqueou esta pessoa: o que ela mandar é descartado, sem aviso.</p>
+			<div class="actions">
+				<button onclick={unblock}>Desbloquear</button>
+			</div>
+		{:else}
+			<div class="actions">
+				<a class="primary-link" href={resolve('/conversa/[chave]', { chave: contact.publicKey })}>Conversar</a>
+				<button class="danger" onclick={() => (confirmingBlock = true)}>Bloquear</button>
+			</div>
+		{/if}
+
+		{#if confirmingBlock}
+			<Sheet label="Bloquear" onclose={() => (confirmingBlock = false)}>
+				<p><strong>Bloquear {contactName(contact)}?</strong></p>
+				<p class="hint">
+					A conversa some deste aparelho e o que essa pessoa mandar daqui para frente é descartado, sem aviso a ela. Você
+					pode desbloquear depois, em Contatos; as mensagens de antes não voltam.
+				</p>
+				<div class="actions">
+					<button onclick={() => (confirmingBlock = false)}>Cancelar</button>
+					<button class="danger" onclick={block}>Bloquear</button>
+				</div>
+			</Sheet>
+		{/if}
 	{/if}
 </main>
 
 <style>
+	.danger {
+		background: var(--danger);
+		border-color: var(--danger);
+		color: white;
+	}
 	.primary-link {
 		display: inline-block;
 		text-decoration: none;

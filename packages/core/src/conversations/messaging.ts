@@ -133,6 +133,8 @@ async function storeIncomingNow(
 	if (rumor.kind !== 14 && rumor.kind !== 15) return undefined;
 	const media = rumor.kind === 15 ? mediaFromRumor(rumor) : undefined;
 	if (rumor.kind === 15 && !media) return undefined; // arquivo que não sabemos abrir
+	// bloqueado (RF-13): descartado sem guardar, no 1:1 e nos grupos; o pedido de apagar (kind 5) segue valendo
+	if (rumor.pubkey !== me && (await storage.contacts.get(rumor.pubkey))?.state === 'bloqueado') return undefined;
 	if (rumor.tags.some((t) => t[0] === GROUP_TAG)) return storeGroupMessage(storage, me, rumor, media, options);
 	const others = new Set([rumor.pubkey, ...rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1])]);
 	others.delete(me);

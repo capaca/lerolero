@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { contactName, directConversationId, toNpub, type ContactRecord } from '@lerolero/core';
@@ -18,7 +19,13 @@
 
 	const name = $derived(contact ? contactName(contact) : contact === null ? `${toNpub(publicKey).slice(0, 12)}…` : '');
 	const isContact = $derived(contact?.state === 'aceito');
-	const inviteHash = $derived(`#${toNpub(publicKey)}${contact?.chosenName ? `&n=${encodeURIComponent(contact.chosenName)}` : ''}`);
+	async function accept() {
+		await session.acceptRequest(publicKey);
+	}
+	async function block() {
+		await session.blockContact(publicKey);
+		await goto(resolve('/contatos'));
+	}
 </script>
 
 <svelte:head><title>{name || 'Conversa'} · Lero-lero</title></svelte:head>
@@ -37,10 +44,14 @@
 			{#if contact !== undefined && !isContact}
 				<div class="banner notice">
 					<p>
-						<strong>Esta pessoa não está nos seus contatos.</strong>
+						<strong>Pedido de mensagem: esta pessoa não está nos seus contatos.</strong>
 						{#if contact?.chosenName}Ela se apresenta como “{contact.chosenName}”, mas qualquer um pode escolher qualquer nome.{/if}
+						Links ficam como texto e áudios não tocam até você aceitar.
 					</p>
-					<a href={resolve('/convite') + inviteHash}>Adicionar aos contatos</a>
+					<div class="actions">
+						<button class="primary" onclick={accept}>Aceitar</button>
+						<button class="danger" onclick={block}>Bloquear</button>
+					</div>
 				</div>
 			{/if}
 		{/snippet}
@@ -48,6 +59,11 @@
 {/key}
 
 <style>
+	.danger {
+		background: var(--danger);
+		border-color: var(--danger);
+		color: white;
+	}
 	.notice {
 		margin: 0.6rem 1rem 0;
 	}

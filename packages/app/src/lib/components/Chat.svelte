@@ -149,6 +149,7 @@
 		if (scroller && scroller.clientHeight === seenHeight) atEnd = distance < 8;
 		farFromEnd = distance > 300;
 		if (atEnd) pending = 0;
+		dayRetries = 0;
 		if (!dayFrame) dayFrame = requestAnimationFrame(updateFloatingDay);
 	}
 
@@ -157,6 +158,7 @@
 	let floatingDay = $state('');
 	let showDay = $state(false);
 	let dayFrame = 0;
+	let dayRetries = 0;
 	let hideDay: ReturnType<typeof setTimeout> | undefined;
 	function updateFloatingDay() {
 		dayFrame = 0;
@@ -164,14 +166,19 @@
 		// no fim da conversa (inclusive quando o app rola sozinho ao abrir) não precisa
 		if (!scroller || atEnd) return void (showDay = false);
 		const box = scroller.getBoundingClientRect();
+		let found = false;
 		for (let y = box.top + 8; y < box.top + 80; y += 6) {
 			const el = document.elementFromPoint(box.left + box.width / 2, y)?.closest<HTMLElement>('[data-day]');
 			if (el) {
 				floatingDay = el.dataset.day!;
 				showDay = true;
+				found = true;
 				break;
 			}
 		}
+		// o bloco que acabou de entrar na tela pode ainda não estar desenhado (content-visibility): tenta nos
+		// próximos quadros em vez de ficar sem a data até a próxima rolagem
+		if (!found && dayRetries++ < 10) dayFrame = requestAnimationFrame(updateFloatingDay);
 		hideDay = setTimeout(() => (showDay = false), 1500);
 	}
 	// Numa rolagem longa, o bloco que entra na tela só é desenhado depois e cresce do tamanho

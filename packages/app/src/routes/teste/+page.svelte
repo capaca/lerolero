@@ -94,7 +94,7 @@
 			<tr><td>Sem fotos e arquivos</td><td>Só texto e áudio</td></tr>
 			<tr><td>"Apagar para todos" é um pedido</td><td>No Lero-lero a mensagem some para todos na conversa; se a outra pessoa usar outro app compatível, ele pode ignorar o pedido</td></tr>
 			<tr><td>Sem "entregue" e "lida"</td><td>O ✓ diz só que a mensagem chegou ao servidor, não ao celular da outra pessoa</td></tr>
-			<tr><td>Sem bloqueio e sem filtro de spam</td><td>Quem tiver seu link de convite consegue te mandar mensagem</td></tr>
+			<tr><td>Sem filtro contra spam em massa</td><td>Quem tiver seu link de convite consegue te mandar mensagem, mas a conversa chega em <strong>Contatos › Pedidos de mensagem</strong> (um ponto no ícone avisa), sem link nem áudio abertos até você aceitar, e dá para bloquear</td></tr>
 			<tr><td>Sem backup dos contatos</td><td>Se trocar de celular, a frase recupera a conta, mas os contatos precisam ser adicionados de novo</td></tr>
 			<tr><td>Servidores no exterior</td><td>Alguma mensagem pode atrasar ou se perder; se notar, conte pra gente</td></tr>
 		</tbody>

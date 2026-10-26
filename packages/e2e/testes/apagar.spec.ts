@@ -1,6 +1,6 @@
 // Apagar mensagens (RF-25): para todos some dos dois lados e o arquivo sai dos Blossom; para mim só daqui.
 import type { Page } from '@playwright/test';
-import { abrirConversa, adicionarPeloConvite, enviarAudio, enviarTexto, expect, test } from '../ajudantes.ts';
+import { abrirConversa, adicionarUmAoOutro, enviarAudio, enviarTexto, expect, test } from '../ajudantes.ts';
 
 /** Endereços do arquivo da (única) mensagem com mídia, como guardados no aparelho. */
 const urlsDaMidia = (page: Page) =>
@@ -26,7 +26,7 @@ async function apagarParaTodos(page: Page, balao: ReturnType<Page['locator']>) {
 
 test('apagar para todos (texto e áudio) e apagar para mim', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
-	await adicionarPeloConvite(maria, joao);
+	await adicionarUmAoOutro(maria, joao);
 	await enviarAudio(joao.page);
 	await enviarTexto(joao.page, 'mensagem que vou apagar');
 

@@ -1,6 +1,6 @@
 // Conversa entre duas pessoas pelo relay local: convite, envio, recebimento sem recarregar, não lidas e
 // o nome que viaja cifrado na primeira mensagem (RF-10..14, RF-20).
-import { adicionarPeloConvite, expect, test } from '../ajudantes.ts';
+import { abrirPedido, adicionarPeloConvite, expect, test } from '../ajudantes.ts';
 
 test('Maria convida, João adiciona e os dois conversam', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
@@ -11,14 +11,13 @@ test('Maria convida, João adiciona e os dois conversam', async ({ novaPessoa })
 	await joao.page.getByRole('button', { name: 'Enviar', exact: true }).click();
 	await expect(joao.page.locator('.row.mine').getByLabel('enviada')).toBeVisible();
 
-	// Maria vê na lista, com o nome que veio na mensagem e 1 não lida
-	await maria.page.goto('./');
-	const conversa = maria.page.locator('.conversations a', { hasText: 'Oi Maria! Aqui é o João.' });
-	await expect(conversa).toContainText('João');
-	await expect(conversa.getByLabel('1 não lidas')).toBeVisible();
-
-	await conversa.click();
-	await expect(maria.page.getByText('Esta pessoa não está nos seus contatos.')).toBeVisible();
+	// Maria ainda não tem o João: chega como pedido de mensagem, com o nome que veio na mensagem
+	await maria.page.goto('./contatos');
+	await expect(maria.page.getByRole('heading', { name: 'Pedidos de mensagem (1)' })).toBeVisible({ timeout: 20_000 });
+	await expect(maria.page.getByRole('link', { name: /João/ })).toContainText('Oi Maria! Aqui é o João.');
+	await abrirPedido(maria.page, 'João');
+	await expect(maria.page.getByText('Pedido de mensagem: esta pessoa não está nos seus contatos.')).toBeVisible();
+	await maria.page.getByRole('button', { name: 'Aceitar' }).click();
 	await maria.page.getByLabel('Mensagem').fill('Oi João, tudo bem?');
 	await maria.page.getByRole('button', { name: 'Enviar', exact: true }).click();
 

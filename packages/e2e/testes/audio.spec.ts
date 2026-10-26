@@ -1,10 +1,10 @@
 // Áudio (RF-40): gravar pelo microfone simulado, enviar cifrado aos dois Blossom, tocar do outro lado,
 // velocidade e um áudio por vez.
-import { abrirConversa, adicionarPeloConvite, enviarAudio, expect, test } from '../ajudantes.ts';
+import { abrirConversa, adicionarUmAoOutro, enviarAudio, expect, test } from '../ajudantes.ts';
 
 test('João grava dois áudios; Maria toca, acelera e só um toca por vez', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
-	await adicionarPeloConvite(maria, joao);
+	await adicionarUmAoOutro(maria, joao);
 	await enviarAudio(joao.page);
 	await enviarAudio(joao.page);
 

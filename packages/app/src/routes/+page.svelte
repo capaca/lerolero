@@ -57,10 +57,20 @@
 		void loadConversations();
 	});
 
+	// há pedidos de mensagem esperando em Contatos: só um ponto no ícone, sem número nem aviso (RF-12)
+	let hasRequests = $state(false);
+
 	async function loadConversations() {
+		hasRequests = (await session.listRequests()).length > 0;
 		const list = await session.listConversations();
+		const shown: ConversationRecord[] = [];
+		for (const conversation of list) {
+			// pedido e bloqueado não entram na lista: ficam em Contatos
+			const state = conversation.group ? 'aceito' : (await session.getContact(conversation.members[0]))?.state;
+			if (state !== 'pedido' && state !== 'bloqueado') shown.push(conversation);
+		}
 		conversations = await Promise.all(
-			list.map(async (conversation) => {
+			shown.map(async (conversation) => {
 				if (conversation.group) {
 					// a cor do avatar do grupo sai do id dele, como a do contato sai da chave
 					const key = conversation.id.slice('grupo:'.length);
@@ -99,7 +109,10 @@
 	<header>
 		<h1>Lero-lero</h1>
 		<nav>
-			<a class="icon-button" href={resolve('/contatos')} aria-label="Contatos"><Icon name="users" size={22} /></a>
+			<a class="icon-button" href={resolve('/contatos')} aria-label={hasRequests ? 'Contatos (há pedidos de mensagem)' : 'Contatos'}>
+				<Icon name="users" size={22} />
+				{#if hasRequests}<span class="dot" aria-hidden="true"></span>{/if}
+			</a>
 			<a class="icon-button" href={resolve('/ajustes')} aria-label="Ajustes"><Icon name="settings" size={22} /></a>
 		</nav>
 	</header>
@@ -246,12 +259,23 @@
 		gap: 0.2rem;
 	}
 	.icon-button {
+		position: relative;
 		display: grid;
 		place-items: center;
 		width: 2.75rem;
 		height: 2.75rem;
 		border-radius: 50%;
 		color: var(--fg);
+	}
+	.dot {
+		position: absolute;
+		top: 0.55rem;
+		right: 0.55rem;
+		width: 0.65rem;
+		height: 0.65rem;
+		border-radius: 50%;
+		background: var(--danger);
+		border: 2px solid var(--bg, white);
 	}
 	.icon-button:hover {
 		background: var(--line);

@@ -1,10 +1,10 @@
 // Mensagem para um contato novo com os relays fora do ar: aparece na hora como "enviando" e fica guardada, em vez de
 // sumir enquanto o app busca onde a pessoa recebe (RNF-12; bug visto pelo Pedro em 2026-10).
-import { adicionarPeloConvite, expect, test } from '../ajudantes.ts';
+import { adicionarUmAoOutro, expect, test } from '../ajudantes.ts';
 
 test('mensagem para contato novo aparece como enviando mesmo com os relays fora do ar', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
-	await adicionarPeloConvite(maria, joao);
+	await adicionarUmAoOutro(maria, joao);
 
 	// conexões novas ficam abertas e mudas: a busca do 10050 da Maria espera o prazo inteiro (~10 s). Recarrega
 	// para não sobrar nenhuma conexão antiga, que ainda funcionaria.
@@ -25,7 +25,7 @@ test('mensagem para contato novo aparece como enviando mesmo com os relays fora 
 
 test('mensagens escritas sem internet saem juntas, na ordem, assim que ela volta', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
-	await adicionarPeloConvite(maria, joao);
+	await adicionarUmAoOutro(maria, joao);
 
 	await joao.page.context().setOffline(true);
 	const textos = ['Mensagem 1', 'Mensagem 2', 'Mensagem 3', 'Mensagem 4'];

@@ -2,12 +2,16 @@
 	import Avatar from '#lib/components/Avatar.svelte';
 	import BackLink from '#lib/components/BackLink.svelte';
 	import { resolve } from '$app/paths';
-	import { contactName, type ContactRecord } from '@lerolero/core';
+	import { contactName, type ContactRecord, type MessageRequest } from '@lerolero/core';
 	import { onMount } from 'svelte';
 	import { session } from '#lib/session.svelte.ts';
 
 	let contacts = $state.raw<ContactRecord[] | undefined>();
-	onMount(async () => (contacts = await session.listContacts()));
+	let requests = $state.raw<MessageRequest[]>([]);
+	let blocked = $state.raw<ContactRecord[]>([]);
+	onMount(async () => {
+		[contacts, requests, blocked] = await Promise.all([session.listContacts(), session.listRequests(), session.listBlocked()]);
+	});
 </script>
 
 <svelte:head><title>Contatos · Lero-lero</title></svelte:head>
@@ -20,6 +24,28 @@
 		<a class="button primary" href={resolve('/contatos/ler')}>Adicionar contato</a>
 		<a class="button" href={resolve('/contatos/meu-convite')}>Meu convite</a>
 	</div>
+
+	{#if requests.length > 0}
+		<section>
+			<h2>Pedidos de mensagem ({requests.length})</h2>
+			<p class="hint">
+				Gente que não está nos seus contatos. Nada é aberto até você aceitar: links ficam como texto e áudios não tocam.
+			</p>
+			<ul class="list">
+				{#each requests as { contact, conversation } (contact.publicKey)}
+					<li>
+						<a href={resolve('/conversa/[chave]', { chave: contact.publicKey })}>
+							<Avatar name={contactName(contact)} publicKey={contact.publicKey} />
+							<span class="text">
+								<strong>~{contactName(contact)}</strong>
+								<span class="hint preview">{conversation.lastMessageKind === 'texto' || !conversation.lastMessageKind ? (conversation.lastMessagePreview ?? '') : 'Mídia'}</span>
+							</span>
+						</a>
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
 
 	{#if contacts === undefined}
 		<p class="hint">Carregando…</p>
@@ -45,9 +71,30 @@
 			{/each}
 		</ul>
 	{/if}
+
+	{#if blocked.length > 0}
+		<section>
+			<h2>Bloqueados ({blocked.length})</h2>
+			<ul class="list">
+				{#each blocked as contact (contact.publicKey)}
+					<li>
+						<a href={resolve('/contatos/[chave]', { chave: contact.publicKey })}>
+							<Avatar name={contactName(contact)} publicKey={contact.publicKey} />
+							<span class="text"><strong>{contactName(contact)}</strong></span>
+						</a>
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
 </main>
 
 <style>
+	.preview {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
 	.button {
 		text-decoration: none;
 		font-weight: 600;
