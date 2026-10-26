@@ -194,6 +194,7 @@ Revisão do app inteiro com olhar de operação. Como não há servidor do proje
 
 - **Forward secrecy com Marmot (MLS)** — reavaliar ~12 meses após o ADR-0001 (out/2027).
 - Grupos grandes (RF-34).
+- **Seleção de várias mensagens (RF-28, pedido do Pedro em 2026-10-26, só registrado):** tocar numa mensagem para entrar no modo de seleção, marcar várias e agir de uma vez: **favoritar**, **excluir** (para mim ou para todos, com as regras do RF-25), **copiar** (textos juntos, na ordem da conversa) e **encaminhar** (a mídia vai sem reenviar o arquivo, RF-70). Hoje cada ação é por mensagem, no menu do toque longo (excluir e copiar já existem). Pontos a decidir antes: onde ficam os favoritos (uma tela "Favoritas" no Ajustes, ou um filtro na conversa) e se favoritar é só local (proposta: sim, nunca vai para o contato, e entra no backup cifrado do RF-06); encaminhar depende de "fotos e encaminhar sem reenviar" (item 2 da ordem do MVP); excluir várias para todos manda um único pedido cifrado com todos os ids. Quando entrar, o toque longo passa a iniciar a seleção, e o menu atual vira a barra de ações.
 - Multi-dispositivo.
 - Chamadas de voz e vídeo.
 - iOS; Google Play (Q-N2); notarização no macOS (Q-N5).
