@@ -50,6 +50,13 @@ Critério escolhido pelo Pedro: **uso no dia a dia**, o que faz um grupo de amig
 10. Detecção de perdas (M4).
 11. Polimento (M5), revisão de prontidão e beta.
 
+**Achados e pedidos do Pedro depois de usar o app (2026-10-26), ainda sem implementar:**
+
+- **Bug (✅ corrigido em 2026-10-26, teste e2e `envio-sem-rede`):** ao adicionar uma pessoa nova com os relays fora do ar, a mensagem "sumia" ao enviar, em vez de ficar pendente e sair depois. Causa encontrada no código: no envio 1:1, a busca de onde o contato recebe (`deliveryRelays`, até ~10 s por relay fora do ar) roda **antes** de guardar a mensagem. Enquanto isso o campo já foi limpo e nada aparece na conversa; se a busca falha ou a pessoa sai da tela, a mensagem se perde. A fila de envio (outbox) existe e funciona, mas só recebe a mensagem depois. Correção: a mensagem é guardada como "pendente" primeiro e os relays são buscados depois (RNF-12). Se não houver para onde enviar (`NoRelaysError`), ela é removida e o texto volta ao campo. Sobra uma janela de ~10 s em que fechar o app deixa a mensagem pendente sem entrada na fila; fica anotada.
+- **Excluir conversa** (apagar do aparelho; backlog, M3). Hoje só se apagam mensagens (RF-25).
+- **"Testadora" suja a lista (causa confirmada em 2026-10-26):** o teste e2e "Enviar comentário" (`comentario.spec.ts`) cria uma conta chamada Testadora e manda o comentário para a conta de comentários (`FEEDBACK_INVITE`, que traz os **relays reais** no nprofile). Em toda rodada da suíte, local ou na CI, uma chave nova manda uma mensagem de verdade para a conta do Pedro. Falta fazer a suíte não sair para a rede real (bug, vem antes). Isso também mostra o buraco que continua valendo: quem não é contato aparece na lista de conversas. Pedido para **antecipar os pedidos de mensagem e o bloqueio** (RF-12, RF-13, item 9 da ordem) e permitir excluir a conversa (acima).
+- **Onboarding:** copiar e guardar 12 palavras é contraintuitivo (RF-03). Em estudo, ver Q-U1.
+
 **Saíram do MVP para a v1** (decidido em 2026-10-22): modo foco com o estado "retida" (RF-52, 60–62), entrega em lotes (RF-63) e expiração de mídia com o painel de armazenamento (RF-72, 73). Ficam bem definidos nos docs para quando chegar a vez.
 
 ### M0 — Fundação (~3 semanas)
@@ -202,3 +209,4 @@ Revisão do app inteiro com olhar de operação. Como não há servidor do proje
 | # | Questão | Responsável |
 |---|---|---|
 | Q-M1 | Revisar as estimativas ao fim do M1, com base no ritmo real | Pedro |
+| Q-U1 | Como tornar o cadastro menos pesado sem perder a recuperação da conta? Hoje o RF-03 exige copiar e guardar 12 palavras. Pedido do Pedro em 2026-10-26: pensar em alternativas | Pedro |

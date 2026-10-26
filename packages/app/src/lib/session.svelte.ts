@@ -387,7 +387,6 @@ class Session {
 			return;
 		}
 		const recipient = conversationId.slice('direta:'.length);
-		const relays = await this.deliveryRelays(recipient);
 		const nameTags = kind === 5 ? [] : await nameTagFor(storage, recipient, this.current.displayName);
 		const wrapped = await vault.wrapDirectMessage(
 			recipient,
@@ -396,9 +395,22 @@ class Session {
 			kind,
 			sendTime(await storage.conversations.get(conversationId))
 		);
+		// guarda antes de buscar onde o contato recebe: com relays fora do ar a busca leva até ~10 s e, sem isto, a
+		// mensagem não aparecia nem ficava na fila (RNF-12)
 		if (store) {
 			await storeOutgoing(storage, wrapped.rumor, recipient);
 			this.version++;
+		}
+		let relays: string[];
+		try {
+			relays = await this.deliveryRelays(recipient);
+		} catch (err) {
+			// sem para onde enviar: não deixa uma "pendente" eterna, o texto volta para o campo
+			if (store) {
+				await deleteForMe(storage, wrapped.rumor.id);
+				this.version++;
+			}
+			throw err;
 		}
 		// a fila guarda e tenta de novo sozinha: a tela não espera a rede
 		void network.engine.enqueue(wrapped.toRecipient, relays, store ? wrapped.rumor.id : undefined);
