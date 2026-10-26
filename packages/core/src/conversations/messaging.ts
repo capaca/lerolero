@@ -3,6 +3,7 @@
 
 import type { Rumor } from '../identity/vault.ts';
 import { cleanName } from '../contacts/invite.ts';
+import { exclusive } from './lock.ts';
 import type { Storage } from '../storage/repositories.ts';
 import type { ConversationRecord, MessageMedia, MessageRecord } from '../storage/records.ts';
 import { groupConversationId, groupIdOf, GROUP_TAG } from './groups.ts';
@@ -122,7 +123,7 @@ async function upsertConversation(
  * (enviada de outro aparelho). Devolve undefined para o que o M1 ainda não trata
  * (grupos, reações, edições…).
  */
-export async function storeIncoming(
+async function storeIncomingNow(
 	storage: Storage,
 	me: string,
 	rumor: Rumor,
@@ -219,7 +220,7 @@ async function rememberSender(storage: Storage, sender: string, rumor: Rumor) {
  * Guarda a mensagem que acabei de escrever, ainda na fila ("pendente", RNF-12: aparece na hora).
  * `recipient` é o contato, numa conversa 1:1; nos grupos, a conversa vem da tag `g`.
  */
-export async function storeOutgoing(storage: Storage, rumor: Rumor, recipient?: string): Promise<StoredMessage> {
+async function storeOutgoingNow(storage: Storage, rumor: Rumor, recipient?: string): Promise<StoredMessage> {
 	const media = rumor.kind === 15 ? mediaFromRumor(rumor) : undefined;
 	const groupId = groupIdOf(rumor);
 	const group = groupId ? await storage.conversations.get(groupConversationId(groupId)) : undefined;
@@ -244,7 +245,7 @@ export async function storeOutgoing(storage: Storage, rumor: Rumor, recipient?: 
  * Guarda o balão provisório de uma mídia que ainda vai subir (media/pending-upload.ts): aparece na conversa na
  * hora, como a mensagem "pendente" (RNF-12), e é trocado pela mensagem de verdade quando o envio termina.
  */
-export async function storePendingMessage(storage: Storage, message: MessageRecord): Promise<void> {
+async function storePendingMessageNow(storage: Storage, message: MessageRecord): Promise<void> {
 	await storage.messages.put(message);
 	const direct = message.conversationId.startsWith('direta:');
 	const fresh = direct ? { type: 'direta' as const, members: [message.conversationId.slice('direta:'.length)] } : undefined;
@@ -259,7 +260,7 @@ export async function markSent(storage: Storage, messageId: string) {
 	if (message?.status === 'pendente') await storage.messages.put({ ...message, status: 'enviada' });
 }
 
-export async function markRead(storage: Storage, conversationId: string) {
+async function markReadNow(storage: Storage, conversationId: string) {
 	const conversation = await storage.conversations.get(conversationId);
 	if (conversation && conversation.unread > 0) await storage.conversations.put({ ...conversation, unread: 0 });
 }
@@ -311,7 +312,7 @@ export async function markDeleted(storage: Storage, message: MessageRecord): Pro
 }
 
 /** Apagar para mim: some do aparelho, sem aviso a ninguém. */
-export async function deleteForMe(storage: Storage, messageId: string) {
+async function deleteForMeNow(storage: Storage, messageId: string) {
 	const message = await storage.messages.get(messageId);
 	if (!message) return;
 	await storage.messages.delete(messageId);
@@ -334,3 +335,11 @@ async function applyDeletion(storage: Storage, rumor: Rumor): Promise<StoredMess
 	}
 	return result;
 }
+
+// Quem grava a conversa espera a vez (lock.ts). `markDeleted` fica de fora: `storeIncoming` a chama por dentro.
+export const storeIncoming = (...args: Parameters<typeof storeIncomingNow>) => exclusive(args[0], () => storeIncomingNow(...args));
+export const storeOutgoing = (...args: Parameters<typeof storeOutgoingNow>) => exclusive(args[0], () => storeOutgoingNow(...args));
+export const storePendingMessage = (...args: Parameters<typeof storePendingMessageNow>) =>
+	exclusive(args[0], () => storePendingMessageNow(...args));
+export const markRead = (...args: Parameters<typeof markReadNow>) => exclusive(args[0], () => markReadNow(...args));
+export const deleteForMe = (...args: Parameters<typeof deleteForMeNow>) => exclusive(args[0], () => deleteForMeNow(...args));
