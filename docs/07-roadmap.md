@@ -121,6 +121,7 @@ Antes "Grupos e recursos de conversa"; os grupos foram adiantados para o M2 e o 
 - Cartão de perfil privado com nome e foto (Q-P5, RF-02; veio do M2).
 - Editar mensagem (RF-24). ~~Apagar para todos (RF-25)~~ feito no M2.
 - Mencionar alguém no grupo com `@` (RF-35). Sem modo foco no MVP, não há exceção a avaliar por enquanto (RF-61, v1).
+- **Endereços de páginas viram links (pedido do Pedro em 2026-10-26, só registrado):** hoje o texto `https://...` aparece como texto comum e a pessoa precisa copiar e colar. Proposta: reconhecer só `http://` e `https://` (e `www.` com `https://`), nunca `javascript:` e afins; tocar abre numa aba nova com `rel="noopener noreferrer"` (sem entregar o endereço do app como origem); pontuação no fim da frase (`.`, `,`, `)`) não entra no link; texto longo é encurtado só na tela, mostrando **o domínio inteiro** (o golpe do falso parente usa endereço parecido, T9). Cuidados de segurança (T18): **sem prévia do link** (buscar a página mostraria o IP da pessoa ao servidor do link e a ela o conteúdo); **em pedido de mensagem de desconhecido o endereço continua texto, não link**, até a pessoa aceitar (T7, RF-12); aviso antes de abrir um endereço de outro domínio é decisão do Pedro (proposta: sem aviso para contatos, aviso curto para quem ainda não é contato). Vale também para o texto copiado e para as mensagens de grupo. Teste e2e: link em mensagem recebida e a mesma mensagem de desconhecido sem link.
 
 **Pronto quando:** um grupo de 5 pessoas conversa com respostas, reações e menções; os status aparecem corretamente.
 
