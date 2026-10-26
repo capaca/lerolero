@@ -44,6 +44,7 @@ export {
 	type SyncEvents,
 	type SyncOptions
 } from './sync/engine.ts';
+export { splitLinks, type TextPart } from './links.ts';
 export {
 	deleteConversation,
 	deleteForMe,

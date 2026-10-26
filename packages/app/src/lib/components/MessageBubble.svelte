@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Um balão da conversa. first/last marcam o começo e o fim de uma sequência da mesma pessoa:
 	// só o último ganha a pontinha; nos grupos, o nome vai no primeiro.
-	import type { MessageRecord } from '@lerolero/core';
+	import { splitLinks, type MessageRecord } from '@lerolero/core';
 	import AudioPlayer from './AudioPlayer.svelte';
 	import { hue } from './Avatar.svelte';
 	import Icon from './Icon.svelte';
@@ -15,6 +15,8 @@
 		last,
 		day,
 		senderName,
+		links = 'texto',
+		onlink,
 		onmenu
 	}: {
 		message: MessageRecord;
@@ -25,6 +27,9 @@
 		day: string;
 		/** só nos grupos, no primeiro balão de outra pessoa */
 		senderName?: string;
+		/** endereços no texto (T18): 'aberto' abre direto, 'aviso' pede confirmação (`onlink`), 'texto' não vira link */
+		links?: 'aberto' | 'aviso' | 'texto';
+		onlink?: (href: string, host: string) => void;
 		/** toque longo (celular) ou botão direito (computador) */
 		onmenu: () => void;
 	} = $props();
@@ -85,7 +90,22 @@
 		{:else if m.media}
 			<p class="hint file"><Icon name="paperclip" size={16} /> Arquivo (ainda não suportado nesta versão)</p>
 		{:else}
-			<p>{m.text}</p>
+			<p>
+				{#each links === 'texto' ? [{ text: m.text }] : splitLinks(m.text) as part, i (i)}
+					{#if 'href' in part && links === 'aviso'}
+						<a
+							href={part.href}
+							target="_blank"
+							rel="noopener noreferrer"
+							onclick={(e) => (e.preventDefault(), onlink?.(part.href, part.host))}>{part.text}</a
+						>
+					{:else if 'href' in part}
+						<a href={part.href} target="_blank" rel="noopener noreferrer">{part.text}</a>
+					{:else}
+						{part.text}
+					{/if}
+				{/each}
+			</p>
 		{/if}
 		<span class="meta">
 			{formatTime(m.createdAt)}
@@ -189,6 +209,10 @@
 		margin: 0;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
+	}
+	.bubble p a {
+		color: var(--accent);
+		text-decoration: underline;
 	}
 	.failed {
 		margin: 0.3rem 0 0;

@@ -7,6 +7,7 @@
 	import Icon from './Icon.svelte';
 	import MessageBubble from './MessageBubble.svelte';
 	import MessageMenu from './MessageMenu.svelte';
+	import Sheet from './Sheet.svelte';
 	import { dayKey, formatDay } from '#lib/format.ts';
 	import { friendlyError } from '#lib/errors.ts';
 	import { session } from '#lib/session.svelte.ts';
@@ -16,6 +17,7 @@
 		header,
 		banner,
 		nameOf,
+		linkMode,
 		closed
 	}: {
 		conversationId: string;
@@ -23,6 +25,8 @@
 		banner?: Snippet;
 		/** só nos grupos: nome de cada membro ("Você", contato, "~Nome"), para os balões e os avisos */
 		nameOf?: (publicKey: string) => string;
+		/** o que fazer com os endereços nas mensagens de cada pessoa (T18); o padrão é deixar como texto */
+		linkMode?: (publicKey: string) => 'aberto' | 'aviso' | 'texto';
 		/** sem envio (ex.: saí do grupo): o texto aparece no lugar do campo */
 		closed?: string;
 	} = $props();
@@ -50,6 +54,13 @@
 		menuFor = message;
 		// vibração curta confirma o toque longo (no iPhone o navegador não vibra)
 		navigator.vibrate?.(15);
+	}
+
+	// endereço de quem não é contato: confirma antes de abrir, mostrando o domínio inteiro
+	let pendingLink = $state.raw<{ href: string; host: string }>();
+	function openLink() {
+		if (pendingLink) window.open(pendingLink.href, '_blank', 'noopener,noreferrer');
+		pendingLink = undefined;
 	}
 
 	let copied = $state(false);
@@ -289,6 +300,8 @@
 								last={item.last}
 								day={item.day}
 								senderName={nameOf && item.first && m.sender !== me ? nameOf(m.sender) : undefined}
+								links={m.sender === me ? 'aberto' : (linkMode?.(m.sender) ?? 'texto')}
+								onlink={(href, host) => (pendingLink = { href, host })}
 								onmenu={() => openMenu(m)}
 							/>
 						{/if}
@@ -316,6 +329,20 @@
 			ondeleteForMe={() => deleteMessage(false)}
 			ondeleteForEveryone={() => deleteMessage(true)}
 		/>
+	{/if}
+
+	{#if pendingLink}
+		<Sheet label="Abrir endereço" onclose={() => (pendingLink = undefined)}>
+			<p><strong>Abrir {pendingLink.host}?</strong></p>
+			<p class="hint">
+				Quem mandou não está nos seus contatos. Confira o endereço: golpes usam endereços parecidos com os de bancos e
+				de conhecidos. O link abre numa aba nova.
+			</p>
+			<div class="actions">
+				<button onclick={() => (pendingLink = undefined)}>Cancelar</button>
+				<button class="primary" onclick={openLink}>Abrir</button>
+			</div>
+		</Sheet>
 	{/if}
 
 	<Composer {conversationId} {closed} bind:error />
