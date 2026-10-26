@@ -78,7 +78,9 @@
 	}
 
 	function seek(event: Event) {
-		if (audio && Number.isFinite(audio.duration)) audio.currentTime = Number((event.target as HTMLInputElement).value);
+		// áudio gravado pelo navegador chega com duração infinita até acabar, mas dá para pular (`seekable`):
+		// exigir duração finita travava a barra enquanto o áudio tocava
+		if (audio && audio.seekable.length > 0) audio.currentTime = Number((event.target as HTMLInputElement).value);
 	}
 
 	onDestroy(() => {

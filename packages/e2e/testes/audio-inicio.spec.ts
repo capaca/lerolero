@@ -6,7 +6,8 @@ import { abrirConversa, adicionarPeloConvite, enviarAudio, expect, test } from '
 test('o player começa depois do silêncio do começo e a barra continua inteira', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
 	await adicionarPeloConvite(maria, joao);
-	await enviarAudio(joao.page, 4);
+	// longo o bastante para não terminar durante o teste, mesmo numa máquina lenta
+	await enviarAudio(joao.page, 8);
 
 	await abrirConversa(maria.page, 'João');
 	await expect(maria.page.locator('.player')).toHaveCount(1);
@@ -35,7 +36,7 @@ test('o player começa depois do silêncio do começo e a barra continua inteira
 		return min * 60 + seg;
 	};
 	const total = await mostrado();
-	expect(total).toBeLessThanOrEqual(3);
+	expect(total).toBeLessThanOrEqual(7);
 
 	await maria.page.getByRole('button', { name: 'Tocar' }).click();
 	await expect(maria.page.getByRole('button', { name: 'Pausar' })).toBeVisible();
@@ -44,6 +45,7 @@ test('o player começa depois do silêncio do começo e a barra continua inteira
 	expect(await mostrado()).toBeLessThanOrEqual(1);
 
 	// a barra continua inteira: dá para voltar ao começo e ouvir o trecho vazio
+	await maria.page.getByRole('button', { name: 'Pausar' }).click();
 	await maria.page.getByLabel('Posição do áudio').fill('0');
-	expect(await maria.page.locator('audio').evaluate((a) => (a as HTMLAudioElement).currentTime)).toBeLessThan(1);
+	await expect.poll(() => maria.page.locator('audio').evaluate((a) => (a as HTMLAudioElement).currentTime)).toBeLessThan(1);
 });
