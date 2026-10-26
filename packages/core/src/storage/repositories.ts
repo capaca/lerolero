@@ -35,6 +35,7 @@ export interface ConversationRepository {
 	put(conversation: ConversationRecord): Promise<void>;
 	/** mais recente primeiro (RF-21) */
 	listByRecent(): Promise<ConversationRecord[]>;
+	delete(id: string): Promise<void>;
 }
 
 export interface MessageRepository {
@@ -115,7 +116,8 @@ export function openStorage(name?: string): Storage {
 		conversations: {
 			get: (id) => db.conversations.get(id),
 			put: async (conversation) => void (await db.conversations.put(conversation)),
-			listByRecent: () => db.conversations.orderBy('lastMessageAt').reverse().toArray()
+			listByRecent: () => db.conversations.orderBy('lastMessageAt').reverse().toArray(),
+			delete: (id) => db.conversations.delete(id)
 		},
 		messages: {
 			get: (id) => db.messages.get(id),

@@ -18,6 +18,7 @@ import {
 	takeForwards,
 	type GroupChange,
 	type StoredGroupChange,
+	deleteConversation,
 	deleteForMe,
 	deletionTags,
 	parseInvite,
@@ -539,6 +540,12 @@ class Session {
 	async deleteForMe(messageId: string) {
 		if ((await storage.messages.get(messageId))?.upload) return this.discardUpload(messageId);
 		await deleteForMe(storage, messageId);
+		this.version++;
+	}
+
+	/** Excluir conversa: some deste aparelho, sem avisar ninguém; o contato fica. Mensagem nova recomeça a conversa. */
+	async deleteConversation(conversationId: string) {
+		await deleteConversation(storage, conversationId, (id) => this.discardUpload(id));
 		this.version++;
 	}
 

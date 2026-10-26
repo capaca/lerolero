@@ -19,6 +19,37 @@
 	// undefined enquanto carrega, para não piscar a tela de "nenhuma conversa"
 	let conversations = $state.raw<Array<{ conversation: ConversationRecord; name?: string; key: string; href: string }>>();
 	let newChatOpen = $state(false);
+	// toque longo (ou botão direito) numa conversa abre o menu de excluir
+	let menuFor = $state.raw<{ conversation: ConversationRecord; name: string }>();
+	let pressTimer: ReturnType<typeof setTimeout> | undefined;
+	let pressStart = { x: 0, y: 0 };
+	let justOpened = false;
+
+	function openMenu(conversation: ConversationRecord, name: string) {
+		clearTimeout(pressTimer);
+		justOpened = true;
+		menuFor = { conversation, name };
+	}
+	function onpointerdown(event: PointerEvent, conversation: ConversationRecord, name: string) {
+		justOpened = false;
+		pressStart = { x: event.clientX, y: event.clientY };
+		clearTimeout(pressTimer);
+		pressTimer = setTimeout(() => openMenu(conversation, name), 500);
+	}
+	function onpointermove(event: PointerEvent) {
+		if (Math.hypot(event.clientX - pressStart.x, event.clientY - pressStart.y) > 10) clearTimeout(pressTimer);
+	}
+	// o toque que abriu o menu não pode também abrir a conversa
+	function onclick(event: MouseEvent) {
+		if (!justOpened) return;
+		justOpened = false;
+		event.preventDefault();
+	}
+	async function confirmDelete() {
+		const id = menuFor?.conversation.id;
+		menuFor = undefined;
+		if (id) await session.deleteConversation(id);
+	}
 
 	// recarrega a lista quando chega ou sai mensagem
 	$effect(() => {
@@ -119,7 +150,15 @@
 		<ul class="conversations">
 			{#each conversations as { conversation, name, key, href } (conversation.id)}
 				<li>
-					<a {href}>
+					<a
+						{href}
+						onpointerdown={(e) => onpointerdown(e, conversation, name ?? `${toNpub(key).slice(0, 12)}…`)}
+						onpointerup={() => clearTimeout(pressTimer)}
+						onpointerleave={() => clearTimeout(pressTimer)}
+						onpointermove={onpointermove}
+						oncontextmenu={(e) => (e.preventDefault(), openMenu(conversation, name ?? `${toNpub(key).slice(0, 12)}…`))}
+						{onclick}
+					>
 						<Avatar {name} publicKey={key} group={!!conversation.group} />
 						<span class="text">
 							<span class="top">
@@ -151,6 +190,27 @@
 		<Icon name="plus" size={26} />
 	</button>
 
+	{#if menuFor}
+		{@const { conversation, name } = menuFor}
+		<Sheet label="Opções da conversa" onclose={() => (menuFor = undefined)}>
+			{#if conversation.group?.amMember}
+				<p><strong>{name}</strong></p>
+				<p class="hint">Para excluir o grupo, saia dele primeiro: abra o grupo e toque no nome dele no topo.</p>
+				<button class="item cancel" onclick={() => (menuFor = undefined)}>Entendi</button>
+			{:else}
+				<p><strong>Excluir a conversa com {name}?</strong></p>
+				<p class="hint">
+					As mensagens somem só deste aparelho; ninguém é avisado. {conversation.group ? '' : 'O contato continua nos seus contatos. '}Se
+					chegar mensagem nova, a conversa recomeça.
+				</p>
+				<div class="actions">
+					<button onclick={() => (menuFor = undefined)}>Cancelar</button>
+					<button class="danger" onclick={confirmDelete}>Excluir conversa</button>
+				</div>
+			{/if}
+		</Sheet>
+	{/if}
+
 	{#if newChatOpen}
 		<Sheet label="Nova conversa" onclose={() => (newChatOpen = false)}>
 			<a class="item" href={resolve('/contatos')}><Icon name="message" /> Conversar com um contato</a>
@@ -163,6 +223,11 @@
 </main>
 
 <style>
+	.danger {
+		background: var(--danger);
+		border-color: var(--danger);
+		color: white;
+	}
 	.home {
 		/* espaço para o botão flutuante não cobrir a última conversa */
 		padding-bottom: 6rem;
@@ -197,6 +262,8 @@
 		padding: 0;
 	}
 	.conversations a {
+		-webkit-touch-callout: none;
+		user-select: none;
 		display: flex;
 		align-items: center;
 		gap: 0.8rem;

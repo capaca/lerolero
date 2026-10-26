@@ -83,7 +83,7 @@
 			<strong>Copiar</strong>, <strong>Apagar para mim</strong> ou, nas suas mensagens, <strong>Apagar para todos</strong>.
 		</li>
 	</ol>
-	<p>O app pede o PIN sempre que é aberto. Esqueceu o PIN? Use <strong>Esqueci o PIN</strong> e digite a frase.</p>
+	<p>O app pede o PIN quando você abre depois de mais de 5 minutos fora dele. Esqueceu o PIN? Use <strong>Esqueci o PIN</strong> e digite a frase.</p>
 
 	<h2>O que ainda não funciona</h2>
 	<p>Esta versão troca <strong>texto e áudio</strong>, entre duas pessoas ou em grupo. O resto vem nas próximas versões.</p>

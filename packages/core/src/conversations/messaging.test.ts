@@ -6,6 +6,7 @@ import type { KdfParams } from '../crypto/seal.ts';
 import { createVault, type Rumor } from '../identity/vault.ts';
 import { openStorage } from '../storage/repositories.ts';
 import {
+	deleteConversation,
 	deleteForMe,
 	deletionTags,
 	directConversationId,
@@ -291,5 +292,32 @@ describe('apagar mensagens (RF-25)', () => {
 		expect(await bob.storage.media.get(media.ox)).toBeDefined(); // m2 ainda usa
 		await deleteForMe(bob.storage, 'm2');
 		expect(await bob.storage.media.get(media.ox)).toBeUndefined();
+	});
+
+	it('excluir conversa tira mensagens, arquivo e conversa; o contato fica; mensagem nova recomeça a conversa', async () => {
+		const { alice, bob, send } = await conversation();
+		const media = { ox: 'e'.repeat(64), x: 'f'.repeat(64), type: 'audio/ogg', size: 1, urls: ['https://x.example/f'], key: '0'.repeat(64), nonce: '0'.repeat(24) };
+		await bob.storage.media.put({ ...media, file: new Blob(['x']), keep: false, lastAccess: 0 });
+		const id = await send('oi');
+		await bob.storage.messages.put({ id: 'a1', conversationId: directConversationId(alice.publicKey), sender: alice.publicKey, kind: 15, text: '', createdAt: 99, status: 'recebida', media });
+		const discarded: string[] = [];
+		await deleteConversation(bob.storage, directConversationId(alice.publicKey), async (m) => void discarded.push(m));
+		expect(await bob.storage.messages.get(id)).toBeUndefined();
+		expect(await bob.storage.messages.get('a1')).toBeUndefined();
+		expect(await bob.storage.media.get(media.ox)).toBeUndefined();
+		expect(await bob.storage.conversations.listByRecent()).toEqual([]);
+		expect(await bob.storage.contacts.get(alice.publicKey)).toBeDefined();
+		expect(discarded).toEqual([]);
+		await send('de novo');
+		expect(await bob.storage.conversations.listByRecent()).toHaveLength(1);
+	});
+
+	it('excluir conversa cancela primeiro o envio de arquivo que ainda sobe', async () => {
+		const { alice, bob } = await conversation();
+		const cid = directConversationId(alice.publicKey);
+		await bob.storage.messages.put({ id: 'envio:1', conversationId: cid, sender: bob.publicKey, kind: 15, text: '', createdAt: 5, status: 'pendente', upload: { startedAt: 0, attempts: 0, nextAttemptAt: 0 } });
+		const discarded: string[] = [];
+		await deleteConversation(bob.storage, cid, async (m) => void discarded.push(m));
+		expect(discarded).toEqual(['envio:1']);
 	});
 });

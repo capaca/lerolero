@@ -320,6 +320,26 @@ async function deleteForMeNow(storage: Storage, messageId: string) {
 	await refreshConversation(storage, message.conversationId);
 }
 
+/** Limite de `listByConversation` que cobre a conversa inteira (o IndexedDB aceita até 2^32 - 1). */
+const EVERY_MESSAGE = 1_000_000_000;
+
+/**
+ * Excluir conversa (só para mim): somem a conversa, as mensagens e os arquivos que mais ninguém usa, sem aviso a
+ * ninguém. O contato e, nos grupos, o estado do grupo ficam. Quem ainda sobe um arquivo cancela o envio antes
+ * (`discard`, que tem a sua própria vez); o que já está na fila de envio de texto sai normalmente.
+ */
+export async function deleteConversation(storage: Storage, conversationId: string, discard: (messageId: string) => Promise<void>) {
+	const all = await storage.messages.listByConversation(conversationId, EVERY_MESSAGE);
+	for (const message of all) if (message.upload) await discard(message.id);
+	await exclusive(storage, async () => {
+		for (const message of await storage.messages.listByConversation(conversationId, EVERY_MESSAGE)) {
+			await storage.messages.delete(message.id);
+			await dropMediaIfUnused(storage, message.media?.ox);
+		}
+		await storage.conversations.delete(conversationId);
+	});
+}
+
 /**
  * Pedido de apagar recebido: só vale se veio de quem escreveu a mensagem. Um contato
  * não consegue apagar mensagens de outra pessoa, nem as minhas.
