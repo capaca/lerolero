@@ -22,3 +22,25 @@ test('mensagem para contato novo aparece como enviando mesmo com os relays fora 
 	await joao.page.reload();
 	await expect(joao.page.locator('.row.mine', { hasText: 'Oi Maria, estou sem rede' })).toBeVisible();
 });
+
+test('mensagens escritas sem internet saem juntas, na ordem, assim que ela volta', async ({ novaPessoa }) => {
+	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
+	await adicionarPeloConvite(maria, joao);
+
+	await joao.page.context().setOffline(true);
+	const textos = ['Mensagem 1', 'Mensagem 2', 'Mensagem 3', 'Mensagem 4'];
+	for (const texto of textos) {
+		await joao.page.getByLabel('Mensagem').fill(texto);
+		await joao.page.getByRole('button', { name: 'Enviar', exact: true }).click();
+		await expect(joao.page.locator('.row.mine', { hasText: texto }).getByLabel('enviando')).toBeVisible();
+	}
+
+	// a primeira não pode ficar para trás: antes, a que falhou primeiro tinha a espera mais longa e saía por último
+	await joao.page.context().setOffline(false);
+	await expect(joao.page.locator('.row.mine').getByLabel('enviada')).toHaveCount(4, { timeout: 20_000 });
+
+	await maria.page.goto('./');
+	await maria.page.locator('.conversations a', { hasText: 'João' }).click();
+	await expect(maria.page.locator('.row:not(.mine)')).toHaveCount(4, { timeout: 20_000 });
+	expect(await maria.page.locator('.row:not(.mine) p:not(.hint)').allTextContents()).toEqual(textos);
+});

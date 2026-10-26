@@ -29,6 +29,8 @@ export const RETRY_DELAYS_MS = [5_000, 15_000, 60_000, 5 * 60_000, 15 * 60_000];
  * vários relays é o que protege contra um relay que perde mensagens (RNF-30).
  */
 export const EXTRA_ATTEMPTS_AFTER_ACCEPTED = 3;
+/** Quantos itens da fila saem ao mesmo tempo: não espera um por um o tempo esgotado de relays fora do ar. */
+export const FLUSH_CONCURRENCY = 5;
 
 /**
  * Geração da sincronização: sobe sempre que o app passa a entender um tipo novo de
@@ -68,6 +70,8 @@ export type SyncOptions = {
 	myPublicKey: string;
 	events: SyncEvents;
 	now?: () => number;
+	/** false enquanto o aparelho está sem internet: a fila espera, sem gastar tentativas nem aumentar a espera */
+	canSend?: () => boolean;
 };
 
 export class SyncEngine {
@@ -76,6 +80,8 @@ export class SyncEngine {
 	private readonly myPublicKey: string;
 	private readonly events: SyncEvents;
 	private readonly now: () => number;
+	private readonly canSend: () => boolean;
+	private lastQueuedAt = 0;
 	private subscription?: { close: () => void };
 	private cursors = new Map<string, number>();
 	private flushing?: Promise<void>;
@@ -89,6 +95,7 @@ export class SyncEngine {
 		this.myPublicKey = options.myPublicKey;
 		this.events = options.events;
 		this.now = options.now ?? Date.now;
+		this.canSend = options.canSend ?? (() => true);
 	}
 
 	/** Começa a receber nos relays indicados (os meus relays de DM). */
@@ -116,11 +123,24 @@ export class SyncEngine {
 	/** O app voltou para a tela ou a internet voltou (RF-80): reconecta e esvazia a fila. */
 	resume() {
 		this.pool.reconnectNow();
-		void this.flush();
+		void this.retryAllNow().then(() => this.flush());
+	}
+
+	/**
+	 * A espera de uma tentativa anterior não vale mais depois que a conexão volta: tenta tudo já, na ordem. Sem
+	 * isto, a mensagem que falhou primeiro (e por isso tem a espera mais longa) saía por último, minutos depois.
+	 */
+	private async retryAllNow() {
+		const now = this.now();
+		for (const item of await this.storage.outbox.due(Infinity)) {
+			if (item.nextAttemptAt > now) await this.storage.outbox.put({ ...item, nextAttemptAt: now });
+		}
 	}
 
 	/** Coloca na fila e tenta enviar já. */
 	async enqueue(event: NostrEvent, relays: string[], messageId?: string) {
+		const queuedAt = Math.max(this.now(), this.lastQueuedAt + 1);
+		this.lastQueuedAt = queuedAt;
 		await this.storage.outbox.put({
 			id: event.id,
 			event,
@@ -128,7 +148,8 @@ export class SyncEngine {
 			acceptedBy: [],
 			messageId,
 			attempts: 0,
-			nextAttemptAt: this.now()
+			nextAttemptAt: this.now(),
+			queuedAt
 		});
 		await this.flush();
 	}
@@ -169,30 +190,43 @@ export class SyncEngine {
 
 	private async flushOnce() {
 		clearTimeout(this.retryTimer);
-		for (const item of await this.storage.outbox.due(this.now())) {
-			const pending = item.relays.filter((r) => !item.acceptedBy.includes(r));
-			// "enviada" assim que o primeiro relay aceita, sem esperar o mais lento (a tela mostra antes)
-			let firstAccept: Promise<void> | undefined;
-			const results = await this.pool.publish(pending, item.event, (_, result) => {
-				if (result.ok && item.acceptedBy.length === 0 && !firstAccept) {
-					firstAccept = this.events.onSent?.({ ...item, acceptedBy: [] }) ?? Promise.resolve();
+		if (this.canSend()) {
+			// repete até esvaziar: o que entrou na fila durante a rodada também sai, sem esperar a próxima espera
+			for (;;) {
+				const due = (await this.storage.outbox.due(this.now())).sort((a, b) => (a.queuedAt ?? a.nextAttemptAt) - (b.queuedAt ?? b.nextAttemptAt));
+				if (due.length === 0) break;
+				// em lotes, na ordem em que foram escritas
+				for (let i = 0; i < due.length; i += FLUSH_CONCURRENCY) {
+					await Promise.all(due.slice(i, i + FLUSH_CONCURRENCY).map((item) => this.sendItem(item)));
 				}
-			});
-			await firstAccept;
-			const newlyAccepted = pending.filter((r) => results[r]?.ok);
-			const acceptedBy = [...item.acceptedBy, ...newlyAccepted];
-			const attempts = item.attempts + 1;
-			const updated: OutboxRecord = { ...item, acceptedBy, attempts, nextAttemptAt: this.now() + this.retryDelay(attempts) };
-
-			const allAccepted = acceptedBy.length === item.relays.length;
-			const enoughExtra = item.acceptedBy.length > 0 && attempts >= EXTRA_ATTEMPTS_AFTER_ACCEPTED;
-			if (allAccepted || enoughExtra) await this.storage.outbox.delete(item.id);
-			else await this.storage.outbox.put(updated);
+			}
 		}
 		await this.scheduleNextRetry();
 	}
 
+	private async sendItem(item: OutboxRecord) {
+		const pending = item.relays.filter((r) => !item.acceptedBy.includes(r));
+		// "enviada" assim que o primeiro relay aceita, sem esperar o mais lento (a tela mostra antes)
+		let firstAccept: Promise<void> | undefined;
+		const results = await this.pool.publish(pending, item.event, (_, result) => {
+			if (result.ok && item.acceptedBy.length === 0 && !firstAccept) {
+				firstAccept = this.events.onSent?.({ ...item, acceptedBy: [] }) ?? Promise.resolve();
+			}
+		});
+		await firstAccept;
+		const newlyAccepted = pending.filter((r) => results[r]?.ok);
+		const acceptedBy = [...item.acceptedBy, ...newlyAccepted];
+		const attempts = item.attempts + 1;
+		const updated: OutboxRecord = { ...item, acceptedBy, attempts, nextAttemptAt: this.now() + this.retryDelay(attempts) };
+
+		const allAccepted = acceptedBy.length === item.relays.length;
+		const enoughExtra = item.acceptedBy.length > 0 && attempts >= EXTRA_ATTEMPTS_AFTER_ACCEPTED;
+		if (allAccepted || enoughExtra) await this.storage.outbox.delete(item.id);
+		else await this.storage.outbox.put(updated);
+	}
+
 	private async scheduleNextRetry() {
+		if (!this.canSend()) return; // sem internet: quem avisa é o evento de "voltou" (resume)
 		const next = (await this.storage.outbox.due(Infinity))[0];
 		if (!next) return;
 		const wait = Math.max(0, next.nextAttemptAt - this.now());

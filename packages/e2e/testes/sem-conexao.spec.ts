@@ -3,7 +3,7 @@ import { expect, test } from '../ajudantes.ts';
 
 test('avisa quando o aparelho fica sem internet e some quando ela volta', async ({ novaPessoa }) => {
 	const { page } = await novaPessoa('Maria');
-	const aviso = page.getByText('Sem conexão. As mensagens saem quando a internet voltar.');
+	const aviso = page.getByText('Sem conexão. As mensagens saem quando voltar.');
 	await expect(aviso).toHaveCount(0);
 
 	await page.context().setOffline(true);

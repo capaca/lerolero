@@ -13,6 +13,7 @@
 	// versão nova do app ativada pelo service worker: avisa em vez de recarregar sozinho,
 	// para não perder uma mensagem que a pessoa esteja digitando
 	let updateReady = $state(false);
+	const showOffline = $derived(session.status === 'desbloqueado' && session.offline);
 
 	// rotas permitidas em cada estado; fora delas, vai para a primeira
 	const ALLOWED: Record<Exclude<Status, 'carregando'>, string[]> = {
@@ -89,20 +90,23 @@
 	<link rel="icon" href={asset('icon-192.png')} />
 </svelte:head>
 
-<div class="toasts">
-	{#if session.status === 'desbloqueado' && session.offline}
-		<p class="offline" role="status">Sem conexão. As mensagens saem quando a internet voltar.</p>
-	{/if}
-	{#if updateReady}
-		<div class="update" role="status">
-			<span>Nova versão disponível.</span>
-			<button onclick={() => location.reload()}>Atualizar</button>
-		</div>
-	{/if}
-</div>
+{#if showOffline}
+	<!-- faixa fina presa no topo, no fluxo da página: não cobre nada nem fica no meio da tela -->
+	<p class="offline" role="status">Sem conexão. As mensagens saem quando voltar.</p>
+{/if}
+
+{#if updateReady}
+	<div class="update" role="status">
+		<span>Nova versão disponível.</span>
+		<button onclick={() => location.reload()}>Atualizar</button>
+	</div>
+{/if}
 
 {#if session.status !== 'carregando'}
-	{@render children()}
+	<!-- a conversa ocupa a altura da tela; com a faixa de sem conexão ela encolhe o mesmo tanto -->
+	<div style:--offline-bar={showOffline ? '1.75rem' : '0px'}>
+		{@render children()}
+	</div>
 {/if}
 
 {#if __APP_HOMOLOG__}
@@ -111,33 +115,29 @@
 {/if}
 
 <style>
-	/* avisos do app, empilhados acima do campo de mensagem */
-	.toasts {
-		position: fixed;
-		left: 1rem;
-		right: 1rem;
-		bottom: calc(5rem + env(safe-area-inset-bottom));
-		z-index: 10;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-		pointer-events: none;
-	}
-	.toasts > * {
-		pointer-events: auto;
-	}
 	.offline {
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: 1.75rem;
 		margin: 0;
-		padding: 0.5rem 1rem;
-		border-radius: 16px;
-		background: var(--fg);
-		color: var(--bg);
-		box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
-		font-size: 0.9rem;
-		text-align: center;
+		padding: 0 0.75rem;
+		background: var(--warn-bg);
+		color: var(--warn-fg);
+		border-bottom: 1px solid var(--line);
+		font-size: 0.8rem;
+		white-space: nowrap;
+		overflow: hidden;
 	}
 	.update {
+		position: fixed;
+		left: 50%;
+		bottom: calc(5rem + env(safe-area-inset-bottom));
+		transform: translateX(-50%);
+		z-index: 10;
 		display: flex;
 		align-items: center;
 		gap: 0.8rem;
