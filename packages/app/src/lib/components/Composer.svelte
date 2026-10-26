@@ -25,7 +25,6 @@
 	// gravação de áudio: um toque começa, outro envia (RF-40)
 	let recording = $state<Recording>();
 	let elapsed = $state(0);
-	let sendingAudio = $state(false);
 	let ticker: ReturnType<typeof setInterval> | undefined;
 
 	async function startAudio() {
@@ -60,13 +59,10 @@
 		recording = undefined;
 		const { file, duration } = await current.stop();
 		if (duration < 1) return; // toque sem querer
-		sendingAudio = true;
 		try {
 			await session.sendAudio(conversationId, file, duration);
 		} catch (err) {
 			error = friendlyError(err);
-		} finally {
-			sendingAudio = false;
 		}
 	}
 
@@ -113,8 +109,6 @@
 				<Icon name="send" />
 			</button>
 		</div>
-	{:else if sendingAudio}
-		<p class="hint sending" role="status"><Icon name="loader" size={16} /> Enviando áudio…</p>
 	{:else}
 		<div class="line">
 			<textarea
@@ -172,13 +166,6 @@
 		to {
 			opacity: 0.3;
 		}
-	}
-	.sending {
-		margin: 0.4rem 0;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		gap: 0.4rem;
 	}
 	textarea {
 		flex: 1;

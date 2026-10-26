@@ -94,6 +94,11 @@ export type MessageRecord = {
 	status: MessageStatus;
 	/** presente nas mensagens de arquivo (kind 15) */
 	media?: MessageMedia;
+	/**
+	 * Áudio que ainda sobe para os servidores Blossom: o balão provisório (id `envio:...`) aparece na hora e a
+	 * mensagem de verdade só nasce depois do envio. `failed`: desistiu depois de tentar por alguns minutos.
+	 */
+	upload?: { startedAt: number; attempts: number; nextAttemptAt: number; failed?: boolean };
 	/** apagada para todos (RF-25): fica o aviso no lugar, sem conteúdo */
 	deleted?: boolean;
 	/** aviso de grupo ("Ana adicionou Bruno"); o texto é refeito com os nomes atuais na tela */

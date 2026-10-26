@@ -58,6 +58,7 @@ export {
 	sendTime,
 	storeIncoming,
 	storeOutgoing,
+	storePendingMessage,
 	type StoredMessage
 } from './conversations/messaging.ts';
 export {
@@ -87,5 +88,16 @@ export {
 	type StoredGroupChange
 } from './conversations/groups.ts';
 export { BlossomError, COPIES, download, remove as removeFromBlossom, upload, type BlossomSigner } from './media/blossom.ts';
+export {
+	discardPendingUpload,
+	listPendingUploads,
+	PENDING_UPLOAD_PREFIX,
+	retryPendingUpload,
+	startPendingAudio,
+	tryPendingUpload,
+	uploadRetryDelay,
+	UPLOAD_GIVE_UP_MS,
+	type UploadAttempt
+} from './media/pending-upload.ts';
 export { decryptFile, encryptFile, MediaIntegrityError, sha256 } from './media/crypto.ts';
 export { openMedia, prepareMedia, type MediaRef } from './media/media.ts';
