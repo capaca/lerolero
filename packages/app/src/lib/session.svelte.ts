@@ -479,11 +479,11 @@ class Session {
 	 * com novas tentativas por alguns minutos (core/media/pending-upload.ts). No grupo, o arquivo sobe uma vez
 	 * só; só a mensagem com o endereço vai para cada um.
 	 */
-	async sendAudio(conversationId: string, file: Blob, duration: number) {
+	async sendAudio(conversationId: string, file: Blob, duration: number, start = 0) {
 		if (conversationId.startsWith('grupo:') && !(await storage.conversations.get(conversationId))?.group?.amMember) {
 			throw new NotInGroupError();
 		}
-		const message = await startPendingAudio(storage, { conversationId, me: this.current.publicKey, file, duration });
+		const message = await startPendingAudio(storage, { conversationId, me: this.current.publicKey, file, duration, start });
 		this.version++;
 		void this.runUpload(message.id);
 	}

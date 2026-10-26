@@ -57,10 +57,10 @@
 		if (!current) return;
 		stopTicker();
 		recording = undefined;
-		const { file, duration } = await current.stop();
+		const { file, duration, start } = await current.stop();
 		if (duration < 1) return; // toque sem querer
 		try {
-			await session.sendAudio(conversationId, file, duration);
+			await session.sendAudio(conversationId, file, duration, start);
 		} catch (err) {
 			error = friendlyError(err);
 		}

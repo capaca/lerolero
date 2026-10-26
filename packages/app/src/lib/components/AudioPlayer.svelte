@@ -26,7 +26,9 @@
 	let src = $state<string>();
 	let phase = $state<'parado' | 'baixando' | 'tocando' | 'pausado' | 'erro'>('parado');
 	let error = $state('');
-	let current = $state(0);
+	// silêncio do começo (media.start): o áudio começa dali, e quem quiser ainda volta ao início da barra
+	const skip = $derived(media.start ?? 0);
+	let current = $state(media.start ?? 0);
 	// duração do arquivo quando carregado; antes disso, a que veio na mensagem
 	let loadedDuration = $state<number>();
 	const total = $derived(loadedDuration ?? media.duration ?? 0);
@@ -49,6 +51,7 @@
 		try {
 			audio!.src = src;
 			audio!.playbackRate = SPEEDS[speedIndex];
+			if (skip && audio!.currentTime < skip) audio!.currentTime = skip;
 			await audio!.play();
 		} catch {
 			phase = 'erro';
@@ -75,7 +78,9 @@
 	}
 
 	function seek(event: Event) {
-		if (audio && Number.isFinite(audio.duration)) audio.currentTime = Number((event.target as HTMLInputElement).value);
+		// áudio gravado pelo navegador chega com duração infinita até acabar, mas dá para pular (`seekable`):
+		// exigir duração finita travava a barra enquanto o áudio tocava
+		if (audio && audio.seekable.length > 0) audio.currentTime = Number((event.target as HTMLInputElement).value);
 	}
 
 	onDestroy(() => {
@@ -105,15 +110,23 @@
 		disabled={!src}
 		style:--progress="{progress}%"
 	/>
-	<span class="time">{fmt(phase === 'parado' ? total : current)}</span>
+	<span class="time">{fmt(phase === 'parado' ? Math.max(0, total - skip) : Math.max(0, current - skip))}</span>
 	<button class="speed" onclick={cycleSpeed} aria-label="Velocidade">{String(SPEEDS[speedIndex]).replace('.', ',')}x</button>
 	<audio
 		bind:this={audio}
 		onplay={() => (claimPlayback(audio!), (phase = 'tocando'), followPlayback())}
 		onpause={() => (phase = 'pausado')}
-		onended={() => ((phase = 'pausado'), (current = 0), releasePlayback(audio!))}
+		onended={() => {
+			phase = 'pausado';
+			current = skip;
+			audio!.currentTime = skip; // ao ouvir de novo, também começa depois do silêncio
+			releasePlayback(audio!);
+		}}
 		ontimeupdate={() => (current = audio!.currentTime)}
-		onloadedmetadata={() => Number.isFinite(audio!.duration) && (loadedDuration = audio!.duration)}
+		onloadedmetadata={() => {
+			if (Number.isFinite(audio!.duration)) loadedDuration = audio!.duration;
+			if (skip && audio!.currentTime < skip) audio!.currentTime = skip;
+		}}
 		preload="none"
 	></audio>
 </div>

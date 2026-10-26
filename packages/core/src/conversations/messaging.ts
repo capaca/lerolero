@@ -61,6 +61,7 @@ export function mediaTags(media: MessageMedia): string[][] {
 		...media.urls.slice(1).map((u) => ['fallback', u])
 	];
 	if (media.duration !== undefined) tags.push(['duration', String(Math.round(media.duration))]);
+	if (media.start) tags.push(['start', String(media.start)]);
 	return tags;
 }
 
@@ -77,6 +78,8 @@ export function mediaFromRumor(rumor: Rumor): MessageMedia | undefined {
 	const type = tag('file-type');
 	if (!url || !key || !nonce || !x || !ox || !type || tag('encryption-algorithm') !== 'aes-gcm') return undefined;
 	const duration = Number(tag('duration'));
+	// de quem escreveu: valor estranho vira "toca inteiro" (nunca pula além do que o áudio tem)
+	const start = Number(tag('start'));
 	return {
 		ox,
 		x,
@@ -85,7 +88,8 @@ export function mediaFromRumor(rumor: Rumor): MessageMedia | undefined {
 		urls: [url, ...fallbacks].slice(0, 4),
 		key,
 		nonce,
-		...(Number.isFinite(duration) && duration > 0 ? { duration } : {})
+		...(Number.isFinite(duration) && duration > 0 ? { duration } : {}),
+		...(Number.isFinite(start) && start > 0 && start < (Number.isFinite(duration) && duration > 0 ? duration : 0) ? { start } : {})
 	};
 }
 

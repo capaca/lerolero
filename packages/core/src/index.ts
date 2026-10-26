@@ -99,5 +99,6 @@ export {
 	UPLOAD_GIVE_UP_MS,
 	type UploadAttempt
 } from './media/pending-upload.ts';
+export { rms, VoiceStartDetector } from './media/voice-start.ts';
 export { decryptFile, encryptFile, MediaIntegrityError, sha256 } from './media/crypto.ts';
 export { openMedia, prepareMedia, type MediaRef } from './media/media.ts';
