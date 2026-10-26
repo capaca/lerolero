@@ -89,12 +89,17 @@
 	<link rel="icon" href={asset('icon-192.png')} />
 </svelte:head>
 
-{#if updateReady}
-	<div class="update" role="status">
-		<span>Nova versão disponível.</span>
-		<button onclick={() => location.reload()}>Atualizar</button>
-	</div>
-{/if}
+<div class="toasts">
+	{#if session.status === 'desbloqueado' && session.offline}
+		<p class="offline" role="status">Sem conexão. As mensagens saem quando a internet voltar.</p>
+	{/if}
+	{#if updateReady}
+		<div class="update" role="status">
+			<span>Nova versão disponível.</span>
+			<button onclick={() => location.reload()}>Atualizar</button>
+		</div>
+	{/if}
+</div>
 
 {#if session.status !== 'carregando'}
 	{@render children()}
@@ -106,12 +111,33 @@
 {/if}
 
 <style>
-	.update {
+	/* avisos do app, empilhados acima do campo de mensagem */
+	.toasts {
 		position: fixed;
-		left: 50%;
+		left: 1rem;
+		right: 1rem;
 		bottom: calc(5rem + env(safe-area-inset-bottom));
-		transform: translateX(-50%);
 		z-index: 10;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		pointer-events: none;
+	}
+	.toasts > * {
+		pointer-events: auto;
+	}
+	.offline {
+		margin: 0;
+		padding: 0.5rem 1rem;
+		border-radius: 16px;
+		background: var(--fg);
+		color: var(--bg);
+		box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+		font-size: 0.9rem;
+		text-align: center;
+	}
+	.update {
 		display: flex;
 		align-items: center;
 		gap: 0.8rem;
