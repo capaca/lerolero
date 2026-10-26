@@ -1,11 +1,11 @@
 // Silêncio no começo do áudio (pedido do Pedro em 2026-10-26): o player começa onde a voz começa e mostra só o
 // que vai tocar. A detecção em si é testada no core (voice-start.test.ts); a mensagem leva o ponto de início
 // na tag `start`. O microfone simulado não tem silêncio, então o início é marcado no registro da mensagem.
-import { abrirConversa, adicionarPeloConvite, enviarAudio, expect, test } from '../ajudantes.ts';
+import { abrirConversa, adicionarUmAoOutro, enviarAudio, expect, test } from '../ajudantes.ts';
 
 test('o player começa depois do silêncio do começo e a barra continua inteira', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
-	await adicionarPeloConvite(maria, joao);
+	await adicionarUmAoOutro(maria, joao);
 	// longo o bastante para não terminar durante o teste, mesmo numa máquina lenta
 	await enviarAudio(joao.page, 8);
 

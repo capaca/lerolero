@@ -44,6 +44,7 @@ export {
 	type SyncEvents,
 	type SyncOptions
 } from './sync/engine.ts';
+export { acceptRequest, blockContact, listBlocked, listRequests, unblockContact, type MessageRequest } from './contacts/requests.ts';
 export { splitLinks, type TextPart } from './links.ts';
 export {
 	deleteConversation,

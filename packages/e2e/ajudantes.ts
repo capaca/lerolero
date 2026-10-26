@@ -58,6 +58,18 @@ export async function adicionarPeloConvite(de: Pessoa, quem: Pessoa) {
 	await expect(quem.page.getByText('Nenhuma mensagem ainda')).toBeVisible();
 }
 
+/** Os dois se adicionam (cada um abre o convite do outro): contatos de verdade, sem pedido de mensagem no meio. */
+export async function adicionarUmAoOutro(a: Pessoa, b: Pessoa) {
+	await adicionarPeloConvite(b, a);
+	await adicionarPeloConvite(a, b); // por último, para `b` ficar na conversa com `a`, como em adicionarPeloConvite
+}
+
+/** Abre, por Contatos, o pedido de mensagem de quem ainda não é contato. */
+export async function abrirPedido(page: Page, de: string) {
+	await page.goto('./contatos');
+	await page.getByRole('link', { name: new RegExp(de) }).click();
+}
+
 export async function enviarTexto(page: Page, texto: string) {
 	await page.getByLabel('Mensagem').fill(texto);
 	await page.getByRole('button', { name: 'Enviar', exact: true }).click();

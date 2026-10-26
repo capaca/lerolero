@@ -1,10 +1,10 @@
 // Excluir conversa (só para mim): toque longo ou botão direito na lista; o contato fica e mensagem nova recomeça
 // a conversa; o outro lado não percebe nada.
-import { abrirConversa, adicionarPeloConvite, enviarTexto, expect, test } from '../ajudantes.ts';
+import { abrirConversa, adicionarUmAoOutro, enviarTexto, expect, test } from '../ajudantes.ts';
 
 test('excluir conversa: some só aqui, o contato fica e mensagem nova recomeça a conversa', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
-	await adicionarPeloConvite(maria, joao); // o João é quem tem a Maria nos contatos
+	await adicionarUmAoOutro(maria, joao);
 	await enviarTexto(joao.page, 'primeira do João');
 	await abrirConversa(maria.page, 'João');
 	await expect(maria.page.locator('.row:not(.mine)', { hasText: 'primeira do João' })).toBeVisible();
@@ -35,7 +35,7 @@ test('excluir conversa: some só aqui, o contato fica e mensagem nova recomeça 
 
 test('toque longo na conversa abre o menu sem abrir a conversa', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
-	await adicionarPeloConvite(maria, joao);
+	await adicionarUmAoOutro(maria, joao);
 	await enviarTexto(joao.page, 'oi');
 	await joao.page.goto('./');
 	const box = (await joao.page.locator('.conversations a', { hasText: 'Maria' }).boundingBox())!;

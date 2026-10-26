@@ -2,6 +2,11 @@
 // As telas chamam estas funções; a chave privada fica no worker, nunca aqui.
 
 import {
+	acceptRequest,
+	blockContact,
+	listBlocked,
+	listRequests,
+	unblockContact,
 	addContact,
 	connect,
 	addMembers,
@@ -677,6 +682,31 @@ class Session {
 
 	listContacts() {
 		return listContacts(storage.contacts);
+	}
+
+	/** Pedidos de mensagem (RF-12): quem escreveu sem ser contato, com a conversa. */
+	listRequests() {
+		return listRequests(storage);
+	}
+
+	listBlocked() {
+		return listBlocked(storage);
+	}
+
+	async acceptRequest(publicKey: string) {
+		await acceptRequest(storage, publicKey);
+		this.version++;
+	}
+
+	/** Bloquear (RF-13): a conversa some daqui e o que vier dessa chave é descartado. */
+	async blockContact(publicKey: string) {
+		await blockContact(storage, publicKey, (id) => this.discardUpload(id));
+		this.version++;
+	}
+
+	async unblockContact(publicKey: string) {
+		await unblockContact(storage, publicKey);
+		this.version++;
 	}
 
 	renameContact(publicKey: string, localName: string) {

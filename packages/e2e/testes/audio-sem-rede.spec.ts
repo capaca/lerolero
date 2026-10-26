@@ -1,11 +1,11 @@
 // Áudio com os servidores de arquivo fora do ar: o balão aparece na hora, tocável e "enviando", e sai sozinho
 // quando o servidor volta, sem o aviso "Enviando áudio…" que dava cara de lentidão (RNF-12, pedido do Pedro em
 // 2026-10-26). A desistência depois de alguns minutos fica nos testes do core.
-import { adicionarPeloConvite, expect, test } from '../ajudantes.ts';
+import { adicionarUmAoOutro, expect, test } from '../ajudantes.ts';
 
 test('áudio aparece na hora com os Blossom fora do ar e sai quando voltam', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
-	await adicionarPeloConvite(maria, joao);
+	await adicionarUmAoOutro(maria, joao);
 
 	// os Blossom da suíte são os únicos https; os relays e o app são locais sem tls
 	const foraDoAr = (url: URL) => url.protocol === 'https:';
