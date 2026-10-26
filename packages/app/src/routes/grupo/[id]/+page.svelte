@@ -10,6 +10,7 @@
 	const groupId = $derived(page.params.id ?? '');
 	let conversation = $state.raw<ConversationRecord | null>();
 	let nameOf = $state.raw<(publicKey: string) => string>(() => '');
+	let contactKeys = $state.raw(new Set<string>());
 
 	// membros, nomes e papéis mudam com os avisos de grupo
 	$effect(() => {
@@ -20,6 +21,7 @@
 	async function load(id: string) {
 		const found = (await session.getConversation(groupConversationId(id))) ?? null;
 		if (found?.group) nameOf = await session.groupNames(found);
+		contactKeys = new Set((await session.listContacts()).filter((c) => c.state === 'aceito').map((c) => c.publicKey));
 		conversation = found;
 	}
 
@@ -47,6 +49,7 @@
 		<Chat
 			conversationId={groupConversationId(groupId)}
 			{nameOf}
+			linkMode={(key) => (contactKeys.has(key) ? 'aberto' : 'aviso')}
 			closed={group.amMember ? undefined : 'Você não faz mais parte deste grupo.'}
 		>
 			{#snippet header()}

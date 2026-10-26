@@ -24,7 +24,8 @@
 <svelte:head><title>{name || 'Conversa'} · Lero-lero</title></svelte:head>
 
 {#key publicKey}
-	<Chat conversationId={directConversationId(publicKey)}>
+	<!-- quem ainda não é contato é um pedido de mensagem: o endereço continua texto (T7, T18) -->
+	<Chat conversationId={directConversationId(publicKey)} linkMode={() => (isContact ? 'aberto' : 'texto')}>
 		{#snippet header()}
 			<ChatHeader {name} href={isContact ? resolve('/contatos/[chave]', { chave: publicKey }) : undefined}>
 				{#snippet avatar()}
