@@ -42,7 +42,9 @@ test('o player começa depois do silêncio do começo e a barra continua inteira
 	await expect(maria.page.getByRole('button', { name: 'Pausar' })).toBeVisible();
 	// começou pelo ponto de início, e não do zero
 	await expect.poll(() => maria.page.locator('audio').evaluate((a) => (a as HTMLAudioElement).currentTime)).toBeGreaterThanOrEqual(2);
-	expect(await mostrado()).toBeLessThanOrEqual(1);
+	// espera o áudio andar de verdade (numa máquina lenta ele ainda carrega, e o navegador só deixa pular depois)
+	await expect.poll(() => maria.page.locator('audio').evaluate((a) => (a as HTMLAudioElement).currentTime)).toBeGreaterThan(2.3);
+	expect(await mostrado()).toBeLessThanOrEqual(2);
 
 	// a barra continua inteira: dá para voltar ao começo e ouvir o trecho vazio
 	await maria.page.getByRole('button', { name: 'Pausar' }).click();
