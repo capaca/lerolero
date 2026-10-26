@@ -12,6 +12,7 @@ import type { Storage } from '../storage/repositories.ts';
 import type { ConversationRecord, GroupEventRecord, GroupInfo, GroupMember, GroupNotice, GroupState, MessageRecord } from '../storage/records.ts';
 import { contactName } from '../contacts/contacts.ts';
 import { toHex } from '../media/crypto.ts';
+import { exclusive } from './lock.ts';
 import { kindOf, NAME_TAG, preview as previewOf, refreshConversation, sendTime } from './messaging.ts';
 
 /** Kind próprio dos avisos de grupo (faixa 4440–4449 reservada ao Lero-lero, Q-P1). */
@@ -308,7 +309,7 @@ export type StoredGroupChange = {
  * Guarda um aviso de grupo (recebido, ou o que eu mesmo acabei de fazer) e atualiza a
  * conversa. Devolve undefined se o aviso não vale ou o grupo ainda não me inclui.
  */
-export async function storeGroupControl(
+async function storeGroupControlNow(
 	storage: Storage,
 	me: string,
 	rumor: Rumor,
@@ -596,3 +597,6 @@ export function introduce(conversation: ConversationRecord, myName: string, to?:
 		recipients: to ?? conversation.members
 	};
 }
+
+export const storeGroupControl = (...args: Parameters<typeof storeGroupControlNow>) =>
+	exclusive(args[0], () => storeGroupControlNow(...args));

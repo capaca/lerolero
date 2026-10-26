@@ -524,3 +524,29 @@ describe('limites', () => {
 		expect(() => createGroup(alice.publicKey, 'Cheio', others.slice(0, 19), 'Alice', tick())).not.toThrow();
 	});
 });
+
+describe('avisos de grupo ao mesmo tempo', () => {
+	// Visto no e2e de grupos: a Ana promove a Bia logo depois de adicionar gente, e a apresentação de quem acabou
+	// de entrar chega no meio. Sem a vez (lock.ts) a gravação mais lenta apagava a promoção.
+	it('uma ação minha e um aviso que chega juntos não apagam um ao outro', async () => {
+		for (const mineFirst of [true, false]) {
+			for (let delay = 0; delay <= 6; delay++) {
+				const { alice, bob, carol, groupId } = await family();
+				const mine = wrap(alice, promoteAdmin(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()));
+				const intro = wrap(carol, introduce(await conversationOf(carol, groupId), 'Carol'));
+				const toAlice = (w: typeof intro) => alice.vault.unwrap(w.toRecipients.find((r) => r.recipient === alice.publicKey)!.wrap);
+				const saveMine = () => storeGroupControl(alice.storage, alice.publicKey, mine.rumor, clock);
+				const saveIntro = () => storeGroupControl(alice.storage, alice.publicKey, toAlice(intro), clock);
+
+				const first = (mineFirst ? saveMine : saveIntro)();
+				for (let i = 0; i < delay; i++) await new Promise((r) => setImmediate(r));
+				const second = (mineFirst ? saveIntro : saveMine)();
+				await Promise.all([first, second]);
+
+				const conversation = await conversationOf(alice, groupId);
+				expect(conversation.group!.state.admins, `minha ação primeiro=${mineFirst}, atraso=${delay}`).toContain(bob.publicKey);
+				expect(conversation.group!.names[carol.publicKey], `minha ação primeiro=${mineFirst}, atraso=${delay}`).toBe('Carol');
+			}
+		}
+	});
+});
