@@ -1,5 +1,5 @@
 // Material do teste: o guia e o roteiro abrem sem conta, e "Enviar comentário" chega como conversa cifrada.
-import { expect, test } from '../ajudantes.ts';
+import { desviados, expect, test } from '../ajudantes.ts';
 
 test('guia e roteiro abrem sem conta, com o link nas boas-vindas', async ({ novoAparelho }) => {
 	const page = await novoAparelho();
@@ -25,4 +25,7 @@ test('"Enviar comentário" vai como conversa com a equipe, com os dados do apare
 	const enviado = page.locator('.row.mine', { hasText: '[Bug] O botão de enviar ficou meio escondido.' });
 	await expect(enviado).toContainText('Dados do aparelho');
 	await expect(enviado.getByLabel('enviada')).toBeVisible();
+
+	// o convite da conta de comentários traz relays reais: a suíte os desviou para o relay local, nada saiu para a rede
+	expect(desviados.some((url) => url.includes('nostr1.com') || url.includes('monostr.com') || url.includes('nmail.li'))).toBe(true);
 });
