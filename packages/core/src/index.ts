@@ -45,6 +45,7 @@ export {
 	type SyncOptions
 } from './sync/engine.ts';
 export {
+	deleteConversation,
 	deleteForMe,
 	deletionTags,
 	directConversationId,
