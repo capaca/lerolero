@@ -97,6 +97,39 @@ describe('motor de sincronização', () => {
 		expect(received).toEqual([wrap.id]);
 	});
 
+	it('se o app morre no meio de processar um embrulho, a próxima sincronização o processa de novo', async () => {
+		// achado no e2e (2026-10-26): recarregar a página enquanto a mensagem chegava a perdia para sempre,
+		// porque o embrulho era marcado como visto antes de a mensagem ser guardada
+		const r = await relay();
+		const bob = await person();
+		const wrap = wrapFor(bob.publicKey, 'chegou na hora do reload');
+		r.events.push(wrap);
+
+		let started = false;
+		const dying = new SyncEngine({
+			storage: bob.storage,
+			pool: bob.pool,
+			myPublicKey: bob.publicKey,
+			events: { onWrap: () => ((started = true), new Promise<void>(() => {})) } // nunca termina: o app morreu
+		});
+		await dying.start([r.url]);
+		await until(() => started);
+		dying.stop();
+
+		const received: string[] = [];
+		const next = new SyncEngine({
+			storage: bob.storage,
+			pool: bob.pool,
+			myPublicKey: bob.publicKey,
+			events: { onWrap: async (w) => void received.push(w.id) }
+		});
+		cleanup.push(() => next.stop());
+		await next.start([r.url]);
+		await until(() => received.length > 0);
+		expect(received).toEqual([wrap.id]);
+		await until(() => bob.storage.seenWraps.has(wrap.id)); // e, processado, não vem de novo
+	});
+
 	it('guarda o cursor e, ao reabrir, pede só desde o cursor menos 2 dias', async () => {
 		const r = await relay();
 		const bob = await person();
