@@ -1,20 +1,17 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
-	import PhraseBackup from '#lib/components/PhraseBackup.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
 	import { session } from '#lib/session.svelte.ts';
 
-	// nome → PIN → frase → teste. O PIN vem antes porque a frase já nasce lacrada com ele.
-	type Step = 'nome' | 'pin' | 'criando' | 'frase' | 'teste';
+	// nome → PIN, e já entra. A frase fica para quando houver algo a perder: o primeiro
+	// contato abre "Guarde sua frase" (Q-U1, phrase-reminder.ts).
+	type Step = 'nome' | 'pin' | 'criando';
 	let step = $state<Step>('nome');
 	let name = $state('');
 	let pin = $state('');
 	let pinAgain = $state('');
-	let words = $state<string[]>([]);
-	let wroteItDown = $state(false);
 	let error = $state('');
 	let pinForm = $state<HTMLFormElement>();
 
@@ -41,18 +38,14 @@
 		error = '';
 		step = 'criando';
 		try {
-			words = await session.create(name.trim(), pin);
-			step = 'frase';
+			await session.create(name.trim(), pin);
 		} catch (err) {
 			error = friendlyError(err);
 			step = 'pin';
+			return;
 		} finally {
 			pin = pinAgain = '';
 		}
-	}
-
-	async function confirmed() {
-		await session.confirmPhrase();
 		await goto(resolve('/'));
 	}
 </script>
@@ -69,7 +62,7 @@
 			<p class="hint">Só seus contatos veem esse nome. Ele não fica público na internet.</p>
 			<div class="actions"><button class="primary" type="submit">Continuar</button></div>
 		</form>
-	{:else if step === 'pin' || step === 'criando'}
+	{:else}
 		<h1>Crie um PIN</h1>
 		<p class="hint">
 			O PIN protege sua conta neste aparelho e será pedido sempre que você abrir o app. Não use datas de
@@ -93,30 +86,5 @@
 				</button>
 			</div>
 		</form>
-	{:else if step === 'frase'}
-		<h1>Sua frase de recuperação</h1>
-		<PhraseBackup {words} />
-		<label class="check"><input type="checkbox" bind:checked={wroteItDown} /> Guardei as 12 palavras</label>
-		<div class="actions">
-			<button class="primary" disabled={!wroteItDown} onclick={() => (step = 'teste')}>Continuar</button>
-		</div>
-	{:else}
-		<h1>Confira sua frase</h1>
-		<PhraseCheck {words} onconfirmed={confirmed} />
-		<button class="link" onclick={() => goto(resolve('/'))}>Fazer depois</button>
-		<p class="hint">Se deixar para depois, vamos lembrar você até conferir.</p>
 	{/if}
 </main>
-
-<style>
-	.check {
-		display: flex;
-		gap: 0.6rem;
-		align-items: center;
-		font-weight: 500;
-	}
-	.check input {
-		width: auto;
-		transform: scale(1.3);
-	}
-</style>

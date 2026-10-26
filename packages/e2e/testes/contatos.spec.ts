@@ -1,7 +1,7 @@
 // Contatos (RF-10..14): convite pelo link antes de ter conta, nome local, o próprio convite, QR pela câmera
 // (leitor do navegador e jsQR) e o link colado.
 import type { Page } from '@playwright/test';
-import { cadastrar, digitarPin, meuConvite, PIN, test, expect, vencerSessao } from '../ajudantes.ts';
+import { cadastrar, confirmarConvite, digitarPin, meuConvite, PIN, test, expect, vencerSessao } from '../ajudantes.ts';
 
 /** Troca a câmera por um vídeo com o QR dado; `semLeitorNativo` força o jsQR. */
 async function cameraMostrando(page: Page, qrSvg: string, semLeitorNativo = false) {
@@ -46,7 +46,7 @@ test('convite aberto antes de ter conta, nome local e o próprio convite', async
 	await expect(joao).toHaveURL(/\/convite#/);
 	await expect(joao.getByText('Se apresenta como: Maria')).toBeVisible();
 	await joao.locator('#nome').fill('Maria do trabalho');
-	await joao.getByRole('button', { name: 'Adicionar' }).click();
+	await confirmarConvite(joao);
 	await expect(joao.getByRole('heading', { name: 'Maria do trabalho' })).toBeVisible();
 	await expect(joao.getByText('Se apresenta como “Maria”.')).toBeVisible();
 
@@ -75,7 +75,7 @@ test('QR pela câmera, com o leitor do navegador e com o jsQR, e o link colado',
 	await cameraMostrando(joao.page, qr);
 	await lerQr(joao.page);
 	await expect(joao.page.getByText('Se apresenta como: Maria')).toBeVisible();
-	await joao.page.getByRole('button', { name: 'Adicionar' }).click();
+	await confirmarConvite(joao.page);
 	await expect(joao.page.getByRole('heading', { name: 'Maria' })).toBeVisible();
 	await lerQr(joao.page);
 	await expect(joao.page.getByText('Esta pessoa já está nos seus contatos como Maria.')).toBeVisible();

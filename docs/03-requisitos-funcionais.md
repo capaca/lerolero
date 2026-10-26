@@ -1,7 +1,7 @@
 # 03 — Requisitos funcionais
 
 - **Status:** ✅ aprovado
-- **Última atualização:** 2026-10-16
+- **Última atualização:** 2026-10-26
 
 ## Fases
 
@@ -21,8 +21,8 @@
 |---|---|---|---|
 | RF-01 | Criar identidade sem telefone nem e-mail: o app gera o par de chaves e o usuário escolhe um nome de exibição | Must | MVP |
 | RF-02 | Foto de perfil opcional | Could | MVP |
-| RF-03 | Mostrar a **frase de recuperação** (12 palavras) no cadastro, com explicação simples e um **teste de verificação** (ex.: "digite a 3ª e a 7ª palavras") | Must | MVP |
-| RF-04 | Lembrete periódico para quem ainda não confirmou que guardou a frase | Should | MVP |
+| RF-03 | Mostrar a **frase de recuperação** (12 palavras) com explicação simples e um **teste de verificação** (ex.: "digite a 3ª e a 7ª palavras"). **Não no cadastro, e sim ao ganhar o primeiro contato** (decidido em 2026-10-26, Q-U1 do [07](07-roadmap.md)): uma tela própria, uma vez, com "Guardar agora" e "Depois" | Must | MVP |
+| RF-04 | Lembrete periódico para quem ainda não confirmou que guardou a frase: aviso na tela inicial, só depois de ter algum contato; "Depois" ou "Lembrar depois" o adiam por 3 dias (1 dia se o risco de perder os dados for maior, como no Safari do iPhone sem instalar) | Should | MVP |
 | RF-05 | Restaurar a identidade num aparelho novo a partir da frase | Must | MVP |
 | RF-06 | Backup cifrado de contatos e configurações nos relays, restaurado junto com a identidade | Should | MVP |
 | RF-07 | Bloqueio do app com PIN ou biometria do aparelho (opcional) | — | v1 |
@@ -130,7 +130,8 @@
 ## Critérios de aceite dos fluxos principais
 
 **Primeiro uso (RF-01, RF-03)**
-- Um usuário leigo instala o PWA, cria a identidade, passa pelo teste da frase de recuperação e chega à tela inicial em menos de 2 minutos, sem ajuda.
+- Um usuário leigo instala o PWA, cria a identidade (nome e PIN) e chega à tela inicial em menos de 2 minutos, sem ajuda.
+- Ao adicionar o primeiro contato, o app pede para guardar a frase; quem guarda e passa pelo teste não vê mais o lembrete.
 - Nenhum dado pessoal (telefone, e-mail, CPF) é pedido.
 
 **Adicionar contato (RF-10, RF-11)**

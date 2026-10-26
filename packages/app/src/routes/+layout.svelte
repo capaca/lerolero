@@ -19,10 +19,8 @@
 	const ALLOWED: Record<Exclude<Status, 'carregando'>, string[]> = {
 		'sem-identidade': ['/bem-vindo', '/cadastro', '/restaurar'],
 		bloqueado: ['/desbloquear', '/esqueci-pin'],
-		// /cadastro continua aberto: depois do PIN a pessoa ainda vê e confere a frase
 		desbloqueado: [
 			'/',
-			'/cadastro',
 			'/ajustes',
 			'/ajustes/frase',
 			'/ajustes/comentario',
@@ -31,6 +29,7 @@
 			'/contatos/ler',
 			'/contatos/[chave]',
 			'/convite',
+			'/guardar-frase',
 			'/conversa/[chave]',
 			'/grupo/novo',
 			'/grupo/[id]',

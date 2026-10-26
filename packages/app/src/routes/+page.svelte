@@ -8,11 +8,9 @@
 	import Sheet from '#lib/components/Sheet.svelte';
 	import { formatWhen } from '#lib/format.ts';
 	import { takePendingInvite } from '#lib/pending-invite.ts';
+	import { phraseReminderDue, snoozePhraseReminder } from '#lib/phrase-reminder.ts';
 	import { highRiskOfDataLoss, isIOS } from '#lib/platform.ts';
 	import { session } from '#lib/session.svelte.ts';
-
-	const DAY = 24 * 60 * 60 * 1000;
-	const SNOOZE_KEY = 'lembreteFraseAdiadoAte';
 
 	let showPhraseReminder = $state(false);
 	let contactCount = $state(0);
@@ -84,21 +82,18 @@
 		);
 	}
 	let showInstallWarning = $state(false);
-	let highRisk = false;
 
 	onMount(async () => {
 		const pending = takePendingInvite();
 		if (pending) return void goto(resolve('/convite') + pending);
 		contactCount = (await session.listContacts()).length;
-		highRisk = highRiskOfDataLoss();
-		showInstallWarning = highRisk;
-		const snoozedUntil = (await session.getSetting<number>(SNOOZE_KEY)) ?? 0;
-		showPhraseReminder = !session.identity?.phraseConfirmed && Date.now() > snoozedUntil;
+		showInstallWarning = highRiskOfDataLoss();
+		showPhraseReminder = await phraseReminderDue(contactCount);
 	});
 
-	// lembrete do RF-04: volta em 3 dias, ou em 1 se o risco de perder os dados for maior
+	// lembrete do RF-04
 	async function snooze() {
-		await session.setSetting(SNOOZE_KEY, Date.now() + (highRisk ? 1 : 3) * DAY);
+		await snoozePhraseReminder();
 		showPhraseReminder = false;
 	}
 </script>
@@ -130,10 +125,10 @@
 
 	{#if showPhraseReminder}
 		<div class="banner" role="status">
-			<p><strong>Você ainda não conferiu sua frase de recuperação.</strong></p>
+			<p><strong>Você ainda não guardou sua frase de recuperação.</strong></p>
 			<p>Sem ela, perder o celular ou esquecer o PIN significa perder sua conta.</p>
 			<div class="actions">
-				<a href={resolve('/ajustes/frase')}>Conferir agora</a>
+				<a href={resolve('/ajustes/frase')}>Guardar agora</a>
 				<button class="link" onclick={snooze}>Lembrar depois</button>
 			</div>
 		</div>

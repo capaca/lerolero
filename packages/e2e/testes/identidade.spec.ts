@@ -1,7 +1,7 @@
 // Cadastro, PIN e recuperação da conta (RF-01..06): o caminho de quem chega no app pela primeira vez.
-import { digitarPin, expect, noInicio, PIN, test, vencerSessao } from '../ajudantes.ts';
+import { digitarPin, esquecerAjuste, expect, meuConvite, noInicio, PIN, test, vencerSessao, verFrase } from '../ajudantes.ts';
 
-test('cadastro: PINs diferentes avisam, iguais criam a conta sem tocar em botão', async ({ novoAparelho }) => {
+test('cadastro: PINs diferentes avisam, iguais criam a conta sem tocar em botão e sem pedir a frase', async ({ novoAparelho }) => {
 	const page = await novoAparelho();
 	await page.goto('./');
 	await expect(page).toHaveURL(/\/bem-vindo$/);
@@ -19,13 +19,54 @@ test('cadastro: PINs diferentes avisam, iguais criam a conta sem tocar em botão
 	await expect(page.locator('#pin2')).toBeFocused();
 
 	await page.keyboard.type(PIN);
-	await expect(page.getByRole('heading', { name: 'Sua frase de recuperação' })).toBeVisible({ timeout: 20_000 });
-	await expect(page.locator('ol li')).toHaveCount(12);
+	// a frase fica para o primeiro contato (Q-U1): sem ele, nem o aviso aparece
+	await noInicio(page);
+	await expect(page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+});
+
+test('a frase vem com o primeiro contato: guardar agora confere e some; depois adia', async ({ novaPessoa }) => {
+	const [maria, joao, ana] = await Promise.all([novaPessoa('Maria'), novaPessoa('João'), novaPessoa('Ana')]);
+
+	await joao.page.goto(await meuConvite(maria.page));
+	await joao.page.getByRole('button', { name: 'Adicionar' }).click();
+	await expect(joao.page.getByRole('heading', { name: 'Guarde sua frase de recuperação' })).toBeVisible();
+	await joao.page.getByRole('button', { name: 'Guardar agora' }).click();
+	await digitarPin(joao.page, 'pin', PIN);
+	await expect(joao.page.locator('ol li')).toHaveCount(12, { timeout: 20_000 });
+	const frase = (await joao.page.locator('ol li').allTextContents()).map((t) => t.replace(/^\d+/, '').trim());
+	await joao.page.getByLabel('Guardei as 12 palavras').check();
+	await joao.page.getByRole('button', { name: 'Continuar' }).click();
+	for (const campo of await joao.page.locator('input[id^="palavra-"]').all()) {
+		const posicao = Number((await campo.getAttribute('id'))!.slice('palavra-'.length));
+		await campo.fill(frase[posicao]);
+	}
+	await joao.page.getByRole('button', { name: 'Confirmar' }).click();
+	// segue para o contato que acabou de entrar, e o aviso não volta
+	await expect(joao.page.getByRole('heading', { name: 'Maria' })).toBeVisible();
+	await joao.page.goto('./');
+	await noInicio(joao.page);
+	await expect(joao.page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+
+	// "Depois" segue para o contato; a tela não aparece de novo e o aviso fica adiado
+	await maria.page.goto(await meuConvite(joao.page));
+	await maria.page.getByRole('button', { name: 'Adicionar' }).click();
+	await maria.page.getByRole('button', { name: 'Depois' }).click();
+	await expect(maria.page.getByRole('heading', { name: 'João' })).toBeVisible();
+	await maria.page.goto('./');
+	await noInicio(maria.page);
+	await expect(maria.page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+	await maria.page.goto(await meuConvite(ana.page));
+	await maria.page.getByRole('button', { name: 'Adicionar' }).click();
+	await expect(maria.page.getByRole('heading', { name: 'Ana' })).toBeVisible();
+
+	// passado o adiamento, o aviso aparece na tela inicial
+	await esquecerAjuste(maria.page, 'lembreteFraseAdiadoAte');
+	await maria.page.goto('./');
+	await expect(maria.page.getByText('Você ainda não guardou sua frase de recuperação.')).toBeVisible({ timeout: 20_000 });
 });
 
 test('PIN: a sessão vencida pede o PIN; errado avisa, certo abre', async ({ novaPessoa }) => {
 	const { page } = await novaPessoa('Maria');
-	await expect(page.getByText('Você ainda não conferiu sua frase de recuperação.')).toBeVisible();
 
 	await vencerSessao(page);
 	await page.goto('./');
@@ -45,11 +86,12 @@ test('recuperar a conta com a frase em outro aparelho dá a mesma chave', async 
 	await maria.page.getByRole('link', { name: 'Ajustes' }).click();
 	const chave = await maria.page.locator('.key').textContent();
 	expect(chave).toMatch(/^npub1/);
+	const frase = await verFrase(maria.page);
 
 	const outro = await novoAparelho();
 	await outro.goto('./');
 	await outro.getByRole('link', { name: 'Já tenho uma conta' }).or(outro.getByRole('button', { name: 'Já tenho uma conta' })).click();
-	await outro.locator('#frase').fill(maria.frase.join(' '));
+	await outro.locator('#frase').fill(frase.join(' '));
 	await outro.locator('#nome').fill('Maria');
 	await digitarPin(outro, 'pin', '246810');
 	await outro.keyboard.type('246810');
