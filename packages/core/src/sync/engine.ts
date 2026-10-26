@@ -173,13 +173,14 @@ export class SyncEngine {
 	private async process(relay: string, wrap: NostrEvent) {
 		if (wrap.kind !== 1059 || !wrap.tags.some((t) => t[0] === 'p' && t[1] === this.myPublicKey)) return;
 		if (!(await this.storage.seenWraps.has(wrap.id))) {
-			// marca antes de processar: um embrulho inválido não deve ser tentado de novo a cada sincronização
-			await this.storage.seenWraps.add({ id: wrap.id, receivedAt: this.seconds() });
 			try {
 				await this.events.onWrap(wrap, relay);
 			} catch {
 				// embrulho que não abre ou não é para nós: descartado, o resto segue
 			}
+			// marca depois de processar (RNF-30): se o app morrer no meio, a mensagem ainda não foi guardada e
+			// precisa vir de novo. O inválido também é marcado, para não ser tentado a cada sincronização.
+			await this.storage.seenWraps.add({ id: wrap.id, receivedAt: this.seconds() });
 		}
 		const cursor = this.cursors.get(relay);
 		if (cursor === undefined || wrap.created_at > cursor) {
