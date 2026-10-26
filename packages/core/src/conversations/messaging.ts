@@ -236,6 +236,19 @@ export async function storeOutgoing(storage: Storage, rumor: Rumor, recipient?: 
 	return { message, conversation, isNew: true };
 }
 
+/**
+ * Guarda o balão provisório de uma mídia que ainda vai subir (media/pending-upload.ts): aparece na conversa na
+ * hora, como a mensagem "pendente" (RNF-12), e é trocado pela mensagem de verdade quando o envio termina.
+ */
+export async function storePendingMessage(storage: Storage, message: MessageRecord): Promise<void> {
+	await storage.messages.put(message);
+	const direct = message.conversationId.startsWith('direta:');
+	const fresh = direct ? { type: 'direta' as const, members: [message.conversationId.slice('direta:'.length)] } : undefined;
+	const existing = await storage.conversations.get(message.conversationId);
+	if (!existing && !fresh) throw new Error('conversa desconhecida');
+	await upsertConversation(storage, message, {}, existing ?? fresh!);
+}
+
 /** Um relay aceitou: "pendente" vira "enviada". */
 export async function markSent(storage: Storage, messageId: string) {
 	const message = await storage.messages.get(messageId);

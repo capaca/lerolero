@@ -31,7 +31,11 @@ import {
 	mediaTags,
 	nameTagFor,
 	openMedia,
-	prepareMedia,
+	discardPendingUpload,
+	listPendingUploads,
+	retryPendingUpload,
+	startPendingAudio,
+	tryPendingUpload,
 	listContacts,
 	NO_FAILURES,
 	openStorage,
@@ -94,6 +98,9 @@ class Session {
 	private savingSession?: Promise<void>;
 	/** fila de envios (sendTo) */
 	private sending: Promise<void> = Promise.resolve();
+	/** áudios subindo agora e o aviso da próxima tentativa de cada um que falhou */
+	private uploading = new Set<string>();
+	private uploadTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 	async init() {
 		this.identity = await storage.identity.get();
@@ -235,10 +242,13 @@ class Session {
 		// versão nova que entende tipos novos de mensagem: recupera o que a antiga ignorou
 		await upgradeSyncGeneration(storage);
 		await engine.start(await this.myDmRelays());
+		void this.resumeUploads();
 		await this.publishDmRelays();
 	}
 
 	private stopNetwork() {
+		this.uploadTimers.forEach(clearTimeout);
+		this.uploadTimers.clear();
 		this.network?.engine.stop();
 		this.network?.pool.close();
 		this.network = undefined;
@@ -247,6 +257,7 @@ class Session {
 	/** O app voltou para a tela ou a internet voltou (RF-80). */
 	resumeNetwork() {
 		this.network?.engine.resume();
+		void this.resumeUploads();
 	}
 
 	/** kind 10050 (NIP-17): publicado nos relays gerais e nos meus, só quando a lista muda. */
@@ -423,23 +434,70 @@ class Session {
 	}
 
 	/**
-	 * Envia um áudio: cifra e sobe para os servidores Blossom (o mesmo arquivo não sobe
-	 * duas vezes) e manda a mensagem kind 15 com a chave, pela fila como um texto. No
-	 * grupo, o arquivo sobe uma vez só; só a mensagem com o endereço vai para cada um.
+	 * Envia um áudio: o balão aparece na hora, tocável, com o relógio de "enviando"; cifrar, subir para os
+	 * Blossom (o mesmo arquivo não sobe duas vezes) e mandar a mensagem kind 15 pela fila acontece por trás,
+	 * com novas tentativas por alguns minutos (core/media/pending-upload.ts). No grupo, o arquivo sobe uma vez
+	 * só; só a mensagem com o endereço vai para cada um.
 	 */
 	async sendAudio(conversationId: string, file: Blob, duration: number) {
-		this.requireNetwork();
-		const list = await relayList();
-		const ref = await prepareMedia(storage, file, {
-			servers: [...list.blossom, ...list.blossomReserva],
-			signer: (template) => vault.sign(template)
-		});
-		const media: MessageMedia = { ...ref, duration };
-		await this.sendTo(conversationId, media.urls[0], mediaTags(media), 15);
+		if (conversationId.startsWith('grupo:') && !(await storage.conversations.get(conversationId))?.group?.amMember) {
+			throw new NotInGroupError();
+		}
+		const message = await startPendingAudio(storage, { conversationId, me: this.current.publicKey, file, duration });
+		this.version++;
+		void this.runUpload(message.id);
+	}
+
+	/** Uma tentativa de envio do áudio; se falhar, a próxima fica marcada com espera crescente. */
+	private async runUpload(id: string) {
+		if (this.uploading.has(id)) return;
+		this.uploading.add(id);
+		clearTimeout(this.uploadTimers.get(id));
+		this.uploadTimers.delete(id);
+		try {
+			const list = await relayList();
+			const conversationId = (await storage.messages.get(id))?.conversationId;
+			const result = await tryPendingUpload(storage, id, {
+				servers: [...list.blossom, ...list.blossomReserva],
+				signer: (template) => vault.sign(template),
+				send: (media) => this.sendTo(conversationId!, media.urls[0], mediaTags(media as MessageMedia), 15)
+			});
+			if (result.state === 'depois') {
+				this.uploadTimers.set(
+					id,
+					setTimeout(() => void this.runUpload(id), Math.max(0, result.at - Date.now()))
+				);
+			}
+		} finally {
+			this.uploading.delete(id);
+			this.version++;
+		}
+	}
+
+	/** Voltou para a tela ou a rede: o que estava esperando a próxima tentativa tenta já. */
+	private async resumeUploads() {
+		for (const id of await listPendingUploads(storage)) void this.runUpload(id);
+	}
+
+	/** "Tentar de novo" num áudio que não saiu. */
+	async retryUpload(messageId: string) {
+		if (await retryPendingUpload(storage, messageId)) {
+			this.version++;
+			void this.runUpload(messageId);
+		}
+	}
+
+	/** "Apagar" num áudio que não saiu (ou cancelar o que ainda sobe). */
+	async discardUpload(messageId: string) {
+		clearTimeout(this.uploadTimers.get(messageId));
+		this.uploadTimers.delete(messageId);
+		await discardPendingUpload(storage, messageId);
+		this.version++;
 	}
 
 	/** Apagar para mim (RF-25): some deste aparelho, sem avisar ninguém. */
 	async deleteForMe(messageId: string) {
+		if ((await storage.messages.get(messageId))?.upload) return this.discardUpload(messageId);
 		await deleteForMe(storage, messageId);
 		this.version++;
 	}
@@ -452,6 +510,8 @@ class Session {
 	async deleteForEveryone(conversationId: string, messageId: string) {
 		const message = await storage.messages.get(messageId);
 		if (!message || message.deleted || message.notice || message.sender !== this.current.publicKey) return;
+		// ainda não saiu: ninguém recebeu nada para apagar
+		if (message.upload) return this.discardUpload(messageId);
 		await markDeleted(storage, message);
 		this.version++;
 		await this.sendTo(conversationId, '', deletionTags(message), 5, false);

@@ -6,6 +6,7 @@
 	import { hue } from './Avatar.svelte';
 	import Icon from './Icon.svelte';
 	import { formatTime } from '#lib/format.ts';
+	import { session } from '#lib/session.svelte.ts';
 
 	let {
 		message: m,
@@ -73,6 +74,14 @@
 			</p>
 		{:else if m.media?.type.startsWith('audio/')}
 			<AudioPlayer media={m.media} />
+			{#if m.upload?.failed}
+				<!-- desistiu depois de alguns minutos: pede uma decisão em vez de ficar "enviando" para sempre -->
+				<p class="failed" role="alert">Não foi possível enviar.</p>
+				<div class="failed-actions">
+					<button type="button" onclick={() => session.retryUpload(m.id)}>Tentar de novo</button>
+					<button type="button" class="discard" onclick={() => session.discardUpload(m.id)}>Apagar</button>
+				</div>
+			{/if}
 		{:else if m.media}
 			<p class="hint file"><Icon name="paperclip" size={16} /> Arquivo (ainda não suportado nesta versão)</p>
 		{:else}
@@ -80,7 +89,7 @@
 		{/if}
 		<span class="meta">
 			{formatTime(m.createdAt)}
-			{#if mine}
+			{#if mine && !m.upload?.failed}
 				<span class="status" title={m.status === 'pendente' ? 'Enviando' : 'Enviada'}>
 					<Icon name={m.status === 'pendente' ? 'clock' : 'check'} size={13} label={m.status === 'pendente' ? 'enviando' : 'enviada'} />
 				</span>
@@ -180,6 +189,30 @@
 		margin: 0;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
+	}
+	.failed {
+		margin: 0.3rem 0 0;
+		font-size: 0.85rem;
+		color: var(--danger);
+		font-weight: 600;
+	}
+	.failed-actions {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: 0.3rem;
+	}
+	.failed-actions button {
+		min-height: 2.75rem;
+		padding: 0 0.9rem;
+		border-radius: 999px;
+		border: 1px solid var(--line);
+		background: var(--surface);
+		color: inherit;
+		font: inherit;
+		font-weight: 600;
+	}
+	.failed-actions .discard {
+		color: var(--danger);
 	}
 	.meta {
 		display: block;
