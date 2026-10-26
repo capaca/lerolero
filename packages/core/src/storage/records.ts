@@ -117,6 +117,8 @@ export type OutboxRecord = {
 	messageId?: string;
 	attempts: number;
 	nextAttemptAt: number;
+	/** quando entrou na fila (ms, crescente): a fila sai na ordem em que as mensagens foram escritas */
+	queuedAt?: number;
 };
 
 export type SyncRecord = { relay: string; cursor: number };

@@ -219,6 +219,71 @@ describe('motor de sincronização', () => {
 	});
 });
 
+describe('ordem e espera da fila de envio', () => {
+	async function offlineEngine(canSend?: () => boolean) {
+		const r = await relay();
+		const port = r.currentPort;
+		await r.stop();
+		const alice = await person();
+		const clock = { now: Date.now() };
+		const sent: string[] = [];
+		const engine = new SyncEngine({
+			storage: alice.storage,
+			pool: alice.pool,
+			myPublicKey: alice.publicKey,
+			now: () => clock.now,
+			canSend,
+			events: { onWrap: async () => {}, onSent: async (item) => void sent.push(item.messageId!) }
+		});
+		cleanup.push(() => engine.stop());
+		const to = getPublicKey(generateSecretKey());
+		return { r, port, alice, clock, sent, engine, url: `ws://127.0.0.1:${port}`, wrap: (text: string) => wrapFor(to, text) };
+	}
+
+	it('sai na ordem em que foi escrita, mesmo quando a primeira já falhou mais vezes', async () => {
+		const { r, port, clock, sent, engine, url, wrap } = await offlineEngine();
+		const [a, b, c] = [wrap('a'), wrap('b'), wrap('c')];
+		await engine.enqueue(a, [url], 'a');
+		clock.now += 6_000;
+		await engine.flush(); // a falha de novo: espera de 15 s
+		clock.now += 1_000;
+		await engine.enqueue(b, [url], 'b'); // b falha uma vez: espera de 5 s, menor que a de a
+		await engine.enqueue(c, [url], 'c');
+
+		await r.start(port);
+		clock.now += 60_000; // todas já podem ser tentadas
+		await engine.flush();
+		expect(sent).toEqual(['a', 'b', 'c']);
+		expect(r.events.map((e) => e.id)).toEqual([a.id, b.id, c.id]);
+	});
+
+	it('ao voltar a conexão, tenta já, sem esperar o tempo da tentativa anterior', async () => {
+		const { r, port, alice, sent, engine, url, wrap } = await offlineEngine();
+		await engine.enqueue(wrap('oi'), [url], 'oi'); // falha: próxima tentativa só daqui a 5 s
+		expect(sent).toEqual([]);
+
+		await r.start(port);
+		engine.resume(); // sem mexer no relógio
+		await until(() => sent.length === 1);
+		expect(await alice.storage.outbox.due(Infinity)).toHaveLength(0);
+	});
+
+	it('sem internet no aparelho não gasta tentativas, e sai quando ela volta', async () => {
+		let online = false;
+		const { r, port, alice, sent, engine, url, wrap } = await offlineEngine(() => online);
+		await engine.enqueue(wrap('um'), [url], 'um');
+		await engine.enqueue(wrap('dois'), [url], 'dois');
+		const queued = await alice.storage.outbox.due(Infinity);
+		expect(queued.map((i) => i.attempts)).toEqual([0, 0]);
+
+		await r.start(port);
+		online = true;
+		engine.resume();
+		await until(() => sent.length === 2);
+		expect(sent).toEqual(['um', 'dois']);
+	});
+});
+
 describe('geração da sincronização', () => {
 	it('depois de atualizar, reprocessa o que uma versão antiga ignorou e marcou como visto', async () => {
 		const r = await relay();

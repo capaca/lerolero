@@ -323,7 +323,7 @@
 
 <style>
 	.chat {
-		height: 100dvh;
+		height: calc(100dvh - var(--offline-bar, 0px));
 		display: flex;
 		flex-direction: column;
 		max-width: 720px;

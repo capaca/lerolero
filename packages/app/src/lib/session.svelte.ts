@@ -231,6 +231,8 @@ class Session {
 			storage,
 			pool,
 			myPublicKey: this.current.publicKey,
+			// sem internet no aparelho a fila espera, sem gastar tentativas (a espera crescente só vale com internet)
+			canSend: () => navigator.onLine,
 			events: {
 				onWrap: (wrap) => this.receive(wrap),
 				onSent: async (item) => {
