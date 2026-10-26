@@ -114,7 +114,7 @@ Antes "Grupos e recursos de conversa"; os grupos foram adiantados para o M2 e o 
 - ~~Grupos de até 20 com tag `g` e eventos de controle; administrador; remover membro (RF-30..33).~~ Adiantado para o M2 (2026-10-22).
 - Responder e reagir (RF-22, 23).
 - Status de entrega com confirmações agrupadas; confirmação de leitura desativável (RF-50, 51).
-- Etapa 3 de UX/UI (veio do M2): aviso de "sem conexão"; tamanho da letra em Ajustes (Normal, Grande, Muito grande; RNF-65); nível do microfone durante a gravação.
+- Etapa 3 de UX/UI (veio do M2): ✅ aviso de "sem conexão" (2026-10-26: pílula acima do campo de mensagem quando o aparelho fica sem internet, na hora, ou sem nenhum relay conectado por 6 s; some sozinha quando volta; teste e2e `sem-conexao`); tamanho da letra em Ajustes (Normal, Grande, Muito grande; RNF-65); nível do microfone durante a gravação.
 - Cartão de perfil privado com nome e foto (Q-P5, RF-02; veio do M2).
 - Editar mensagem (RF-24). ~~Apagar para todos (RF-25)~~ feito no M2.
 - Mencionar alguém no grupo com `@` (RF-35). Sem modo foco no MVP, não há exceção a avaliar por enquanto (RF-61, v1).

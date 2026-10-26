@@ -98,6 +98,10 @@ class Session {
 	private savingSession?: Promise<void>;
 	/** fila de envios (sendTo) */
 	private sending: Promise<void> = Promise.resolve();
+	/** sem internet, ou sem nenhum relay conectado há alguns segundos: a tela avisa que as mensagens ficam na fila */
+	offline = $state(false);
+	private noRelaysSince?: number;
+	private connectionTimer?: ReturnType<typeof setInterval>;
 	/** áudios subindo agora e o aviso da próxima tentativa de cada um que falhou */
 	private uploading = new Set<string>();
 	private uploadTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -243,10 +247,44 @@ class Session {
 		await upgradeSyncGeneration(storage);
 		await engine.start(await this.myDmRelays());
 		void this.resumeUploads();
+		this.watchConnection();
 		await this.publishDmRelays();
 	}
 
+	/**
+	 * Só avisa depois de uns segundos sem relay (RELAYS_GRACE_MS): ao abrir o app a conexão leva um instante e
+	 * um relay que cai e volta não deve piscar o aviso. Sem internet no aparelho, avisa na hora.
+	 */
+	private watchConnection() {
+		const RELAYS_GRACE_MS = 6_000;
+		const check = () => {
+			if (!this.network) return;
+			if (!navigator.onLine) return void (this.offline = true);
+			if (this.network.pool.connectedUrls().length > 0) {
+				this.noRelaysSince = undefined;
+				return void (this.offline = false);
+			}
+			this.noRelaysSince ??= Date.now();
+			this.offline = Date.now() - this.noRelaysSince >= RELAYS_GRACE_MS;
+		};
+		clearInterval(this.connectionTimer);
+		this.connectionTimer = setInterval(check, 1_000);
+		addEventListener('offline', check);
+		addEventListener('online', check);
+		this.stopWatchingConnection = () => {
+			clearInterval(this.connectionTimer);
+			removeEventListener('offline', check);
+			removeEventListener('online', check);
+			this.noRelaysSince = undefined;
+			this.offline = false;
+		};
+		check();
+	}
+
+	private stopWatchingConnection = () => {};
+
 	private stopNetwork() {
+		this.stopWatchingConnection();
 		this.uploadTimers.forEach(clearTimeout);
 		this.uploadTimers.clear();
 		this.network?.engine.stop();
