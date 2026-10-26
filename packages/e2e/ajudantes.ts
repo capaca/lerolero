@@ -1,5 +1,6 @@
 // Auxiliares da suíte: cada pessoa é um contexto do navegador (IndexedDB próprio, como um aparelho).
 // Erro de JavaScript na página faz o teste falhar no fim, mesmo que os passos tenham passado.
+import { get } from 'node:http';
 import { test as base, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
 export { expect };
@@ -94,6 +95,40 @@ export const vencerSessao = (page: Page) =>
 			})
 	);
 
+/** Endereços de relays de fora (ex.: os do convite de comentários) que a suíte desviou para o relay local. */
+export const desviados: string[] = [];
+
+/**
+ * O convite da conta de comentários traz os relays reais: sem isto, "Enviar comentário" mandava uma mensagem de
+ * verdade para a conta do Pedro a cada rodada da suíte (2026-10-26). Qualquer WebSocket que não seja local vai
+ * para o relay de mensagens local.
+ */
+async function desviarRelaysDeFora(contexto: BrowserContext, baseURL: string) {
+	// node:http, porque o fetch do Node recusa a porta 4190 do servidor da suíte (lista de portas proibidas)
+	const { dm } = await new Promise<{ dm: string[] }>((ok, falha) =>
+		get(new URL('relays.json', baseURL), (res) => {
+			let corpo = '';
+			res.on('data', (parte) => (corpo += parte));
+			res.on('end', () => ok(JSON.parse(corpo)));
+		}).on('error', falha)
+	);
+	await contexto.routeWebSocket(
+		(url) => url.hostname !== '127.0.0.1' && url.hostname !== 'localhost',
+		(ws) => {
+			desviados.push(ws.url());
+			const local = new WebSocket(dm[0]);
+			const aberto = new Promise<void>((ok) => local.addEventListener('open', () => ok()));
+			ws.onMessage(async (mensagem) => {
+				await aberto;
+				local.send(typeof mensagem === 'string' ? mensagem : new Uint8Array(mensagem));
+			});
+			local.addEventListener('message', (e) => ws.send(e.data));
+			ws.onClose(() => local.close());
+			local.addEventListener('close', () => ws.close());
+		}
+	);
+}
+
 type Fixtures = {
 	/** aparelho sem conta: um contexto novo do navegador (`baseURL` para outro servidor do app) */
 	novoAparelho: (baseURL?: string) => Promise<Page>;
@@ -110,6 +145,7 @@ export const test = base.extend<Fixtures>({
 			const contexto = await browser.newContext({ baseURL, viewport, locale, ignoreHTTPSErrors, serviceWorkers });
 			await contexto.grantPermissions(['clipboard-read', 'clipboard-write', 'microphone']);
 			contextos.push(contexto);
+			await desviarRelaysDeFora(contexto, baseURL!);
 			const page = await contexto.newPage();
 			page.on('pageerror', (e) => erros.push(e.message));
 			return page;
