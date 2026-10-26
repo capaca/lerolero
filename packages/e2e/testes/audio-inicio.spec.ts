@@ -47,5 +47,12 @@ test('o player começa depois do silêncio do começo e a barra continua inteira
 	// a barra continua inteira: dá para voltar ao começo e ouvir o trecho vazio
 	await maria.page.getByRole('button', { name: 'Pausar' }).click();
 	await maria.page.getByLabel('Posição do áudio').fill('0');
-	await expect.poll(() => maria.page.locator('audio').evaluate((a) => (a as HTMLAudioElement).currentTime)).toBeLessThan(1);
+	const estado = () =>
+		maria.page.locator('audio').evaluate((el) => {
+			const a = el as HTMLAudioElement;
+			return { t: a.currentTime, duration: a.duration, seekable: a.seekable.length ? [a.seekable.start(0), a.seekable.end(0)] : [], paused: a.paused, ended: a.ended, readyState: a.readyState };
+		});
+	await expect
+		.poll(async () => (await estado()).t, { message: `estado do áudio: ${JSON.stringify(await estado())}` })
+		.toBeLessThan(1);
 });
