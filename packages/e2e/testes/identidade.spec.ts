@@ -1,5 +1,5 @@
 // Cadastro, PIN e recuperação da conta (RF-01..06): o caminho de quem chega no app pela primeira vez.
-import { digitarPin, esquecerAjuste, expect, meuConvite, noInicio, PIN, test, vencerSessao, verFrase } from '../ajudantes.ts';
+import { criarConta, digitarPin, esquecerAjuste, expect, meuConvite, noInicio, PIN, test, vencerSessao, verFrase } from '../ajudantes.ts';
 
 test('cadastro: PINs diferentes avisam, iguais criam a conta sem tocar em botão e sem pedir a frase', async ({ novoAparelho }) => {
 	const page = await novoAparelho();
@@ -99,4 +99,41 @@ test('recuperar a conta com a frase em outro aparelho dá a mesma chave', async 
 	await noInicio(outro);
 	await outro.getByRole('link', { name: 'Ajustes' }).click();
 	await expect(outro.locator('.key')).toHaveText(chave!);
+});
+
+test('armazenamento persistente (T19): pede ao entrar, tenta de novo só depois de um dia e para quando concedido', async ({ novoAparelho }) => {
+	const page = await novoAparelho();
+	// o Chrome nega no cadastro; o teste conta os pedidos e controla a resposta
+	await page.addInitScript(() => {
+		const contar = () => Number(localStorage.getItem('pedidosPersist') ?? 0);
+		Object.defineProperty(navigator, 'storage', {
+			value: {
+				persisted: async () => localStorage.getItem('concedido') === 'sim',
+				persist: async () => {
+					localStorage.setItem('pedidosPersist', String(contar() + 1));
+					return localStorage.getItem('concedido') === 'sim';
+				}
+			}
+		});
+	});
+	const pedidos = () => page.evaluate(() => Number(localStorage.getItem('pedidosPersist') ?? 0));
+	await criarConta(page, 'Maria');
+	await expect.poll(pedidos).toBe(1);
+
+	// recarregar no mesmo dia não insiste
+	await page.reload();
+	await noInicio(page);
+	await page.waitForTimeout(500);
+	expect(await pedidos()).toBe(1);
+
+	// passado o dia, tenta de novo; concedido, não pergunta mais
+	await esquecerAjuste(page, 'armazenamentoPersistenteTentadoEm');
+	await page.reload();
+	await expect.poll(pedidos).toBe(2);
+	await page.evaluate(() => localStorage.setItem('concedido', 'sim'));
+	await esquecerAjuste(page, 'armazenamentoPersistenteTentadoEm');
+	await page.reload();
+	await noInicio(page);
+	await page.waitForTimeout(500);
+	expect(await pedidos()).toBe(2);
 });
