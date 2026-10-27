@@ -181,6 +181,8 @@
 								<span class="preview">
 									{#if conversation.lastMessageKind === 'audio'}
 										<Icon name="mic" size={15} />
+									{:else if conversation.lastMessageKind === 'foto'}
+										<Icon name="image" size={15} />
 									{:else if conversation.lastMessageKind === 'arquivo'}
 										<Icon name="paperclip" size={15} />
 									{/if}

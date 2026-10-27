@@ -37,6 +37,7 @@ import {
 	mediaTags,
 	nameTagFor,
 	openMedia,
+	startPendingPhoto,
 	discardPendingUpload,
 	listPendingUploads,
 	retryPendingUpload,
@@ -67,6 +68,7 @@ import {
 	type Vault
 } from '@lerolero/core';
 import { NoRelaysError, NotInGroupError, PinLockedError } from './errors.ts';
+import { prepareFromFile } from './photo-encoder.ts';
 import { relayList } from './relays.ts';
 
 export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
@@ -501,6 +503,17 @@ class Session {
 			throw new NotInGroupError();
 		}
 		const message = await startPendingAudio(storage, { conversationId, me: this.current.publicKey, file, duration, start });
+		this.version++;
+		void this.runUpload(message.id);
+	}
+
+	/** Envia uma foto da galeria: comprime, mostra o balão na hora e sobe por trás, como o áudio (RF-41). */
+	async sendPhoto(conversationId: string, original: Blob) {
+		if (conversationId.startsWith('grupo:') && !(await storage.conversations.get(conversationId))?.group?.amMember) {
+			throw new NotInGroupError();
+		}
+		const { file, width, height, thumb } = await prepareFromFile(original);
+		const message = await startPendingPhoto(storage, { conversationId, me: this.current.publicKey, file, width, height, thumb });
 		this.version++;
 		void this.runUpload(message.id);
 	}
