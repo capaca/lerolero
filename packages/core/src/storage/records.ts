@@ -59,9 +59,12 @@ export type ConversationRecord = {
 	/** só nos grupos */
 	group?: GroupInfo;
 	lastMessageAt: number;
+	/** o texto da última mensagem, só quando ela é texto (storage/summary.ts) */
 	lastMessagePreview?: string;
-	/** tipo da última mensagem, para a lista mostrar o ícone certo */
-	lastMessageKind?: 'texto' | 'audio' | 'arquivo';
+	/** tipo da última mensagem: a lista mostra o ícone e monta o texto na língua da pessoa (ADR-0008) */
+	lastMessageKind?: 'texto' | 'audio' | 'arquivo' | 'apagada' | 'aviso';
+	/** a última mensagem é um aviso de grupo: quem fez e o quê */
+	lastNotice?: { author: string; notice: GroupNotice };
 	unread: number;
 	/** já mandei meu nome nesta conversa (tag "nome" na primeira mensagem) */
 	nameSent?: boolean;
@@ -103,7 +106,7 @@ export type MessageRecord = {
 	upload?: { startedAt: number; attempts: number; nextAttemptAt: number; failed?: boolean };
 	/** apagada para todos (RF-25): fica o aviso no lugar, sem conteúdo */
 	deleted?: boolean;
-	/** aviso de grupo ("Ana adicionou Bruno"); o texto é refeito com os nomes atuais na tela */
+	/** aviso de grupo ("Ana adicionou Bruno"); a tela monta o texto, com os nomes atuais e na língua da pessoa */
 	notice?: GroupNotice;
 };
 

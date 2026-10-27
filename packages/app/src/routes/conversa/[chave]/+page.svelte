@@ -6,6 +6,7 @@
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Chat from '#lib/components/Chat.svelte';
 	import ChatHeader from '#lib/components/ChatHeader.svelte';
+	import { m } from '#lib/paraglide/messages.js';
 	import { phraseOfferDue } from '#lib/phrase-reminder.ts';
 	import { session } from '#lib/session.svelte.ts';
 
@@ -31,7 +32,7 @@
 	}
 </script>
 
-<svelte:head><title>{name || 'Conversa'} · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: name || m.conversa_titulo_pagina() })}</title></svelte:head>
 
 {#key publicKey}
 	<!-- quem ainda não é contato é um pedido de mensagem: o endereço continua texto (T7, T18) -->
@@ -47,13 +48,13 @@
 			{#if contact !== undefined && !isContact}
 				<div class="banner notice">
 					<p>
-						<strong>Pedido de mensagem: esta pessoa não está nos seus contatos.</strong>
-						{#if contact?.chosenName}Ela se apresenta como “{contact.chosenName}”, mas qualquer um pode escolher qualquer nome.{/if}
-						Links ficam como texto e áudios não tocam até você aceitar.
+						<strong>{m.conversa_pedido_titulo()}</strong>
+						{#if contact?.chosenName}{m.conversa_pedido_nome({ nome: contact.chosenName })}{/if}
+						{m.conversa_pedido_limites()}
 					</p>
 					<div class="actions">
-						<button class="primary" onclick={accept}>Aceitar</button>
-						<button class="danger" onclick={block}>Bloquear</button>
+						<button class="primary" onclick={accept}>{m.conversa_pedido_aceitar()}</button>
+						<button class="danger" onclick={block}>{m.conversa_pedido_bloquear()}</button>
 					</div>
 				</div>
 			{/if}

@@ -7,6 +7,9 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
 	import { formatWhen } from '#lib/format.ts';
+	import { boldParts } from '#lib/i18n.svelte.ts';
+	import { previewText, type NameOf } from '#lib/notices.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { takePendingInvite } from '#lib/pending-invite.ts';
 	import { phraseReminderDue, snoozePhraseReminder } from '#lib/phrase-reminder.ts';
 	import { highRiskOfDataLoss, isIOS } from '#lib/platform.ts';
@@ -15,7 +18,8 @@
 	let showPhraseReminder = $state(false);
 	let contactCount = $state(0);
 	// undefined enquanto carrega, para não piscar a tela de "nenhuma conversa"
-	let conversations = $state.raw<Array<{ conversation: ConversationRecord; name?: string; key: string; href: string }>>();
+	// nameOf: nos grupos, para a prévia de um aviso ("Ana adicionou João")
+	let conversations = $state.raw<Array<{ conversation: ConversationRecord; name?: string; key: string; href: string; nameOf?: NameOf }>>();
 	let newChatOpen = $state(false);
 	// toque longo (ou botão direito) numa conversa abre o menu de excluir
 	let menuFor = $state.raw<{ conversation: ConversationRecord; name: string }>();
@@ -72,7 +76,8 @@
 				if (conversation.group) {
 					// a cor do avatar do grupo sai do id dele, como a do contato sai da chave
 					const key = conversation.id.slice('grupo:'.length);
-					return { conversation, key, name: conversation.group.state.name, href: resolve('/grupo/[id]', { id: key }) };
+					const nameOf = conversation.lastMessageKind === 'aviso' ? await session.groupNames(conversation) : undefined;
+					return { conversation, key, name: conversation.group.state.name, href: resolve('/grupo/[id]', { id: key }), nameOf };
 				}
 				const key = conversation.members[0];
 				const contact: ContactRecord | undefined = await session.getContact(key);
@@ -98,38 +103,38 @@
 	}
 </script>
 
-<svelte:head><title>Lero-lero</title></svelte:head>
+<svelte:head><title>{m.app_nome()}</title></svelte:head>
 
 <main class="home">
 	<header>
-		<h1>Lero-lero</h1>
+		<h1>{m.app_nome()}</h1>
 		<nav>
-			<a class="icon-button" href={resolve('/contatos')} aria-label={hasRequests ? 'Contatos (há pedidos de mensagem)' : 'Contatos'}>
+			<a class="icon-button" href={resolve('/contatos')} aria-label={hasRequests ? m.inicio_contatos_pedidos() : m.inicio_contatos()}>
 				<Icon name="users" size={22} />
 				{#if hasRequests}<span class="dot" aria-hidden="true"></span>{/if}
 			</a>
-			<a class="icon-button" href={resolve('/ajustes')} aria-label="Ajustes"><Icon name="settings" size={22} /></a>
+			<a class="icon-button" href={resolve('/ajustes')} aria-label={m.inicio_ajustes()}><Icon name="settings" size={22} /></a>
 		</nav>
 	</header>
 
 	{#if showInstallWarning}
 		<div class="banner" role="status">
-			<p><strong>Instale o Lero-lero na tela de início.</strong></p>
+			<p><strong>{m.inicio_instalar_titulo()}</strong></p>
 			<p>
-				No iPhone, o Safari pode apagar os dados de sites que ficam alguns dias sem uso. Instalado, o app fica
-				protegido. {#if isIOS()}Toque em <strong>Compartilhar</strong> e depois em
-					<strong>Adicionar à Tela de Início</strong>.{/if}
+				{m.inicio_instalar_texto()}
+				{#if isIOS()}{#each boldParts(m.inicio_instalar_ios()) as part, i (i)}{#if part.bold}<strong>{part.text}</strong
+							>{:else}{part.text}{/if}{/each}{/if}
 			</p>
 		</div>
 	{/if}
 
 	{#if showPhraseReminder}
 		<div class="banner" role="status">
-			<p><strong>Você ainda não guardou sua frase de recuperação.</strong></p>
-			<p>Sem ela, perder o celular ou esquecer o PIN significa perder sua conta.</p>
+			<p><strong>{m.inicio_frase_titulo()}</strong></p>
+			<p>{m.inicio_frase_texto()}</p>
 			<div class="actions">
-				<a href={resolve('/ajustes/frase')}>Guardar agora</a>
-				<button class="link" onclick={snooze}>Lembrar depois</button>
+				<a href={resolve('/ajustes/frase')}>{m.inicio_frase_guardar()}</a>
+				<button class="link" onclick={snooze}>{m.inicio_frase_depois()}</button>
 			</div>
 		</div>
 	{/if}
@@ -138,25 +143,25 @@
 		<section class="empty">
 			<span class="empty-icon"><Icon name="message" size={40} /></span>
 			{#if contactCount === 0}
-				<h2>Comece convidando alguém</h2>
-				<p class="hint">Mostre seu QR code ou mande seu link de convite. Ou leia o QR code de quem te convidou.</p>
+				<h2>{m.inicio_vazio_convide_titulo()}</h2>
+				<p class="hint">{m.inicio_vazio_convide_texto()}</p>
 			{:else}
-				<h2>Nenhuma conversa ainda</h2>
-				<p class="hint">Escolha um contato para começar, ou chame mais alguém para o Lero-lero.</p>
+				<h2>{m.inicio_vazio_titulo()}</h2>
+				<p class="hint">{m.inicio_vazio_texto()}</p>
 			{/if}
 			<div class="actions stack">
 				{#if contactCount > 0}
-					<a class="button primary" href={resolve('/contatos')}><Icon name="users" /> Escolher um contato</a>
+					<a class="button primary" href={resolve('/contatos')}><Icon name="users" /> {m.inicio_escolher_contato()}</a>
 				{/if}
 				<a class="button" class:primary={contactCount === 0} href={resolve('/contatos/meu-convite')}>
-					<Icon name="user-plus" /> Convidar alguém
+					<Icon name="user-plus" /> {m.inicio_convidar()}
 				</a>
-				<a class="button" href={resolve('/contatos/ler')}><Icon name="scan" /> Ler QR code</a>
+				<a class="button" href={resolve('/contatos/ler')}><Icon name="scan" /> {m.inicio_ler_qr()}</a>
 			</div>
 		</section>
 	{:else if conversations}
 		<ul class="conversations">
-			{#each conversations as { conversation, name, key, href } (conversation.id)}
+			{#each conversations as { conversation, name, key, href, nameOf } (conversation.id)}
 				<li>
 					<a
 						{href}
@@ -175,16 +180,15 @@
 							</span>
 							<span class="bottom">
 								<span class="preview">
-									{#if conversation.lastMessageKind === 'audio' || conversation.lastMessagePreview?.startsWith('🎤')}
-										<Icon name="mic" size={15} /> Áudio
-									{:else if conversation.lastMessageKind === 'arquivo' || conversation.lastMessagePreview?.startsWith('📎')}
-										<Icon name="paperclip" size={15} /> Arquivo
-									{:else}
-										{conversation.lastMessagePreview ?? ''}
+									{#if conversation.lastMessageKind === 'audio'}
+										<Icon name="mic" size={15} />
+									{:else if conversation.lastMessageKind === 'arquivo'}
+										<Icon name="paperclip" size={15} />
 									{/if}
+									{previewText(conversation, nameOf)}
 								</span>
 								{#if conversation.unread > 0}
-									<span class="badge" aria-label={`${conversation.unread} não lidas`}>{conversation.unread}</span>
+									<span class="badge" aria-label={m.inicio_nao_lidas({ count: conversation.unread })}>{conversation.unread}</span>
 								{/if}
 							</span>
 						</span>
@@ -194,38 +198,35 @@
 		</ul>
 	{/if}
 
-	<button class="fab primary" aria-label="Nova conversa" onclick={() => (newChatOpen = true)}>
+	<button class="fab primary" aria-label={m.inicio_nova_conversa()} onclick={() => (newChatOpen = true)}>
 		<Icon name="plus" size={26} />
 	</button>
 
 	{#if menuFor}
 		{@const { conversation, name } = menuFor}
-		<Sheet label="Opções da conversa" onclose={() => (menuFor = undefined)}>
+		<Sheet label={m.inicio_opcoes_conversa()} onclose={() => (menuFor = undefined)}>
 			{#if conversation.group?.amMember}
 				<p><strong>{name}</strong></p>
-				<p class="hint">Para excluir o grupo, saia dele primeiro: abra o grupo e toque no nome dele no topo.</p>
-				<button class="item cancel" onclick={() => (menuFor = undefined)}>Entendi</button>
+				<p class="hint">{m.inicio_excluir_grupo_dica()}</p>
+				<button class="item cancel" onclick={() => (menuFor = undefined)}>{m.comum_entendi()}</button>
 			{:else}
-				<p><strong>Excluir a conversa com {name}?</strong></p>
-				<p class="hint">
-					As mensagens somem só deste aparelho; ninguém é avisado. {conversation.group ? '' : 'O contato continua nos seus contatos. '}Se
-					chegar mensagem nova, a conversa recomeça.
-				</p>
+				<p><strong>{m.inicio_excluir_titulo({ nome: name })}</strong></p>
+				<p class="hint">{conversation.group ? m.inicio_excluir_dica_grupo() : m.inicio_excluir_dica_contato()}</p>
 				<div class="actions">
-					<button onclick={() => (menuFor = undefined)}>Cancelar</button>
-					<button class="danger" onclick={confirmDelete}>Excluir conversa</button>
+					<button onclick={() => (menuFor = undefined)}>{m.comum_cancelar()}</button>
+					<button class="danger" onclick={confirmDelete}>{m.inicio_excluir()}</button>
 				</div>
 			{/if}
 		</Sheet>
 	{/if}
 
 	{#if newChatOpen}
-		<Sheet label="Nova conversa" onclose={() => (newChatOpen = false)}>
-			<a class="item" href={resolve('/contatos')}><Icon name="message" /> Conversar com um contato</a>
-			<a class="item" href={resolve('/grupo/novo')}><Icon name="users" /> Novo grupo</a>
-			<a class="item" href={resolve('/contatos/ler')}><Icon name="scan" /> Adicionar contato (ler QR code)</a>
-			<a class="item" href={resolve('/contatos/meu-convite')}><Icon name="user-plus" /> Convidar alguém</a>
-			<button class="item cancel" onclick={() => (newChatOpen = false)}>Cancelar</button>
+		<Sheet label={m.inicio_nova_conversa()} onclose={() => (newChatOpen = false)}>
+			<a class="item" href={resolve('/contatos')}><Icon name="message" /> {m.inicio_novo_contato()}</a>
+			<a class="item" href={resolve('/grupo/novo')}><Icon name="users" /> {m.inicio_novo_grupo()}</a>
+			<a class="item" href={resolve('/contatos/ler')}><Icon name="scan" /> {m.inicio_novo_ler_qr()}</a>
+			<a class="item" href={resolve('/contatos/meu-convite')}><Icon name="user-plus" /> {m.inicio_convidar()}</a>
+			<button class="item cancel" onclick={() => (newChatOpen = false)}>{m.comum_cancelar()}</button>
 		</Sheet>
 	{/if}
 </main>

@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	// nome → PIN, e já entra. A frase fica para quando houver algo a perder: o primeiro
@@ -19,7 +20,7 @@
 	let pinAgainInput = $state<PinInput>();
 	let pinShakes = $state(0);
 	function pinMismatch() {
-		error = 'Os dois PINs não são iguais.';
+		error = m.comum_pins_diferentes();
 		pinAgain = '';
 		pinShakes++;
 		navigator.vibrate?.(150);
@@ -33,7 +34,7 @@
 
 	async function submitPin(event: SubmitEvent) {
 		event.preventDefault();
-		if (pin.length !== 6) return (error = 'O PIN precisa ter 6 números.');
+		if (pin.length !== 6) return (error = m.erro_pin_tamanho());
 		if (pin !== pinAgain) return pinMismatch();
 		error = '';
 		step = 'criando';
@@ -50,30 +51,27 @@
 	}
 </script>
 
-<svelte:head><title>Criar conta · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.cadastro_titulo_pagina() })}</title></svelte:head>
 
 <main>
 	{#if step === 'nome'}
-		<h1>Como quer ser chamado?</h1>
+		<h1>{m.cadastro_nome_titulo()}</h1>
 		<form onsubmit={submitName}>
-			<label for="nome">Seu nome</label>
+			<label for="nome">{m.comum_seu_nome()}</label>
 			<!-- svelte-ignore a11y_autofocus -->
 			<input id="nome" maxlength="40" autocomplete="nickname" required autofocus bind:value={name} />
-			<p class="hint">Só seus contatos veem esse nome. Ele não fica público na internet.</p>
-			<div class="actions"><button class="primary" type="submit">Continuar</button></div>
+			<p class="hint">{m.cadastro_nome_dica()}</p>
+			<div class="actions"><button class="primary" type="submit">{m.comum_continuar()}</button></div>
 		</form>
 	{:else}
-		<h1>Crie um PIN</h1>
-		<p class="hint">
-			O PIN protege sua conta neste aparelho e será pedido sempre que você abrir o app. Não use datas de
-			aniversário nem 123456.
-		</p>
+		<h1>{m.cadastro_pin_titulo()}</h1>
+		<p class="hint">{m.cadastro_pin_dica()}</p>
 		<form bind:this={pinForm} onsubmit={submitPin}>
-			<PinInput id="pin" label="PIN de 6 números" bind:value={pin} autofocus oncomplete={() => pinAgainInput?.focus()} />
+			<PinInput id="pin" label={m.cadastro_pin_rotulo()} bind:value={pin} autofocus oncomplete={() => pinAgainInput?.focus()} />
 			<PinInput
 				bind:this={pinAgainInput}
 				id="pin2"
-				label="Digite o PIN de novo"
+				label={m.comum_pin_repetir()}
 				bind:value={pinAgain}
 				error={!!error && !pinAgain}
 				shakes={pinShakes}
@@ -82,7 +80,7 @@
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 			<div class="actions">
 				<button class="primary" type="submit" disabled={step === 'criando'}>
-					{step === 'criando' ? 'Criando sua conta…' : 'Criar conta'}
+					{step === 'criando' ? m.cadastro_criando() : m.cadastro_criar()}
 				</button>
 			</div>
 		</form>

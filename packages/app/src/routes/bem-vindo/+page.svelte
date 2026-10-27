@@ -1,21 +1,19 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { m } from '#lib/paraglide/messages.js';
 </script>
 
-<svelte:head><title>Lero-lero</title></svelte:head>
+<svelte:head><title>{m.app_nome()}</title></svelte:head>
 
 <main>
-	<h1>Lero-lero</h1>
-	<p>Mensagens privadas, sem dono e sem telefone.</p>
-	<p class="hint">
-		Você não precisa de número nem de e-mail. Sua conta fica só neste aparelho, protegida por um PIN, e
-		pode ser recuperada com uma frase de 12 palavras.
-	</p>
+	<h1>{m.app_nome()}</h1>
+	<p>{m.bemvindo_lema()}</p>
+	<p class="hint">{m.bemvindo_explicacao()}</p>
 	<div class="actions stack">
-		<a class="button primary" href={resolve('/cadastro')}>Criar minha conta</a>
-		<a class="button" href={resolve('/restaurar')}>Já tenho uma conta (tenho a frase)</a>
+		<a class="button primary" href={resolve('/cadastro')}>{m.bemvindo_criar()}</a>
+		<a class="button" href={resolve('/restaurar')}>{m.bemvindo_tenho_conta()}</a>
 	</div>
-	<p class="hint">Está participando do teste? Veja <a href={resolve('/teste')}>como testar</a>.</p>
+	<p class="hint">{m.bemvindo_teste_antes()} <a href={resolve('/teste')}>{m.bemvindo_teste_link()}</a>.</p>
 </main>
 
 <style>

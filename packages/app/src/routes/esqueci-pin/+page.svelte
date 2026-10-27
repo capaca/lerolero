@@ -4,6 +4,7 @@
 	import PhraseInput from '#lib/components/PhraseInput.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let phrase = $state('');
@@ -16,7 +17,7 @@
 	let pinAgainInput = $state<PinInput>();
 	let pinShakes = $state(0);
 	function pinMismatch() {
-		error = 'Os dois PINs não são iguais.';
+		error = m.comum_pins_diferentes();
 		pinAgain = '';
 		pinShakes++;
 		navigator.vibrate?.(150);
@@ -39,20 +40,18 @@
 	}
 </script>
 
-<svelte:head><title>Esqueci o PIN · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.esqueci_titulo() })}</title></svelte:head>
 
 <main>
-	<h1>Esqueci o PIN</h1>
-	<p class="hint">
-		Com a sua frase de 12 palavras você cria um PIN novo. Suas conversas neste aparelho continuam aqui.
-	</p>
+	<h1>{m.esqueci_titulo()}</h1>
+	<p class="hint">{m.esqueci_dica()}</p>
 	<form onsubmit={submit}>
 		<PhraseInput id="frase" bind:value={phrase} />
-		<PinInput id="pin" label="PIN novo (6 números)" bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
+		<PinInput id="pin" label={m.esqueci_pin_rotulo()} bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
 		<PinInput
 			bind:this={pinAgainInput}
 			id="pin2"
-			label="Digite o PIN novo de novo"
+			label={m.esqueci_pin_repetir()}
 			bind:value={pinAgain}
 			error={!!error && !pinAgain}
 			shakes={pinShakes}
@@ -60,9 +59,9 @@
 		/>
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
 		<div class="actions">
-			<button class="primary" type="submit" disabled={busy}>{busy ? 'Trocando…' : 'Trocar o PIN'}</button>
-			<a href={resolve('/desbloquear')}>Voltar</a>
+			<button class="primary" type="submit" disabled={busy}>{busy ? m.esqueci_trocando() : m.esqueci_trocar()}</button>
+			<a href={resolve('/desbloquear')}>{m.comum_voltar()}</a>
 		</div>
 	</form>
-	<p class="hint">Sem a frase não há como trocar o PIN: ela é a única chave reserva da sua conta.</p>
+	<p class="hint">{m.esqueci_sem_frase()}</p>
 </main>

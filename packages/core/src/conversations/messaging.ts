@@ -6,6 +6,7 @@ import { cleanName } from '../contacts/invite.ts';
 import { exclusive } from './lock.ts';
 import type { Storage } from '../storage/repositories.ts';
 import type { ConversationRecord, MessageMedia, MessageRecord } from '../storage/records.ts';
+import { summaryOf } from '../storage/summary.ts';
 import { groupConversationId, groupIdOf, GROUP_TAG } from './groups.ts';
 
 /**
@@ -16,8 +17,6 @@ import { groupConversationId, groupIdOf, GROUP_TAG } from './groups.ts';
 export const NAME_TAG = 'nome';
 
 export const directConversationId = (other: string) => `direta:${other}`;
-
-const PREVIEW_LENGTH = 80;
 
 /**
  * Horário de uma mensagem ou aviso que eu envio, em segundos (o do Nostr). No mesmo segundo,
@@ -31,19 +30,6 @@ export function sendTime(conversation: Pick<ConversationRecord, 'lastMessageAt'>
 	return Math.max(current, Math.min(conversation.lastMessageAt + 1, current + 60));
 }
 
-export function kindOf(message: Pick<MessageRecord, 'media'>): 'texto' | 'audio' | 'arquivo' {
-	if (!message.media) return 'texto';
-	return message.media.type.startsWith('audio/') ? 'audio' : 'arquivo';
-}
-
-/** Prévia em texto; o ícone fica por conta da interface, pelo `lastMessageKind`. */
-export function preview(message: Pick<MessageRecord, 'text' | 'media' | 'deleted'>): string {
-	if (message.deleted) return 'Mensagem apagada';
-	const kind = kindOf(message);
-	if (kind === 'audio') return 'Áudio';
-	if (kind === 'arquivo') return 'Arquivo';
-	return message.text.replace(/\s+/g, ' ').trim().slice(0, PREVIEW_LENGTH);
-}
 
 /**
  * Tags do kind 15 (NIP-17) a partir de um arquivo já enviado ao Blossom. A primeira URL
@@ -110,8 +96,7 @@ async function upsertConversation(
 		id,
 		unread: (existing?.unread ?? 0) + (changes.unread ?? 0),
 		lastMessageAt: isLatest ? message.createdAt : existing.lastMessageAt,
-		lastMessagePreview: isLatest ? preview(message) : existing.lastMessagePreview,
-		lastMessageKind: isLatest ? kindOf(message) : existing.lastMessageKind,
+		...(isLatest ? summaryOf(message) : {}),
 		nameSent: changes.nameSent || existing?.nameSent
 	};
 	await storage.conversations.put(conversation);
@@ -290,8 +275,7 @@ export async function refreshConversation(storage: Storage, conversationId: stri
 	await storage.conversations.put({
 		...conversation,
 		lastMessageAt: latest?.createdAt ?? conversation.lastMessageAt,
-		lastMessagePreview: latest ? preview(latest) : undefined,
-		lastMessageKind: latest && !latest.deleted ? kindOf(latest) : 'texto'
+		...summaryOf(latest)
 	});
 }
 
@@ -308,7 +292,7 @@ export async function markDeleted(storage: Storage, message: MessageRecord): Pro
 	// a prévia só muda se a apagada era a mais recente (sem depender da ordem de empates no mesmo segundo)
 	const conversation = await storage.conversations.get(message.conversationId);
 	if (conversation && message.createdAt >= conversation.lastMessageAt) {
-		await storage.conversations.put({ ...conversation, lastMessagePreview: preview(deleted), lastMessageKind: 'texto' });
+		await storage.conversations.put({ ...conversation, ...summaryOf(deleted) });
 	}
 	return deleted;
 }

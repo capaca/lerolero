@@ -1,0 +1,239 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"app_nome": "Lero-lero",
+	"titulo_pagina": "{pagina} · Lero-lero",
+	"layout_sem_conexao": "Sem conexão. As mensagens saem quando voltar.",
+	"layout_versao_nova": "Nova versão disponível.",
+	"layout_atualizar": "Atualizar",
+	"layout_homologacao": "Homologação",
+	"comum_voltar": "Voltar",
+	"comum_continuar": "Continuar",
+	"comum_seu_nome": "Seu nome",
+	"comum_pin_repetir": "Digite o PIN de novo",
+	"comum_pins_diferentes": "Os dois PINs não são iguais.",
+	"bemvindo_lema": "Mensagens privadas, sem dono e sem telefone.",
+	"bemvindo_explicacao": "Você não precisa de número nem de e-mail. Sua conta fica só neste aparelho, protegida por um PIN, e pode ser recuperada com uma frase de 12 palavras.",
+	"bemvindo_criar": "Criar minha conta",
+	"bemvindo_tenho_conta": "Já tenho uma conta (tenho a frase)",
+	"bemvindo_teste_antes": "Está participando do teste? Veja",
+	"bemvindo_teste_link": "como testar",
+	"cadastro_titulo_pagina": "Criar conta",
+	"cadastro_nome_titulo": "Como quer ser chamado?",
+	"cadastro_nome_dica": "Só seus contatos veem esse nome. Ele não fica público na internet.",
+	"cadastro_pin_titulo": "Crie um PIN",
+	"cadastro_pin_dica": "O PIN protege sua conta neste aparelho e será pedido sempre que você abrir o app. Não use datas de aniversário nem 123456.",
+	"cadastro_pin_rotulo": "PIN de 6 números",
+	"cadastro_criando": "Criando sua conta…",
+	"cadastro_criar": "Criar conta",
+	"restaurar_titulo_pagina": "Recuperar conta",
+	"restaurar_titulo": "Recuperar minha conta",
+	"restaurar_dica": "Digite as 12 palavras que você guardou quando criou a conta. Se estiverem num gerenciador de senhas, pode colar.",
+	"restaurar_nome_dica": "O nome fica só no aparelho e com seus contatos; por isso pedimos de novo.",
+	"restaurar_pin_rotulo": "Crie um PIN de 6 números para este aparelho",
+	"restaurar_recuperando": "Recuperando…",
+	"restaurar_recuperar": "Recuperar conta",
+	"desbloquear_ola": "Olá",
+	"desbloquear_ola_nome": "Olá, {nome}",
+	"desbloquear_abrindo": "Abrindo…",
+	"desbloquear_digite_pin": "Digite seu PIN",
+	"desbloquear_esqueci": "Esqueci o PIN",
+	"esqueci_titulo": "Esqueci o PIN",
+	"esqueci_dica": "Com a sua frase de 12 palavras você cria um PIN novo. Suas conversas neste aparelho continuam aqui.",
+	"esqueci_pin_rotulo": "PIN novo (6 números)",
+	"esqueci_pin_repetir": "Digite o PIN novo de novo",
+	"esqueci_trocando": "Trocando…",
+	"esqueci_trocar": "Trocar o PIN",
+	"esqueci_sem_frase": "Sem a frase não há como trocar o PIN: ela é a única chave reserva da sua conta.",
+	"frase_rotulo": "Sua frase de recuperação",
+	"frase_placeholder": "As 12 palavras, separadas por espaço",
+	"frase_contagem": "{count} de {total} palavras",
+	"frase_nao_reconheco": "não reconheço: {palavras}",
+	"frase_palavra_posicao": "{position}ª \"{word}\"",
+	"frase_sugestoes": "Sugestões",
+	"erro_pin_incorreto": "PIN incorreto.",
+	"erro_pin_bloqueado": "PIN incorreto muitas vezes. Tente de novo em {espera}, ou use \"Esqueci o PIN\".",
+	"erro_pin_tamanho": "O PIN precisa ter 6 números.",
+	"erro_frase_outra_conta": "Esta frase é de outra conta, não da que está neste aparelho.",
+	"erro_frase_invalida": "Frase inválida.",
+	"erro_frase_tamanho": [
+		{
+			"declarations": [
+				"input count",
+				"input total",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "A frase tem {total} palavras; foi digitada {count}.",
+				"countPlural=other": "A frase tem {total} palavras; foram digitadas {count}."
+			}
+		}
+	],
+	"erro_frase_palavra": "A {position}ª palavra (\"{word}\") não está na lista.",
+	"erro_frase_soma": "As palavras existem, mas a frase não confere. Verifique a ordem e se alguma foi trocada.",
+	"erro_convite_invalido": "Convite inválido.",
+	"erro_convite_formato": "Este não parece ser um convite do Lero-lero.",
+	"erro_convite_nao_pessoa": "Este código não é de uma pessoa.",
+	"erro_convite_proprio": "Este é o seu próprio convite.",
+	"erro_arquivo": "Não foi possível enviar o arquivo agora. Verifique a internet e tente de novo.",
+	"erro_sem_opus": "Este aparelho não grava áudio no formato do app. No iPhone, é preciso o iOS 18.4 ou mais novo.",
+	"erro_microfone": "O app não tem permissão para usar o microfone. Libere nas configurações do navegador.",
+	"erro_sem_relays": "Não sei onde entregar mensagens para esta pessoa. Peça a ela um convite novo.",
+	"erro_fora_do_grupo": "Você não faz mais parte deste grupo.",
+	"erro_so_admin": "Só os administradores do grupo podem fazer isso.",
+	"erro_generico": "Algo deu errado. Tente de novo.",
+	"espera_segundos": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} segundo",
+				"countPlural=other": "{count} segundos"
+			}
+		}
+	],
+	"espera_minutos": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} minuto",
+				"countPlural=other": "{count} minutos"
+			}
+		}
+	],
+	"comum_cancelar": "Cancelar",
+	"comum_entendi": "Entendi",
+	"membro_voce": "Você",
+	"membro_voce_no_meio": "você",
+	"membro_alguem": "Alguém",
+	"aviso_criou": "{quem} criou o grupo “{grupo}”",
+	"aviso_adicionou": "{quem} adicionou {alvos}",
+	"aviso_removeu": "{quem} removeu {alvos}",
+	"aviso_saiu": "{quem} saiu do grupo",
+	"aviso_renomeou": "{quem} mudou o nome do grupo para “{grupo}”",
+	"aviso_promoveu": "{quem} deu a {alvos} a função de administrador",
+	"aviso_rebaixou": "{quem} tirou {alvos} da função de administrador",
+	"aviso_mudou": "{quem} mudou o grupo",
+	"previa_audio": "Áudio",
+	"previa_arquivo": "Arquivo",
+	"previa_apagada": "Mensagem apagada",
+	"inicio_contatos": "Contatos",
+	"inicio_contatos_pedidos": "Contatos (há pedidos de mensagem)",
+	"inicio_ajustes": "Ajustes",
+	"inicio_instalar_titulo": "Instale o Lero-lero na tela de início.",
+	"inicio_instalar_texto": "No iPhone, o Safari pode apagar os dados de sites que ficam alguns dias sem uso. Instalado, o app fica protegido.",
+	"inicio_instalar_ios": "Toque em **Compartilhar** e depois em **Adicionar à Tela de Início**.",
+	"inicio_frase_titulo": "Você ainda não guardou sua frase de recuperação.",
+	"inicio_frase_texto": "Sem ela, perder o celular ou esquecer o PIN significa perder sua conta.",
+	"inicio_frase_guardar": "Guardar agora",
+	"inicio_frase_depois": "Lembrar depois",
+	"inicio_vazio_convide_titulo": "Comece convidando alguém",
+	"inicio_vazio_convide_texto": "Mostre seu QR code ou mande seu link de convite. Ou leia o QR code de quem te convidou.",
+	"inicio_vazio_titulo": "Nenhuma conversa ainda",
+	"inicio_vazio_texto": "Escolha um contato para começar, ou chame mais alguém para o Lero-lero.",
+	"inicio_escolher_contato": "Escolher um contato",
+	"inicio_convidar": "Convidar alguém",
+	"inicio_ler_qr": "Ler QR code",
+	"inicio_nao_lidas": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} não lida",
+				"countPlural=other": "{count} não lidas"
+			}
+		}
+	],
+	"inicio_nova_conversa": "Nova conversa",
+	"inicio_opcoes_conversa": "Opções da conversa",
+	"inicio_excluir_grupo_dica": "Para excluir o grupo, saia dele primeiro: abra o grupo e toque no nome dele no topo.",
+	"inicio_excluir_titulo": "Excluir a conversa com {nome}?",
+	"inicio_excluir_dica_contato": "As mensagens somem só deste aparelho; ninguém é avisado. O contato continua nos seus contatos. Se chegar mensagem nova, a conversa recomeça.",
+	"inicio_excluir_dica_grupo": "As mensagens somem só deste aparelho; ninguém é avisado. Se chegar mensagem nova, a conversa recomeça.",
+	"inicio_excluir": "Excluir conversa",
+	"inicio_novo_contato": "Conversar com um contato",
+	"inicio_novo_grupo": "Novo grupo",
+	"inicio_novo_ler_qr": "Adicionar contato (ler QR code)",
+	"conversa_titulo_pagina": "Conversa",
+	"conversa_voltar": "Voltar para as conversas",
+	"conversa_carregar_anteriores": "Carregar mensagens anteriores",
+	"conversa_vazia": "Nenhuma mensagem ainda. Diga oi!",
+	"conversa_novas": "Mensagens novas",
+	"conversa_copiada": "Mensagem copiada",
+	"conversa_erro_copiar": "Não foi possível copiar a mensagem.",
+	"conversa_ir_fim": "Ir para o fim",
+	"conversa_ir_fim_novas": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "Ir para o fim, {count} mensagem nova",
+				"countPlural=other": "Ir para o fim, {count} mensagens novas"
+			}
+		}
+	],
+	"conversa_link_titulo": "Abrir endereço",
+	"conversa_link_pergunta": "Abrir {host}?",
+	"conversa_link_dica": "Quem mandou não está nos seus contatos. Confira o endereço: golpes usam endereços parecidos com os de bancos e de conhecidos. O link abre numa aba nova.",
+	"conversa_link_abrir": "Abrir",
+	"conversa_pedido_titulo": "Pedido de mensagem: esta pessoa não está nos seus contatos.",
+	"conversa_pedido_nome": "Ela se apresenta como “{nome}”, mas qualquer um pode escolher qualquer nome.",
+	"conversa_pedido_limites": "Links ficam como texto e áudios não tocam até você aceitar.",
+	"conversa_pedido_aceitar": "Aceitar",
+	"conversa_pedido_bloquear": "Bloquear",
+	"grupo_titulo_pagina": "Grupo",
+	"grupo_nao_esta": "Este grupo não está neste aparelho.",
+	"bolha_voce_apagou": "Você apagou esta mensagem",
+	"bolha_apagada": "Esta mensagem foi apagada",
+	"bolha_audio_pedido": "Áudio de quem não é seu contato. Aceite o pedido para ouvir.",
+	"bolha_falhou": "Não foi possível enviar.",
+	"bolha_tentar_de_novo": "Tentar de novo",
+	"bolha_apagar": "Apagar",
+	"bolha_arquivo": "Arquivo (ainda não suportado nesta versão)",
+	"bolha_enviando": "Enviando",
+	"bolha_enviada": "Enviada",
+	"menu_opcoes": "Opções da mensagem",
+	"menu_copiar": "Copiar",
+	"menu_apagar_mim": "Apagar para mim",
+	"menu_apagar_todos": "Apagar para todos",
+	"menu_apagar_todos_pergunta": "Apagar para todos?",
+	"menu_apagar_todos_dica_grupo": "A mensagem some para você e, no Lero-lero, para todos do grupo. Quem usar outro app compatível pode continuar vendo.",
+	"menu_apagar_todos_dica_contato": "A mensagem some para você e, no Lero-lero, para o contato também. Se ele usar outro app compatível, o app dele pode ignorar o pedido.",
+	"envio_mensagem": "Mensagem",
+	"envio_enviar": "Enviar",
+	"envio_gravar": "Gravar áudio",
+	"envio_gravando": "Gravando {tempo}",
+	"envio_cancelar_gravacao": "Cancelar gravação",
+	"envio_enviar_audio": "Enviar áudio",
+	"audio_tocar": "Tocar",
+	"audio_pausar": "Pausar",
+	"audio_posicao": "Posição do áudio",
+	"audio_velocidade": "Velocidade",
+	"audio_erro_baixar": "Não foi possível baixar o áudio.",
+	"audio_erro_formato": "Este aparelho não toca este áudio. No iPhone, é preciso o iOS 18.4 ou mais novo.",
+	"data_hoje": "Hoje",
+	"data_ontem": "Ontem"
+}

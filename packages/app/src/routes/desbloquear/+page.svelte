@@ -5,6 +5,7 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let pin = $state('');
@@ -39,21 +40,21 @@
 	}
 </script>
 
-<svelte:head><title>Lero-lero</title></svelte:head>
+<svelte:head><title>{m.app_nome()}</title></svelte:head>
 
 <main class="lock">
 	<div class="who">
 		{#if session.identity}
 			<Avatar name={session.identity.displayName} publicKey={session.identity.publicKey} size={76} />
 		{/if}
-		<h1>Olá{session.identity ? `, ${session.identity.displayName}` : ''}</h1>
+		<h1>{session.identity ? m.desbloquear_ola_nome({ nome: session.identity.displayName }) : m.desbloquear_ola()}</h1>
 	</div>
 
 	<form onsubmit={unlock}>
 		<PinInput
 			bind:this={pinInput}
 			id="pin"
-			label={busy ? 'Abrindo…' : 'Digite seu PIN'}
+			label={busy ? m.desbloquear_abrindo() : m.desbloquear_digite_pin()}
 			bind:value={pin}
 			autofocus
 			center
@@ -67,7 +68,7 @@
 		</p>
 	</form>
 
-	<a class="forgot" href={resolve('/esqueci-pin')}>Esqueci o PIN</a>
+	<a class="forgot" href={resolve('/esqueci-pin')}>{m.desbloquear_esqueci()}</a>
 </main>
 
 <style>

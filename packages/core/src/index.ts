@@ -11,7 +11,8 @@ export {
 	parsePhrase,
 	PHRASE_LENGTH,
 	pickCheckPositions,
-	suggestWords
+	suggestWords,
+	type PhraseProblem
 } from './identity/phrase.ts';
 export {
 	createVault,
@@ -31,7 +32,7 @@ export {
 } from './identity/vault.ts';
 export { toNpub } from './identity/npub.ts';
 export { DELAYS_MS, FREE_ATTEMPTS, NO_FAILURES, recordFailure, waitTime, type AttemptState } from './identity/attempts.ts';
-export { cleanName, InvalidInviteError, inviteLink, parseInvite, type Invite } from './contacts/invite.ts';
+export { cleanName, InvalidInviteError, inviteLink, parseInvite, type Invite, type InviteProblem } from './contacts/invite.ts';
 export { addContact, contactName, listContacts, renameContact, SelfInviteError } from './contacts/contacts.ts';
 export { RelayConnection, RelayError, type PublishResult, type Signer, type SocketFactory } from './net/connection.ts';
 export { IDLE_CLOSE_MS, RECONNECT_DELAYS_MS, RelayPool, type PoolOptions } from './net/pool.ts';
@@ -69,7 +70,6 @@ export {
 	canDo,
 	createGroup,
 	demoteAdmin,
-	describeNotice,
 	groupNames,
 	GROUP_CONTROL_KIND,
 	GROUP_TAG,
@@ -88,6 +88,7 @@ export {
 	type GroupAction,
 	type GroupChange,
 	type ManageAction,
+	type MemberName,
 	type StoredGroupChange
 } from './conversations/groups.ts';
 export { BlossomError, COPIES, download, remove as removeFromBlossom, upload, type BlossomSigner } from './media/blossom.ts';

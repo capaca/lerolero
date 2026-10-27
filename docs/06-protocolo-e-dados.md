@@ -164,6 +164,8 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 
 **Expiração de mídia (RF-72):** tarefa local apaga de `media` os Blobs com último acesso há mais de 30 dias e `guardar = não`. A mensagem e a prévia continuam.
 
+**Sem texto de interface no banco ([ADR-0008](adr/0008-internacionalizacao.md), versão 5 do Dexie, 2026-10-27):** a última mensagem de cada conversa fica como tipo (`texto`, `audio`, `arquivo`, `apagada`, `aviso`), o texto escrito pela pessoa (só no tipo `texto`) e, num aviso de grupo, o autor e o aviso estruturado (ação, alvos, nome do grupo). As mensagens de aviso guardam só o aviso, sem frase. A tela monta "Áudio" e "Ana adicionou João" na língua da pessoa e com os nomes atuais. A migração para a versão 5 refaz o resumo de cada conversa a partir da última mensagem; os avisos antigos guardam a frase em português em `texto`, que a tela ignora.
+
 **Migrações:** cada mudança de esquema ganha uma nova versão no Dexie, com função de migração testada.
 
 ## 5. Compatibilidade com outros apps Nostr

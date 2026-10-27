@@ -7,8 +7,17 @@ import { wordlist } from '@scure/bip39/wordlists/portuguese.js';
 
 export const PHRASE_LENGTH = 12;
 
+/** O que há de errado na frase; a interface monta o texto (ADR-0008). `position` começa em 1. */
+export type PhraseProblem =
+	| { reason: 'tamanho'; count: number }
+	| { reason: 'palavra'; position: number; word: string }
+	| { reason: 'soma' };
+
 export class InvalidPhraseError extends Error {
-	constructor(message = 'Frase de recuperação inválida') {
+	constructor(
+		message = 'Frase de recuperação inválida',
+		readonly detail?: PhraseProblem
+	) {
 		super(message);
 		this.name = 'InvalidPhraseError';
 	}
@@ -48,15 +57,26 @@ export function suggestWords(input: string, limit = 4): string[] {
 export function parsePhrase(input: string | string[]): string[] {
 	const parts = (Array.isArray(input) ? input : input.split(/\s+/)).filter((p) => p.trim() !== '');
 	if (parts.length !== PHRASE_LENGTH) {
-		throw new InvalidPhraseError(`A frase tem ${PHRASE_LENGTH} palavras; foram digitadas ${parts.length}`);
+		throw new InvalidPhraseError(`A frase tem ${PHRASE_LENGTH} palavras; foram digitadas ${parts.length}`, {
+			reason: 'tamanho',
+			count: parts.length
+		});
 	}
 	const words = parts.map((part, i) => {
 		const word = matchWord(part);
-		if (!word) throw new InvalidPhraseError(`A ${i + 1}ª palavra ("${part.trim()}") não está na lista`);
+		if (!word) {
+			throw new InvalidPhraseError(`A ${i + 1}ª palavra ("${part.trim()}") não está na lista`, {
+				reason: 'palavra',
+				position: i + 1,
+				word: part.trim()
+			});
+		}
 		return word;
 	});
 	if (!validateMnemonic(words.join(' '), wordlist)) {
-		throw new InvalidPhraseError('As palavras existem, mas a frase não confere. Verifique a ordem e se alguma foi trocada');
+		throw new InvalidPhraseError('As palavras existem, mas a frase não confere. Verifique a ordem e se alguma foi trocada', {
+			reason: 'soma'
+		});
 	}
 	return words;
 }

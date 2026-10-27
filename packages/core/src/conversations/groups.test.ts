@@ -12,6 +12,7 @@ import {
 	demoteAdmin,
 	GROUP_CONTROL_KIND,
 	groupConversationId,
+	groupNames,
 	GroupPermissionError,
 	introduce,
 	leaveGroup,
@@ -107,12 +108,18 @@ describe('criar grupo e conversar', () => {
 		const { alice, bob, carol, groupId, results } = await family();
 		expect(results.get('Bob')).toMatchObject({ isNew: true, joined: true });
 		const bobs = await conversationOf(bob, groupId);
-		expect(bobs).toMatchObject({ type: 'grupo', lastMessagePreview: '~Alice criou o grupo “Família”', unread: 0 });
+		// a prévia guarda o aviso, não a frase: a tela monta "~Alice criou o grupo" na língua da pessoa (ADR-0008)
+		expect(bobs).toMatchObject({
+			type: 'grupo',
+			lastMessageKind: 'aviso',
+			lastNotice: { author: alice.publicKey, notice: { action: 'criar', subject: 'Família' } },
+			unread: 0
+		});
 		expect(bobs.members.sort()).toEqual([alice.publicKey, carol.publicKey].sort());
 		expect(bobs.group).toMatchObject({ amMember: true, state: { name: 'Família', creator: alice.publicKey, admins: [alice.publicKey] } });
 		// o nome de quem criou chega junto, cifrado só para o grupo
 		expect(bobs.group!.names[alice.publicKey]).toBe('Alice');
-		expect((await conversationOf(alice, groupId)).lastMessagePreview).toBe('Você criou o grupo “Família”');
+		expect((await conversationOf(alice, groupId)).lastNotice).toMatchObject({ author: alice.publicKey, notice: { action: 'criar' } });
 	});
 
 	it('a mensagem chega a todos na conversa do grupo, não na conversa 1:1', async () => {
@@ -154,7 +161,7 @@ describe('criar grupo e conversar', () => {
 		const conversation = await conversationOf(bob, created.groupId);
 		expect(conversation).toMatchObject({ unread: 1, lastMessagePreview: 'chegou primeiro' });
 		const messages = await bob.storage.messages.listByConversation(conversation.id, 10);
-		expect(messages.map((m) => m.text)).toEqual(['~Alice criou o grupo “Família”', 'chegou primeiro']);
+		expect(messages.map((m) => m.notice?.action ?? m.text)).toEqual(['criar', 'chegou primeiro']);
 	});
 });
 
@@ -471,11 +478,25 @@ describe('avisos na conversa', () => {
 		const { alice, bob, carol, groupId } = await family();
 		await act(bob, introduce(await conversationOf(bob, groupId), 'Bob'), [alice, carol]);
 		await act(alice, removeMember(await conversationOf(alice, groupId), alice.publicKey, bob.publicKey, 'Alice', tick()), [bob, carol]);
-		const texts = async (p: Person) =>
-			(await p.storage.messages.listByConversation(groupConversationId(groupId), 10)).map((m) => m.text);
-		expect(await texts(alice)).toEqual(['Você criou o grupo “Família”', 'Você removeu ~Bob']);
-		expect(await texts(bob)).toEqual(['~Alice criou o grupo “Família”', '~Alice removeu você']);
-		expect((await conversationOf(carol, groupId)).lastMessagePreview).toBe('~Alice removeu ~Bob');
+		const notices = async (p: Person) =>
+			(await p.storage.messages.listByConversation(groupConversationId(groupId), 10)).map((m) => ({
+				author: m.sender,
+				action: m.notice?.action,
+				targets: m.notice?.targets
+			}));
+		const expected = [
+			{ author: alice.publicKey, action: 'criar', targets: [] },
+			{ author: alice.publicKey, action: 'remover', targets: [bob.publicKey] }
+		];
+		for (const p of [alice, bob, carol]) expect(await notices(p)).toEqual(expected);
+		expect((await conversationOf(carol, groupId)).lastNotice).toEqual({ author: alice.publicKey, notice: { action: 'remover', targets: [bob.publicKey] } });
+
+		// os nomes, como cada um conhece: eu; quem não é contato, pelo nome que mandou ao grupo
+		const namesFor = async (p: Person) => groupNames(p.storage, (await conversationOf(p, groupId)).group!, p.publicKey);
+		expect((await namesFor(alice))(alice.publicKey)).toEqual({ me: true });
+		expect((await namesFor(alice))(bob.publicKey)).toEqual({ name: 'Bob', contact: false });
+		expect((await namesFor(bob))(alice.publicKey)).toEqual({ name: 'Alice', contact: false });
+		expect((await namesFor(carol))(bob.publicKey)).toEqual({ name: 'Bob', contact: false });
 	});
 
 	it('aviso que não valeu não aparece', async () => {

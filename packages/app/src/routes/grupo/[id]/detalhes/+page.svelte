@@ -10,6 +10,8 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { intlLocale } from '#lib/i18n.svelte.ts';
+	import { memberName } from '#lib/notices.ts';
 	import { session } from '#lib/session.svelte.ts';
 
 	const groupId = $derived(page.params.id ?? '');
@@ -26,7 +28,10 @@
 
 	async function load(id: string) {
 		const found = (await session.getConversation(id)) ?? null;
-		if (found?.group) nameOf = await session.groupNames(found);
+		if (found?.group) {
+			const names = await session.groupNames(found);
+			nameOf = (key) => memberName(names(key));
+		}
 		conversation = found;
 	}
 
@@ -43,7 +48,7 @@
 		const rank = (k: string) => (k === me ? 0 : groupState.admins.includes(k) ? 1 : 2);
 		return groupState.members
 			.map((m) => m.publicKey)
-			.sort((a, b) => rank(a) - rank(b) || nameOf(a).localeCompare(nameOf(b), 'pt-BR'));
+			.sort((a, b) => rank(a) - rank(b) || nameOf(a).localeCompare(nameOf(b), intlLocale()));
 	});
 
 	let error = $state('');

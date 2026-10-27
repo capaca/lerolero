@@ -6,12 +6,15 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
+		"build:pseudo": "node scripts/pseudolingua.js && LINGUA_PSEUDO=1 BASE_PATH=/lerolero-pseudo vite build",
 		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && svelte-check --tsconfig ./src/service-worker/tsconfig.json --threshold error",
+		"prepare": "paraglide-js compile --silent && svelte-kit sync || echo ''",
+		"check": "paraglide-js compile --silent && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && svelte-check --tsconfig ./src/service-worker/tsconfig.json --threshold error",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"devDependencies": {
+		"@inlang/paraglide-js": "2.29.1",
+		"@inlang/plugin-message-format": "4.5.0",
 		"@sveltejs/adapter-static": "4.0.0",
 		"@sveltejs/kit": "3.0.1",
 		"@sveltejs/vite-plugin-svelte": "7.3.1",

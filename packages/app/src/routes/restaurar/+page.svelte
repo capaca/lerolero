@@ -4,6 +4,7 @@
 	import PhraseInput from '#lib/components/PhraseInput.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let phrase = $state('');
@@ -17,7 +18,7 @@
 	let pinAgainInput = $state<PinInput>();
 	let pinShakes = $state(0);
 	function pinMismatch() {
-		error = 'Os dois PINs não são iguais.';
+		error = m.comum_pins_diferentes();
 		pinAgain = '';
 		pinShakes++;
 		navigator.vibrate?.(150);
@@ -40,21 +41,21 @@
 	}
 </script>
 
-<svelte:head><title>Recuperar conta · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.restaurar_titulo_pagina() })}</title></svelte:head>
 
 <main>
-	<h1>Recuperar minha conta</h1>
-	<p class="hint">Digite as 12 palavras que você guardou quando criou a conta. Se estiverem num gerenciador de senhas, pode colar.</p>
+	<h1>{m.restaurar_titulo()}</h1>
+	<p class="hint">{m.restaurar_dica()}</p>
 	<form onsubmit={submit}>
 		<PhraseInput id="frase" bind:value={phrase} />
-		<label for="nome">Seu nome</label>
+		<label for="nome">{m.comum_seu_nome()}</label>
 		<input id="nome" maxlength="40" autocomplete="nickname" required bind:value={name} />
-		<p class="hint">O nome fica só no aparelho e com seus contatos; por isso pedimos de novo.</p>
-		<PinInput id="pin" label="Crie um PIN de 6 números para este aparelho" bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
+		<p class="hint">{m.restaurar_nome_dica()}</p>
+		<PinInput id="pin" label={m.restaurar_pin_rotulo()} bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
 		<PinInput
 			bind:this={pinAgainInput}
 			id="pin2"
-			label="Digite o PIN de novo"
+			label={m.comum_pin_repetir()}
 			bind:value={pinAgain}
 			error={!!error && !pinAgain}
 			shakes={pinShakes}
@@ -62,8 +63,8 @@
 		/>
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
 		<div class="actions">
-			<button class="primary" type="submit" disabled={busy}>{busy ? 'Recuperando…' : 'Recuperar conta'}</button>
-			<a href={resolve('/bem-vindo')}>Voltar</a>
+			<button class="primary" type="submit" disabled={busy}>{busy ? m.restaurar_recuperando() : m.restaurar_recuperar()}</button>
+			<a href={resolve('/bem-vindo')}>{m.comum_voltar()}</a>
 		</div>
 	</form>
 </main>

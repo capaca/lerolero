@@ -43,6 +43,7 @@ flowchart LR
 | [0003](adr/0003-armazenamento-local.md) | Armazenamento local: **IndexedDB (Dexie)** atrás de uma interface própria |
 | [0004](adr/0004-midia.md) | Mídia: cifrada no aparelho, guardada em **Blossom**, deduplicada pelo hash |
 | [0005](adr/0005-notificacoes.md) | Notificações: nenhuma no PWA; **UnifiedPush** no Android; conexão própria no desktop |
+| [0008](adr/0008-internacionalizacao.md) | Textos: **Paraglide JS** na interface, pt-BR como base; o núcleo devolve códigos, nunca texto de interface |
 
 ## Componentes
 

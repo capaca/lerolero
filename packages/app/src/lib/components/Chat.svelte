@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Conversa (1:1 ou grupo): mensagens, avisos de grupo, menu da mensagem e campo de envio.
 	// O topo e os avisos de cima ficam com a tela que usa o componente.
-	import { describeNotice, type MessageRecord } from '@lerolero/core';
+	import type { MessageRecord } from '@lerolero/core';
 	import { onDestroy, tick, type Snippet } from 'svelte';
 	import Composer from './Composer.svelte';
 	import Icon from './Icon.svelte';
@@ -10,6 +10,8 @@
 	import Sheet from './Sheet.svelte';
 	import { dayKey, formatDay } from '#lib/format.ts';
 	import { friendlyError } from '#lib/errors.ts';
+	import { memberName, noticeText, type NameOf } from '#lib/notices.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let {
@@ -23,8 +25,8 @@
 		conversationId: string;
 		header: Snippet;
 		banner?: Snippet;
-		/** só nos grupos: nome de cada membro ("Você", contato, "~Nome"), para os balões e os avisos */
-		nameOf?: (publicKey: string) => string;
+		/** só nos grupos: quem é cada membro, para o nome nos balões e nos avisos */
+		nameOf?: NameOf;
 		/** o que fazer com os endereços nas mensagens de cada pessoa (T18); o padrão é deixar como texto */
 		linkMode?: (publicKey: string) => 'aberto' | 'aviso' | 'texto';
 		/** sem envio (ex.: saí do grupo): o texto aparece no lugar do campo */
@@ -75,7 +77,7 @@
 			clearTimeout(copiedTimer);
 			copiedTimer = setTimeout(() => (copied = false), 2000);
 		} catch {
-			error = 'Não foi possível copiar a mensagem.';
+			error = m.conversa_erro_copiar();
 		}
 	}
 	onDestroy(() => clearTimeout(copiedTimer));
@@ -284,32 +286,32 @@
 		<p class="floating-day" class:visible={showDay} aria-hidden="true">{floatingDay}</p>
 		<div class="messages" bind:this={scroller} {onscroll} aria-live="polite">
 			{#if hasOlder}
-				<button class="link older" onclick={loadOlder}>Carregar mensagens anteriores</button>
+				<button class="link older" onclick={loadOlder}>{m.conversa_carregar_anteriores()}</button>
 			{/if}
 			{#if messages.length === 0 && loaded}
-				<p class="hint empty">Nenhuma mensagem ainda. Diga oi!</p>
+				<p class="hint empty">{m.conversa_vazia()}</p>
 			{/if}
 			{#each blocks as block, b (b)}
 				<div class="block" style:--block-estimate="{block.length * 56}px">
 					{#each block as item (item.type === 'msg' ? item.message.id : item.type === 'dia' ? `d${item.key}` : 'novas')}
 						{#if item.type === 'novas'}
-							<p class="new-line"><span>Mensagens novas</span></p>
+							<p class="new-line"><span>{m.conversa_novas()}</span></p>
 						{:else if item.type === 'dia'}
 							<p class="day" data-day={item.label}>{item.label}</p>
 						{:else if item.message.notice}
-							<p class="notice-line">{nameOf ? describeNotice(item.message.notice, item.message.sender, nameOf) : item.message.text}</p>
+							<p class="notice-line">{noticeText(item.message.notice, item.message.sender, nameOf ?? (() => undefined))}</p>
 						{:else}
-							{@const m = item.message}
+							{@const msg = item.message}
 							<MessageBubble
-								message={m}
-								mine={m.sender === me}
+								message={msg}
+								mine={msg.sender === me}
 								first={item.first}
 								last={item.last}
 								day={item.day}
-								senderName={nameOf && item.first && m.sender !== me ? nameOf(m.sender) : undefined}
-								links={m.sender === me ? 'aberto' : (linkMode?.(m.sender) ?? 'texto')}
+								senderName={nameOf && item.first && msg.sender !== me ? memberName(nameOf(msg.sender)) : undefined}
+								links={msg.sender === me ? 'aberto' : (linkMode?.(msg.sender) ?? 'texto')}
 								onlink={(href, host) => (pendingLink = { href, host })}
-								onmenu={() => openMenu(m)}
+								onmenu={() => openMenu(msg)}
 							/>
 						{/if}
 					{/each}
@@ -317,10 +319,10 @@
 			{/each}
 		</div>
 		{#if copied}
-			<p class="copied" role="status">Mensagem copiada</p>
+			<p class="copied" role="status">{m.conversa_copiada()}</p>
 		{/if}
 		{#if farFromEnd || pending}
-			<button class="round jump" onclick={() => goToEnd()} aria-label={pending ? `Ir para o fim, ${pending} ${pending === 1 ? 'mensagem nova' : 'mensagens novas'}` : 'Ir para o fim'}>
+			<button class="round jump" onclick={() => goToEnd()} aria-label={pending ? m.conversa_ir_fim_novas({ count: pending }) : m.conversa_ir_fim()}>
 				<Icon name="chevron-down" />
 				{#if pending}<span class="badge" aria-hidden="true">{pending > 99 ? '99+' : pending}</span>{/if}
 			</button>
@@ -339,15 +341,12 @@
 	{/if}
 
 	{#if pendingLink}
-		<Sheet label="Abrir endereço" onclose={() => (pendingLink = undefined)}>
-			<p><strong>Abrir {pendingLink.host}?</strong></p>
-			<p class="hint">
-				Quem mandou não está nos seus contatos. Confira o endereço: golpes usam endereços parecidos com os de bancos e
-				de conhecidos. O link abre numa aba nova.
-			</p>
+		<Sheet label={m.conversa_link_titulo()} onclose={() => (pendingLink = undefined)}>
+			<p><strong>{m.conversa_link_pergunta({ host: pendingLink.host })}</strong></p>
+			<p class="hint">{m.conversa_link_dica()}</p>
 			<div class="actions">
-				<button onclick={() => (pendingLink = undefined)}>Cancelar</button>
-				<button class="primary" onclick={openLink}>Abrir</button>
+				<button onclick={() => (pendingLink = undefined)}>{m.comum_cancelar()}</button>
+				<button class="primary" onclick={openLink}>{m.conversa_link_abrir()}</button>
 			</div>
 		</Sheet>
 	{/if}

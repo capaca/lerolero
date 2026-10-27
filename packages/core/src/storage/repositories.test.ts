@@ -99,4 +99,52 @@ describe('migração do banco', () => {
 		expect(await upgraded.groupEvents.listByGroup('x')).toEqual([]);
 		upgraded.close();
 	});
+
+	it('da versão 4 para a 5: a prévia guarda o tipo, não frases em português (ADR-0008)', async () => {
+		const { Dexie } = await import('dexie');
+		const name = 'migracao-v4';
+		const old = new Dexie(name);
+		old.version(4).stores({
+			identity: 'id',
+			settings: 'key',
+			contacts: 'publicKey, state',
+			conversations: 'id, lastMessageAt',
+			messages: 'id, [conversationId+createdAt], status, media.ox',
+			outbox: 'id, nextAttemptAt',
+			sync: 'relay',
+			seen_wraps: 'id, receivedAt',
+			media: 'ox, lastAccess',
+			group_events: 'id, groupId'
+		});
+		const audio = { ox: 'o', x: 'x', type: 'audio/ogg', size: 1, urls: [], key: 'k', nonce: 'n' };
+		const notice = { action: 'adicionar', targets: ['c'] };
+		const conversations = old.table('conversations');
+		const messages = old.table('messages');
+		// como a versão 4 gravava: a frase pronta na prévia, e 'texto' para apagada e aviso
+		await conversations.bulkPut([
+			{ id: 'texto', type: 'direta', members: [], lastMessageAt: 2, lastMessagePreview: 'oi', lastMessageKind: 'texto', unread: 0 },
+			{ id: 'audio', type: 'direta', members: [], lastMessageAt: 2, lastMessagePreview: 'Áudio', lastMessageKind: 'audio', unread: 0 },
+			{ id: 'apagada', type: 'direta', members: [], lastMessageAt: 2, lastMessagePreview: 'Mensagem apagada', lastMessageKind: 'texto', unread: 0 },
+			{ id: 'grupo', type: 'grupo', members: [], lastMessageAt: 2, lastMessagePreview: '~Ana adicionou ~Caio', lastMessageKind: 'texto', unread: 0 }
+		]);
+		await messages.bulkPut([
+			{ ...message('t1', 'texto', 1), text: 'antiga' },
+			{ ...message('t2', 'texto', 2), text: '  oi\n  tudo bem? ' },
+			{ ...message('a1', 'audio', 2), kind: 15, text: '', media: audio },
+			{ ...message('d1', 'apagada', 2), text: '', deleted: true },
+			{ ...message('n1', 'grupo', 2), sender: 'ana', kind: 4440, text: '~Ana adicionou ~Caio', notice }
+		]);
+		old.close();
+
+		const upgraded = openStorage(name);
+		const summary = async (id: string) => {
+			const { lastMessagePreview, lastMessageKind, lastNotice } = (await upgraded.conversations.get(id))!;
+			return { lastMessagePreview, lastMessageKind, lastNotice };
+		};
+		expect(await summary('texto')).toEqual({ lastMessagePreview: 'oi tudo bem?', lastMessageKind: 'texto', lastNotice: undefined });
+		expect(await summary('audio')).toEqual({ lastMessagePreview: undefined, lastMessageKind: 'audio', lastNotice: undefined });
+		expect(await summary('apagada')).toEqual({ lastMessagePreview: undefined, lastMessageKind: 'apagada', lastNotice: undefined });
+		expect(await summary('grupo')).toEqual({ lastMessagePreview: undefined, lastMessageKind: 'aviso', lastNotice: { author: 'ana', notice } });
+		upgraded.close();
+	});
 });

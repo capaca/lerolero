@@ -3,6 +3,7 @@
 	import { MAX_TEXT_LENGTH } from '@lerolero/core';
 	import { onDestroy } from 'svelte';
 	import Icon from './Icon.svelte';
+	import { m } from '#lib/paraglide/messages.js';
 	import { MAX_SECONDS, startRecording, type Recording } from '#lib/recorder.ts';
 	import { friendlyError } from '#lib/errors.ts';
 	import { session } from '#lib/session.svelte.ts';
@@ -100,12 +101,12 @@
 		<p class="hint closed" role="status">{closed}</p>
 	{:else if recording}
 		<div class="line recording" role="status">
-			<button type="button" class="round ghost" onclick={cancelAudio} aria-label="Cancelar gravação">
+			<button type="button" class="round ghost" onclick={cancelAudio} aria-label={m.envio_cancelar_gravacao()}>
 				<Icon name="trash" />
 			</button>
 			<span class="dot" aria-hidden="true"></span>
-			<span class="elapsed">Gravando {clock(elapsed)}</span>
-			<button type="button" class="round primary" onclick={finishAudio} aria-label="Enviar áudio">
+			<span class="elapsed">{m.envio_gravando({ tempo: clock(elapsed) })}</span>
+			<button type="button" class="round primary" onclick={finishAudio} aria-label={m.envio_enviar_audio()}>
 				<Icon name="send" />
 			</button>
 		</div>
@@ -117,13 +118,13 @@
 				{onkeydown}
 				rows="1"
 				maxlength={MAX_TEXT_LENGTH}
-				placeholder="Mensagem"
-				aria-label="Mensagem"
+				placeholder={m.envio_mensagem()}
+				aria-label={m.envio_mensagem()}
 			></textarea>
 			{#if text.trim()}
-				<button class="round primary" type="submit" aria-label="Enviar"><Icon name="send" /></button>
+				<button class="round primary" type="submit" aria-label={m.envio_enviar()}><Icon name="send" /></button>
 			{:else}
-				<button class="round primary" type="button" onclick={startAudio} aria-label="Gravar áudio"><Icon name="mic" /></button>
+				<button class="round primary" type="button" onclick={startAudio} aria-label={m.envio_gravar()}><Icon name="mic" /></button>
 			{/if}
 		</div>
 	{/if}

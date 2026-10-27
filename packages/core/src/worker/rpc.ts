@@ -9,7 +9,8 @@ export type Remote<H extends Handlers> = {
 };
 
 type Request = { id: number; method: string; args: unknown[] };
-type Response = { id: number; ok: true; value: unknown } | { id: number; ok: false; error: { name: string; message: string } };
+type RemoteErrorData = { name: string; message: string; detail?: unknown };
+type Response = { id: number; ok: true; value: unknown } | { id: number; ok: false; error: RemoteErrorData };
 
 /** As duas pontas só precisam de postMessage e de ouvir mensagens (Worker, MessagePort, self do worker). */
 export type Endpoint = {
@@ -28,7 +29,9 @@ export function expose(handlers: Handlers, endpoint: Endpoint) {
 			response = { id, ok: true, value: await handler(...args) };
 		} catch (err) {
 			const e = err instanceof Error ? err : new Error(String(err));
-			response = { id, ok: false, error: { name: e.name, message: e.message } };
+			// `detail` leva o código do problema (ex.: qual palavra da frase): a interface traduz (ADR-0008)
+			const detail = (e as { detail?: unknown }).detail;
+			response = { id, ok: false, error: { name: e.name, message: e.message, ...(detail === undefined ? {} : { detail }) } };
 		}
 		endpoint.postMessage(response);
 	});
@@ -36,7 +39,11 @@ export function expose(handlers: Handlers, endpoint: Endpoint) {
 
 /** Erro vindo do worker, com o nome original (ex.: WrongPinError) para quem chamou poder distinguir. */
 export class RemoteError extends Error {
-	constructor(name: string, message: string) {
+	constructor(
+		name: string,
+		message: string,
+		readonly detail?: unknown
+	) {
 		super(message);
 		this.name = name;
 	}
@@ -52,7 +59,7 @@ export function connect<H extends Handlers>(endpoint: Endpoint): Remote<H> {
 		if (!p) return;
 		pending.delete(response.id);
 		if (response.ok) p.resolve(response.value);
-		else p.reject(new RemoteError(response.error.name, response.error.message));
+		else p.reject(new RemoteError(response.error.name, response.error.message, response.error.detail));
 	});
 	return new Proxy({} as Remote<H>, {
 		get: (_, method) => {

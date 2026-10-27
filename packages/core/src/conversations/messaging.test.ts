@@ -193,7 +193,7 @@ describe('conversas 1:1', () => {
 		const wrapped = alice.vault.wrapDirectMessage(bob.publicKey, media.urls[0], mediaTags(media), 15);
 		const sent = await storeOutgoing(alice.storage, wrapped.rumor, bob.publicKey);
 		expect(sent.message.media).toEqual(media);
-		expect(sent.conversation).toMatchObject({ lastMessagePreview: 'Áudio', lastMessageKind: 'audio' });
+		expect(sent.conversation).toMatchObject({ lastMessagePreview: undefined, lastMessageKind: 'audio' });
 
 		const got = await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(wrapped.toRecipient));
 		expect(got?.message).toMatchObject({ kind: 15, text: '', media });
@@ -273,7 +273,7 @@ describe('apagar mensagens (RF-25)', () => {
 		const got = await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(request.toRecipient));
 		expect(got?.message).toMatchObject({ id, deleted: true, text: '' });
 		const conv = await bob.storage.conversations.get(directConversationId(alice.publicKey));
-		expect(conv?.lastMessagePreview).toBe('Mensagem apagada');
+		expect(conv).toMatchObject({ lastMessagePreview: undefined, lastMessageKind: 'apagada' });
 		expect((await alice.storage.messages.get(id))?.deleted).toBe(true);
 	});
 
