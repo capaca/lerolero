@@ -6,9 +6,10 @@ export const PREVIEW_LENGTH = 80;
 
 export type ConversationSummary = Pick<ConversationRecord, 'lastMessagePreview' | 'lastMessageKind' | 'lastNotice'>;
 
-export function kindOf(message: Pick<MessageRecord, 'media'>): 'texto' | 'audio' | 'arquivo' {
+export function kindOf(message: Pick<MessageRecord, 'media'>): 'texto' | 'audio' | 'foto' | 'arquivo' {
 	if (!message.media) return 'texto';
-	return message.media.type.startsWith('audio/') ? 'audio' : 'arquivo';
+	if (message.media.type.startsWith('audio/')) return 'audio';
+	return message.media.type.startsWith('image/') ? 'foto' : 'arquivo';
 }
 
 /** Os três campos sempre presentes (mesmo `undefined`), para substituir os do resumo anterior ao espalhar. */

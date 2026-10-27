@@ -62,7 +62,7 @@ export type ConversationRecord = {
 	/** o texto da última mensagem, só quando ela é texto (storage/summary.ts) */
 	lastMessagePreview?: string;
 	/** tipo da última mensagem: a lista mostra o ícone e monta o texto na língua da pessoa (ADR-0008) */
-	lastMessageKind?: 'texto' | 'audio' | 'arquivo' | 'apagada' | 'aviso';
+	lastMessageKind?: 'texto' | 'audio' | 'foto' | 'arquivo' | 'apagada' | 'aviso';
 	/** a última mensagem é um aviso de grupo: quem fez e o quê */
 	lastNotice?: { author: string; notice: GroupNotice };
 	unread: number;
@@ -85,6 +85,11 @@ export type MessageMedia = {
 	duration?: number;
 	/** segundos de silêncio no começo do áudio, que o player pula (media/voice-start.ts) */
 	start?: number;
+	/** tamanho da foto em pixels, para o balão reservar o espaço antes de baixar (RF-41) */
+	width?: number;
+	height?: number;
+	/** prévia da foto: JPEG minúsculo em base64, de até ~5 KB (RNF-24) */
+	thumb?: string;
 };
 
 export type MessageRecord = {
