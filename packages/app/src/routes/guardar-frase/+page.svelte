@@ -9,6 +9,7 @@
 	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
 	import PhraseReveal from '#lib/components/PhraseReveal.svelte';
 	import { markPhraseOffered, snoozePhraseReminder } from '#lib/phrase-reminder.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	type Step = 'aviso' | 'pin' | 'frase' | 'teste';
@@ -33,22 +34,19 @@
 	}
 </script>
 
-<svelte:head><title>Guarde sua frase · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.frase_guardar_titulo_pagina() })}</title></svelte:head>
 
 <main>
 	{#if step === 'aviso'}
-		<h1>Guarde sua frase de recuperação</h1>
-		<p>
-			Agora você tem contatos no Lero-lero. Se perder o celular ou esquecer o PIN, só uma frase de 12 palavras
-			recupera sua conta e seus contatos.
-		</p>
-		<p class="hint">Leva um minuto: você anota as palavras e confere duas delas.</p>
+		<h1>{m.frase_guardar_titulo()}</h1>
+		<p>{m.frase_guardar_explicacao()}</p>
+		<p class="hint">{m.frase_guardar_dica()}</p>
 		<div class="actions stack">
-			<button class="primary" onclick={() => (step = 'pin')}>Guardar agora</button>
-			<button onclick={later}>Depois</button>
+			<button class="primary" onclick={() => (step = 'pin')}>{m.inicio_frase_guardar()}</button>
+			<button onclick={later}>{m.frase_depois()}</button>
 		</div>
 	{:else if step === 'pin'}
-		<h1>Guarde sua frase de recuperação</h1>
+		<h1>{m.frase_guardar_titulo()}</h1>
 		<PhraseReveal
 			onrevealed={(w) => {
 				words = w;
@@ -56,17 +54,17 @@
 			}}
 		/>
 	{:else if step === 'frase'}
-		<h1>Sua frase de recuperação</h1>
+		<h1>{m.frase_sua()}</h1>
 		<PhraseBackup {words} />
-		<label class="check"><input type="checkbox" bind:checked={wroteItDown} /> Guardei as 12 palavras</label>
+		<label class="check"><input type="checkbox" bind:checked={wroteItDown} /> {m.frase_guardei()}</label>
 		<div class="actions">
-			<button class="primary" disabled={!wroteItDown} onclick={() => (step = 'teste')}>Continuar</button>
+			<button class="primary" disabled={!wroteItDown} onclick={() => (step = 'teste')}>{m.comum_continuar()}</button>
 		</div>
 	{:else}
-		<h1>Confira sua frase</h1>
+		<h1>{m.frase_confira_titulo()}</h1>
 		<PhraseCheck {words} onconfirmed={confirmed} />
-		<button class="link" onclick={later}>Fazer depois</button>
-		<p class="hint">Se deixar para depois, vamos lembrar você até conferir.</p>
+		<button class="link" onclick={later}>{m.frase_fazer_depois()}</button>
+		<p class="hint">{m.frase_lembrar_dica()}</p>
 	{/if}
 </main>
 

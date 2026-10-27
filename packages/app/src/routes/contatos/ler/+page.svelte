@@ -6,6 +6,7 @@
 	import { onDestroy } from 'svelte';
 	import { startScanner } from '#lib/scanner.ts';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let video = $state<HTMLVideoElement>();
 	let scanning = $state(false);
@@ -36,7 +37,7 @@
 			});
 		} catch {
 			scanning = false;
-			error = 'Não foi possível abrir a câmera. Verifique a permissão do navegador ou cole o link abaixo.';
+			error = m.ler_erro_camera();
 		}
 	}
 
@@ -48,30 +49,30 @@
 	onDestroy(() => stop?.());
 </script>
 
-<svelte:head><title>Adicionar contato · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.contatos_adicionar() })}</title></svelte:head>
 
 <main>
-	<BackLink href={resolve('/contatos')} label="Contatos" />
-	<h1>Adicionar contato</h1>
+	<BackLink href={resolve('/contatos')} label={m.contatos_titulo()} />
+	<h1>{m.contatos_adicionar()}</h1>
 
 	<section>
-		<h2>Ler o QR code da pessoa</h2>
+		<h2>{m.ler_qr_titulo()}</h2>
 		<!-- svelte-ignore a11y_media_has_caption -->
 		<video bind:this={video} playsinline muted class:hidden={!scanning}></video>
 		{#if !scanning}
-			<button class="primary" onclick={scan}>Abrir a câmera</button>
+			<button class="primary" onclick={scan}>{m.ler_abrir_camera()}</button>
 		{:else}
-			<p class="hint">Aponte para o QR code no celular da pessoa.</p>
-			<button onclick={() => (stop?.(), (scanning = false))}>Cancelar</button>
+			<p class="hint">{m.ler_aponte()}</p>
+			<button onclick={() => (stop?.(), (scanning = false))}>{m.comum_cancelar()}</button>
 		{/if}
 	</section>
 
 	<section>
-		<h2>Ou colar o link de convite</h2>
+		<h2>{m.ler_colar_titulo()}</h2>
 		<form onsubmit={submitPaste}>
-			<label for="link">Link recebido</label>
-			<input id="link" autocomplete="off" placeholder="https://…/convite#nprofile1…" bind:value={pasted} />
-			<div class="actions"><button type="submit" disabled={!pasted.trim()}>Abrir convite</button></div>
+			<label for="link">{m.ler_link_rotulo()}</label>
+			<input id="link" autocomplete="off" placeholder={m.ler_link_placeholder()} bind:value={pasted} />
+			<div class="actions"><button type="submit" disabled={!pasted.trim()}>{m.ler_abrir_convite()}</button></div>
 		</form>
 	</section>
 

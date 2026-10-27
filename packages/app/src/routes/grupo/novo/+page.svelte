@@ -6,6 +6,8 @@
 	import BackLink from '#lib/components/BackLink.svelte';
 	import ContactPicker from '#lib/components/ContactPicker.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { intlLocale } from '#lib/i18n.svelte.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	// eu também conto no limite de 20 (RF-30)
@@ -19,14 +21,14 @@
 
 	onMount(async () => {
 		const all = await session.listContacts();
-		contacts = all.filter((c) => c.state === 'aceito').sort((a, b) => contactName(a).localeCompare(contactName(b), 'pt-BR'));
+		contacts = all.filter((c) => c.state === 'aceito').sort((a, b) => contactName(a).localeCompare(contactName(b), intlLocale()));
 	});
 
 	async function create(event: SubmitEvent) {
 		event.preventDefault();
 		error = '';
-		if (!name.trim()) return void (error = 'Dê um nome ao grupo.');
-		if (chosen.length === 0) return void (error = 'Escolha pelo menos uma pessoa.');
+		if (!name.trim()) return void (error = m.grupo_erro_nome());
+		if (chosen.length === 0) return void (error = m.grupo_erro_ninguem());
 		creating = true;
 		try {
 			const id = await session.createGroup(name, chosen);
@@ -38,40 +40,34 @@
 	}
 </script>
 
-<svelte:head><title>Novo grupo · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.inicio_novo_grupo() })}</title></svelte:head>
 
 <main>
-	<BackLink href={resolve('/')} label="Início" />
-	<h1>Novo grupo</h1>
+	<BackLink href={resolve('/')} label={m.comum_inicio()} />
+	<h1>{m.inicio_novo_grupo()}</h1>
 
 	<form onsubmit={create}>
-		<label for="nome">Nome do grupo</label>
-		<input id="nome" bind:value={name} oninput={() => (error = '')} maxlength="60" autocomplete="off" placeholder="Ex.: Família" />
+		<label for="nome">{m.grupo_nome_rotulo()}</label>
+		<input id="nome" bind:value={name} oninput={() => (error = '')} maxlength="60" autocomplete="off" placeholder={m.grupo_nome_placeholder()} />
 
-		<h2>Quem participa <span class="count">{chosen.length} de {MAX_OTHERS}</span></h2>
+		<h2>{m.grupo_quem_participa()} <span class="count">{m.grupo_contagem({ count: chosen.length, max: MAX_OTHERS })}</span></h2>
 		{#if contacts === undefined}
-			<p class="hint">Carregando…</p>
+			<p class="hint">{m.comum_carregando()}</p>
 		{:else if contacts.length === 0}
-			<p class="hint">
-				Você ainda não tem contatos. Para criar um grupo, primeiro adicione as pessoas pelo QR code ou pelo link de
-				convite.
-			</p>
+			<p class="hint">{m.grupo_sem_contatos()}</p>
 			<div class="actions">
-				<a href={resolve('/contatos/meu-convite')}>Convidar alguém</a>
+				<a href={resolve('/contatos/meu-convite')}>{m.inicio_convidar()}</a>
 			</div>
 		{:else}
 			<ContactPicker {contacts} bind:chosen max={MAX_OTHERS} onchange={() => (error = '')} />
 		{/if}
 
-		<p class="hint">
-			Os nomes que você deu aos seus contatos ficam só com você. No grupo, cada pessoa aparece com o nome que ela
-			mesma escolheu.
-		</p>
+		<p class="hint">{m.grupo_nomes_dica()}</p>
 
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
 		<div class="actions">
 			<button class="primary" type="submit" disabled={creating || !contacts?.length}>
-				{creating ? 'Criando…' : 'Criar grupo'}
+				{creating ? m.grupo_criando() : m.grupo_criar()}
 			</button>
 		</div>
 	</form>

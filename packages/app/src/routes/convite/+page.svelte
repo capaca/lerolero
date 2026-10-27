@@ -1,10 +1,12 @@
 <script lang="ts">
 	import BackLink from '#lib/components/BackLink.svelte';
+	import Rich from '#lib/components/Rich.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { contactName, parseInvite, toNpub, type ContactRecord, type Invite } from '@lerolero/core';
 	import { onMount } from 'svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { phraseOfferDue } from '#lib/phrase-reminder.ts';
 	import { session } from '#lib/session.svelte.ts';
 
@@ -18,7 +20,7 @@
 		try {
 			const parsed = parseInvite(location.hash);
 			if (parsed.publicKey === session.identity?.publicKey) {
-				error = 'Este é o seu próprio convite. Mande-o para quem você quer adicionar.';
+				error = m.convite_proprio();
 				return;
 			}
 			invite = parsed;
@@ -49,37 +51,32 @@
 	}
 </script>
 
-<svelte:head><title>Convite · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.convite_titulo() })}</title></svelte:head>
 
 <main>
-	<BackLink href={resolve('/contatos')} label="Contatos" />
+	<BackLink href={resolve('/contatos')} label={m.contatos_titulo()} />
 	{#if error}
-		<h1>Convite</h1>
+		<h1>{m.convite_titulo()}</h1>
 		<p class="error" role="alert">{error}</p>
 	{:else if invite}
-		<h1>{existing ? 'Atualizar contato' : 'Adicionar contato'}</h1>
+		<h1>{existing ? m.convite_atualizar() : m.contatos_adicionar()}</h1>
 		{#if existing}
-			<p>Esta pessoa já está nos seus contatos como <strong>{contactName(existing)}</strong>.</p>
+			<p><Rich text={m.convite_ja_contato({ nome: contactName(existing) })} /></p>
 		{/if}
 		<div class="card">
-			<p>
-				Se apresenta como: <strong>{invite.name ?? '(sem nome)'}</strong>
-			</p>
+			<p><Rich text={m.convite_se_apresenta({ nome: invite.name ?? m.convite_sem_nome() })} /></p>
 			<p class="hint key">{toNpub(invite.publicKey)}</p>
 		</div>
 		<form onsubmit={add}>
-			<label for="nome">Como quer salvar esta pessoa?</label>
+			<label for="nome">{m.convite_nome_rotulo()}</label>
 			<input id="nome" maxlength="40" autocomplete="off" bind:value={localName} />
-			<p class="hint">
-				Este nome só você vê, e é ele que aparece nas conversas. Se recebeu o link de alguém que diz ser um
-				conhecido, confirme por ligação ou pessoalmente antes de confiar: golpistas usam nomes de parentes.
-			</p>
+			<p class="hint">{m.convite_nome_dica()}</p>
 			<div class="actions">
-				<button class="primary" type="submit" disabled={busy}>{existing ? 'Salvar' : 'Adicionar'}</button>
+				<button class="primary" type="submit" disabled={busy}>{existing ? m.comum_salvar() : m.convite_adicionar()}</button>
 			</div>
 		</form>
 	{:else}
-		<p class="hint">Lendo o convite…</p>
+		<p class="hint">{m.convite_lendo()}</p>
 	{/if}
 </main>
 

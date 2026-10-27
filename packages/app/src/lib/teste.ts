@@ -9,6 +9,3 @@ export const FEEDBACK_INVITE =
 
 /** Formulário externo (Google Forms) para mandar prints ou quando o app não funciona. */
 export const FEEDBACK_FORM_URL = '';
-
-/** Nome com que a conta de comentários aparece para quem testa. */
-export const FEEDBACK_CONTACT_NAME = 'Lero-lero (comentários)';

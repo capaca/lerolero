@@ -5,9 +5,9 @@
 	import { contactName, toNpub, type ContactRecord, type ConversationRecord } from '@lerolero/core';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Icon from '#lib/components/Icon.svelte';
+	import Rich from '#lib/components/Rich.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
 	import { formatWhen } from '#lib/format.ts';
-	import { boldParts } from '#lib/i18n.svelte.ts';
 	import { previewText, type NameOf } from '#lib/notices.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { takePendingInvite } from '#lib/pending-invite.ts';
@@ -122,8 +122,7 @@
 			<p><strong>{m.inicio_instalar_titulo()}</strong></p>
 			<p>
 				{m.inicio_instalar_texto()}
-				{#if isIOS()}{#each boldParts(m.inicio_instalar_ios()) as part, i (i)}{#if part.bold}<strong>{part.text}</strong
-							>{:else}{part.text}{/if}{/each}{/if}
+				{#if isIOS()}<Rich text={m.inicio_instalar_ios()} />{/if}
 			</p>
 		</div>
 	{/if}

@@ -1,8 +1,11 @@
 <script lang="ts">
 	import BackLink from '#lib/components/BackLink.svelte';
+	import Rich from '#lib/components/Rich.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toNpub } from '@lerolero/core';
+	import { formatIsoDay } from '#lib/format.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { relayList } from '#lib/relays.ts';
 	import { session } from '#lib/session.svelte.ts';
 	import { FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
@@ -31,56 +34,53 @@
 	}
 </script>
 
-<svelte:head><title>Ajustes · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.inicio_ajustes() })}</title></svelte:head>
 
 <main>
-	<BackLink href={resolve('/')} label="Início" />
-	<h1>Ajustes</h1>
+	<BackLink href={resolve('/')} label={m.comum_inicio()} />
+	<h1>{m.inicio_ajustes()}</h1>
 
 	<section class="card">
-		<h2>Sua conta</h2>
-		<p>Nome: <strong>{session.identity?.displayName}</strong></p>
-		<p class="hint">Sua chave pública (identifica você na rede):</p>
+		<h2>{m.ajustes_conta()}</h2>
+		<p><Rich text={m.ajustes_nome({ nome: session.identity?.displayName ?? '' })} /></p>
+		<p class="hint">{m.ajustes_chave_dica()}</p>
 		<p class="key">{npub}</p>
-		<button onclick={copy}>{copied ? 'Copiada!' : 'Copiar chave'}</button>
+		<button onclick={copy}>{copied ? m.ajustes_chave_copiada() : m.ajustes_copiar_chave()}</button>
 	</section>
 
 	<section class="card">
-		<h2>Segurança</h2>
+		<h2>{m.ajustes_seguranca()}</h2>
 		<div class="actions stack">
 			<a href={resolve('/ajustes/frase')}>
-				{session.identity?.phraseConfirmed ? 'Ver minha frase de recuperação' : 'Conferir minha frase de recuperação'}
+				{session.identity?.phraseConfirmed ? m.ajustes_ver_frase() : m.ajustes_conferir_frase()}
 			</a>
-			<button onclick={lock}>Bloquear agora</button>
+			<button onclick={lock}>{m.ajustes_bloquear_agora()}</button>
 		</div>
 	</section>
 
 	<section class="card">
-		<h2>Teste</h2>
+		<h2>{m.ajustes_teste()}</h2>
 		<div class="actions stack">
 			{#if FEEDBACK_INVITE || FEEDBACK_FORM_URL}
-				<a href={resolve('/ajustes/comentario')}>Enviar comentário (bug ou sugestão)</a>
+				<a href={resolve('/ajustes/comentario')}>{m.ajustes_comentario()}</a>
 			{/if}
-			<a href={resolve('/teste')}>Como testar</a>
+			<a href={resolve('/teste')}>{m.ajustes_como_testar()}</a>
 		</div>
 	</section>
 
 	<section class="card">
-		<h2>Servidores</h2>
+		<h2>{m.ajustes_servidores()}</h2>
 		{#await relays}
-			<p class="hint">Carregando…</p>
+			<p class="hint">{m.comum_carregando()}</p>
 		{:then list}
 			<p>
-				{list.dm.length} relays para mensagens e {list.blossom.length} servidores para mídia
-				<span class="hint">(lista de {list.atualizado})</span>.
+				{m.ajustes_lista({ relays: m.ajustes_relays({ count: list.dm.length }), midia: m.ajustes_midia({ count: list.blossom.length }) })}
+				<span class="hint">{m.ajustes_lista_data({ data: formatIsoDay(list.atualizado) })}</span>
 			</p>
 		{:catch}
-			<p class="error">Não foi possível carregar a lista de servidores.</p>
+			<p class="error">{m.ajustes_erro_lista()}</p>
 		{/await}
-		<p>
-			Conectado agora a <strong>{connected.length}</strong>
-			{connected.length === 1 ? 'servidor' : 'servidores'}.
-		</p>
+		<p><Rich text={m.ajustes_conectado({ count: connected.length })} /></p>
 		{#if connected.length}
 			<ul class="hint relays">
 				{#each connected as url (url)}<li>{url.replace('wss://', '')}</li>{/each}
@@ -88,7 +88,9 @@
 		{/if}
 	</section>
 
-	<p class="hint release">Lero-lero {__APP_RELEASE__}{__APP_HOMOLOG__ ? ' · homologação' : ''}</p>
+	<p class="hint release">
+		{(__APP_HOMOLOG__ ? m.ajustes_versao_homologacao : m.ajustes_versao)({ versao: __APP_RELEASE__ })}
+	</p>
 </main>
 
 <style>

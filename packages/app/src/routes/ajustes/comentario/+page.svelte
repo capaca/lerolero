@@ -4,11 +4,13 @@
 	import { resolve } from '$app/paths';
 	import { version } from '$app/env';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
-	import { FEEDBACK_CONTACT_NAME, FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
+	import { FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
+	import Rich from '#lib/components/Rich.svelte';
 
-	const KINDS = ['Bug', 'Sugestão', 'Outro'] as const;
-	let kind = $state<(typeof KINDS)[number]>('Bug');
+	const KINDS = { bug: m.comentario_bug, sugestao: m.comentario_sugestao, outro: m.comentario_outro };
+	let kind = $state<keyof typeof KINDS>('bug');
 	let text = $state('');
 	let withDevice = $state(true);
 	let busy = $state(false);
@@ -17,11 +19,11 @@
 	// dados que ajudam a reproduzir um problema; a pessoa vê e decide se manda
 	const device = $derived(
 		[
-			`Navegador: ${navigator.userAgent}`,
-			`Tela: ${screen.width}×${screen.height}, janela ${innerWidth}×${innerHeight}`,
-			`Instalado: ${matchMedia('(display-mode: standalone)').matches ? 'sim' : 'não'}`,
-			`Versão do app: ${__APP_RELEASE__} (build ${version})`,
-			`Servidores conectados: ${session.connectedRelays().length}`
+			m.comentario_navegador({ navegador: navigator.userAgent }),
+			m.comentario_tela({ tela: `${screen.width}×${screen.height}`, janela: `${innerWidth}×${innerHeight}` }),
+			m.comentario_instalado({ resposta: matchMedia('(display-mode: standalone)').matches ? m.comum_sim() : m.comum_nao() }),
+			m.comentario_versao({ versao: __APP_RELEASE__, build: version }),
+			m.comentario_conectados({ count: session.connectedRelays().length })
 		].join('\n')
 	);
 
@@ -29,9 +31,9 @@
 		event.preventDefault();
 		busy = true;
 		error = '';
-		const body = `[${kind}] ${text.trim()}${withDevice ? `\n\n— Dados do aparelho —\n${device}` : ''}`;
+		const body = `[${KINDS[kind]()}] ${text.trim()}${withDevice ? `\n\n${m.comentario_dados_titulo()}\n${device}` : ''}`;
 		try {
-			const key = await session.sendFeedback(FEEDBACK_INVITE, FEEDBACK_CONTACT_NAME, body);
+			const key = await session.sendFeedback(FEEDBACK_INVITE, m.comentario_contato(), body);
 			await goto(resolve('/conversa/[chave]', { chave: key }));
 		} catch (err) {
 			error = friendlyError(err);
@@ -40,43 +42,35 @@
 	}
 </script>
 
-<svelte:head><title>Enviar comentário · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.comentario_titulo() })}</title></svelte:head>
 
 <main>
-	<BackLink href={resolve('/ajustes')} label="Ajustes" />
-	<h1>Enviar comentário</h1>
+	<BackLink href={resolve('/ajustes')} label={m.inicio_ajustes()} />
+	<h1>{m.comentario_titulo()}</h1>
 	{#if !FEEDBACK_INVITE}
-		<p class="hint">O envio de comentários ainda não está configurado.</p>
+		<p class="hint">{m.comentario_nao_configurado()}</p>
 	{:else}
-		<p>
-			Seu comentário vai cifrado para a equipe, como uma conversa: a resposta aparece em
-			<strong>{FEEDBACK_CONTACT_NAME}</strong>.
-		</p>
+		<p><Rich text={m.comentario_explicacao({ nome: m.comentario_contato() })} /></p>
 		<form onsubmit={submit}>
 			<fieldset>
-				<legend>Tipo</legend>
-				{#each KINDS as k (k)}
-					<label class="option"><input type="radio" name="tipo" value={k} bind:group={kind} /> {k}</label>
+				<legend>{m.comentario_tipo()}</legend>
+				{#each Object.entries(KINDS) as [k, label] (k)}
+					<label class="option"><input type="radio" name="tipo" value={k} bind:group={kind} /> {label()}</label>
 				{/each}
 			</fieldset>
-			<label for="texto">O que aconteceu ou o que você sugere?</label>
+			<label for="texto">{m.comentario_texto_rotulo()}</label>
 			<textarea id="texto" rows="6" required maxlength="3000" bind:value={text}></textarea>
-			<p class="hint">
-				Num bug, conte o que fez, o que apareceu e o que esperava. Nunca escreva sua frase de 12 palavras.
-			</p>
-			<label class="option"><input type="checkbox" bind:checked={withDevice} /> Incluir dados do aparelho</label>
+			<p class="hint">{m.comentario_texto_dica()}</p>
+			<label class="option"><input type="checkbox" bind:checked={withDevice} /> {m.comentario_incluir_dados()}</label>
 			{#if withDevice}<pre class="hint device">{device}</pre>{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 			<div class="actions">
-				<button class="primary" type="submit" disabled={busy || !text.trim()}>{busy ? 'Enviando…' : 'Enviar'}</button>
+				<button class="primary" type="submit" disabled={busy || !text.trim()}>{busy ? m.comentario_enviando() : m.envio_enviar()}</button>
 			</div>
 		</form>
 	{/if}
 	{#if FEEDBACK_FORM_URL}
-		<p class="hint">
-			Quer mandar um print, ou o app não está funcionando? Use o
-			<a href={FEEDBACK_FORM_URL} target="_blank" rel="noopener noreferrer">formulário de retorno</a>.
-		</p>
+		<p class="hint"><Rich text={m.comentario_formulario()} href={FEEDBACK_FORM_URL} external /></p>
 	{/if}
 </main>
 
