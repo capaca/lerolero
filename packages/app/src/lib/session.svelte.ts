@@ -77,11 +77,23 @@ const OPEN_SESSION_KEY = 'sessaoAberta';
 const storage = openStorage();
 const vault = connect<Vault>(new Worker(new URL('./core.worker.ts', import.meta.url), { type: 'module' }));
 
-/** Pede ao navegador para não apagar os dados do app sob pressão de espaço (ADR-0003). */
+const PERSIST_KEY = 'armazenamentoPersistente';
+const PERSIST_TRIED_KEY = 'armazenamentoPersistenteTentadoEm';
+const PERSIST_RETRY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Pede ao navegador para não apagar os dados do app sob pressão de espaço (ADR-0003, T19). O Chrome decide pelo
+ * uso do site, e no cadastro ele quase sempre nega; por isso a cada desbloqueio tenta de novo, no máximo uma vez
+ * por dia (o Firefox pergunta à pessoa a cada pedido).
+ */
 async function requestPersistence() {
 	try {
+		if (await navigator.storage?.persisted?.()) return void (await storage.settings.set(PERSIST_KEY, true));
+		const triedAt = (await storage.settings.get<number>(PERSIST_TRIED_KEY)) ?? 0;
+		if (Date.now() - triedAt < PERSIST_RETRY_MS) return;
+		await storage.settings.set(PERSIST_TRIED_KEY, Date.now());
 		const granted = await navigator.storage?.persist?.();
-		await storage.settings.set('armazenamentoPersistente', granted ?? false);
+		await storage.settings.set(PERSIST_KEY, granted ?? false);
 	} catch {
 		// navegadores sem a API: o lembrete da frase continua sendo a proteção
 	}
@@ -122,6 +134,7 @@ class Session {
 	/** Desbloqueado: entra e conecta. Também guarda a sessão, para recarregar sem pedir o PIN. */
 	private unlocked() {
 		this.status = 'desbloqueado';
+		void requestPersistence();
 		void this.startNetwork();
 		this.savingSession = vault
 			.openSession(Date.now())
@@ -165,7 +178,6 @@ class Session {
 		const { publicKey, phrase, words } = await vault.create(pin);
 		await this.save({ id: 'eu', publicKey, phrase, phraseConfirmed: false, displayName, createdAt: Date.now() });
 		this.unlocked();
-		void requestPersistence();
 		return words;
 	}
 
@@ -174,7 +186,6 @@ class Session {
 		// quem restaurou digitou a frase: está provado que ela foi guardada
 		await this.save({ id: 'eu', publicKey, phrase, phraseConfirmed: true, displayName, createdAt: Date.now() });
 		this.unlocked();
-		void requestPersistence();
 	}
 
 	/**
