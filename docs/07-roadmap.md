@@ -227,5 +227,5 @@ Revisão do app inteiro com olhar de operação. Como não há servidor do proje
 | # | Questão | Responsável |
 |---|---|---|
 | Q-M1 | Revisar as estimativas ao fim do M1, com base no ritmo real | Pedro |
-| Q-I1 | Internacionalização: qual mecanismo (Paraglide, svelte-i18n ou módulo próprio) e quais línguas depois do português? Registrar em ADR | Pedro |
+| Q-I1 | Internacionalização: qual mecanismo (Paraglide, svelte-i18n ou módulo próprio) e quais línguas depois do português? Registrar em ADR | ✅ Resolvida em 2026-10-27: Paraglide JS 2, só pt-BR por enquanto, pseudolíngua nos testes ([ADR-0008](adr/0008-internacionalizacao.md)) |
 | Q-U1 | Como tornar o cadastro menos pesado sem perder a recuperação da conta? Hoje o RF-03 exige copiar e guardar 12 palavras. Pedido do Pedro em 2026-10-26: pensar em alternativas | ✅ Resolvida em 2026-10-26: a frase sai do cadastro e é pedida ao ganhar o primeiro contato (RF-03, RF-04, T19); passkey adiada para depois da Q-N1 (Q-A6 do [02](02-modelo-de-ameacas.md)) |

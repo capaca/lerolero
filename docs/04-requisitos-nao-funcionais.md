@@ -126,7 +126,7 @@ Metas de qualidade que valem para todo o app. Os números são propostas iniciai
 - **Retenção alvo:** 7 dias.
 - **Licença:** AGPL-3.0.
 - **Acessibilidade:** WCAG 2.2 AA.
-- **Idioma:** pt-BR, com estrutura para tradução.
+- **Idioma:** pt-BR, com estrutura para tradução ([ADR-0008](adr/0008-internacionalizacao.md)).
 - **Distribuição Android:** APK direto primeiro; Google Play depois.
 - **Tor/proxy embutido:** não (Q-A5 resolvida).
 - **Jurídico:** diretrizes técnicas agora; orientação jurídica antes do lançamento público (Q-A3 encaminhada).
