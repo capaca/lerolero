@@ -3,6 +3,7 @@
 	// Usado em "ver minha frase" e em "Guarde sua frase".
 	import PinInput from './PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let { onrevealed }: { onrevealed: (words: string[]) => void } = $props();
@@ -30,7 +31,7 @@
 <form bind:this={form} onsubmit={reveal}>
 	<PinInput
 		id="pin"
-		label="Digite seu PIN para ver a frase"
+		label={m.frase_pin_rotulo()}
 		bind:value={pin}
 		autofocus
 		error={!!error && !pin}
@@ -38,5 +39,5 @@
 		oncomplete={() => form?.requestSubmit()}
 	/>
 	{#if error}<p class="error" role="alert">{error}</p>{/if}
-	<div class="actions"><button class="primary" type="submit" disabled={pin.length !== 6}>Ver frase</button></div>
+	<div class="actions"><button class="primary" type="submit" disabled={pin.length !== 6}>{m.frase_ver()}</button></div>
 </form>

@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import QrCode from '#lib/components/QrCode.svelte';
 	import { appUrl } from '#lib/app-url.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let link = $state('');
@@ -15,7 +16,7 @@
 
 	async function share() {
 		try {
-			await navigator.share({ title: 'Lero-lero', text: 'Fale comigo no Lero-lero:', url: link });
+			await navigator.share({ title: m.app_nome(), text: m.meuconvite_texto(), url: link });
 		} catch {
 			// a pessoa cancelou o compartilhamento
 		}
@@ -27,21 +28,18 @@
 	}
 </script>
 
-<svelte:head><title>Meu convite · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.contatos_meu_convite() })}</title></svelte:head>
 
 <main>
-	<BackLink href={resolve('/contatos')} label="Contatos" />
-	<h1>Meu convite</h1>
-	<p>Mostre este QR code para a pessoa ler no app dela, ou mande o link por qualquer meio.</p>
+	<BackLink href={resolve('/contatos')} label={m.contatos_titulo()} />
+	<h1>{m.contatos_meu_convite()}</h1>
+	<p>{m.meuconvite_dica()}</p>
 	{#if link}
-		<QrCode text={link} label="QR code do seu convite" />
+		<QrCode text={link} label={m.meuconvite_qr()} />
 		<div class="actions">
-			{#if canShare}<button class="primary" onclick={share}>Compartilhar link</button>{/if}
-			<button onclick={copy}>{copied ? 'Link copiado' : 'Copiar link'}</button>
+			{#if canShare}<button class="primary" onclick={share}>{m.meuconvite_compartilhar()}</button>{/if}
+			<button onclick={copy}>{copied ? m.meuconvite_copiado() : m.meuconvite_copiar()}</button>
 		</div>
-		<p class="hint">
-			O convite tem seu nome, sua chave e onde você recebe mensagens. Não é segredo: quem tiver o link
-			consegue te mandar mensagens, mas não consegue ler as suas.
-		</p>
+		<p class="hint">{m.meuconvite_explicacao()}</p>
 	{/if}
 </main>

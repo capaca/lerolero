@@ -4,6 +4,8 @@
 	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
 	import PhraseBackup from '#lib/components/PhraseBackup.svelte';
 	import PhraseReveal from '#lib/components/PhraseReveal.svelte';
+	import Rich from '#lib/components/Rich.svelte';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let words = $state<string[]>([]);
@@ -17,11 +19,11 @@
 	}
 </script>
 
-<svelte:head><title>Frase de recuperação · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.frase_titulo() })}</title></svelte:head>
 
 <main>
-	<BackLink href={resolve('/ajustes')} label="Ajustes" />
-	<h1>Frase de recuperação</h1>
+	<BackLink href={resolve('/ajustes')} label={m.inicio_ajustes()} />
+	<h1>{m.frase_titulo()}</h1>
 
 	{#if words.length === 0}
 		<PhraseReveal onrevealed={(w) => (words = w)} />
@@ -30,9 +32,9 @@
 	{:else}
 		<PhraseBackup {words} />
 		{#if done}
-			<p role="status"><strong>Frase conferida.</strong> Mantenha-a guardada num lugar seguro.</p>
+			<p role="status"><Rich text={m.frase_conferida()} /></p>
 		{:else if !session.identity?.phraseConfirmed}
-			<div class="actions"><button class="primary" onclick={() => (checking = true)}>Já guardei, conferir</button></div>
+			<div class="actions"><button class="primary" onclick={() => (checking = true)}>{m.frase_ja_guardei()}</button></div>
 		{/if}
 	{/if}
 </main>

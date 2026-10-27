@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
+
 	let { words }: { words: string[] } = $props();
 </script>
 
-<ol class="grid" aria-label="Frase de recuperação">
+<ol class="grid" aria-label={m.frase_titulo()}>
 	{#each words as word, i (i)}
 		<li><span class="n">{i + 1}</span>{word}</li>
 	{/each}

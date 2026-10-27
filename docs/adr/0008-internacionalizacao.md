@@ -83,7 +83,20 @@ Como fica:
   baixado de um CDN a cada build, como o modelo do inlang sugere: menos uma porta de entrada para código de fora no build.
   Pelo mesmo motivo a versão do Paraglide respeita a idade mínima de publicação do pnpm (2.29.1, não a 2.29.2 do dia).
 - A pseudolíngua é um segundo build (`pnpm build:pseudo`, em `build-pseudo/`, servido pelo e2e em `/lerolero-pseudo/`),
-  gerado de `messages/pt-BR.json` por `scripts/pseudolingua.js`. O teste `textos.spec.ts` percorre as telas já
-  extraídas e falha com o texto que ficou de fora. A CI de e2e e o `verificar.sh build` fazem os dois builds.
+  gerado de `messages/pt-BR.json` por `scripts/pseudolingua.js`. O teste `textos.spec.ts` percorre todas as
+  telas e falha com o texto que ficou de fora; uma tela nova entra nele junto com ela. A CI de e2e e o `verificar.sh build` fazem os dois builds.
 - Se o Paraglide parar de ser mantido, as mensagens em JSON e as chamadas `m.chave()` dão para trocar por um módulo
   próprio (opção C) sem mexer nos textos.
+- Frases com negrito, ícone ou link no meio ficam inteiras no JSON: `**trecho**` marca o negrito (ou o link, quando há
+  `href`) e um ícone entra como variável (`{relogio}`). O componente `Rich` desenha isso; não há HTML nos textos.
+- O nome com que a conta de comentários aparece ("Lero-lero (comentários)") vem das mensagens, mas fica gravado como
+  o nome do contato na hora em que a pessoa manda o primeiro comentário. É um dado da pessoa, que ela pode renomear,
+  como qualquer contato; não muda se ela trocar de língua depois (decidido em 2026-10-27).
+- O manifesto do PWA (`manifest.webmanifest`) é um arquivo estático, com a descrição em português. Fica assim até
+  haver a segunda língua, junto com a escolha da língua em Ajustes.
+
+## Andamento
+
+- 2026-10-27: concluída a extração. Todas as telas, as mensagens de erro, o guia `/teste` e o roteiro de aceite usam
+  `messages/pt-BR.json`; a data da lista de relays em Ajustes, antes "2026-10-22", sai por extenso na língua da
+  interface.

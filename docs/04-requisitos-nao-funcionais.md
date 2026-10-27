@@ -99,7 +99,7 @@ Metas de qualidade que valem para todo o app. Os números são propostas iniciai
 |---|---|
 | RNF-70 | Interface em **português do Brasil** |
 | RNF-71 | Todos os textos externalizados em arquivos de tradução, prontos para a comunidade traduzir para outros idiomas |
-| RNF-72 | Datas, horas e números no formato brasileiro |
+| RNF-72 | Datas, horas e números no formato da língua da interface (o brasileiro, em pt-BR; [ADR-0008](adr/0008-internacionalizacao.md)) |
 
 ## 9. Distribuição e custo
 

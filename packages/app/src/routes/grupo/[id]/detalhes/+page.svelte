@@ -12,6 +12,7 @@
 	import { friendlyError } from '#lib/errors.ts';
 	import { intlLocale } from '#lib/i18n.svelte.ts';
 	import { memberName } from '#lib/notices.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	const groupId = $derived(page.params.id ?? '');
@@ -40,7 +41,11 @@
 	const active = $derived(!!group?.amMember);
 
 	const roleOf = (publicKey: string) =>
-		groupState?.creator === publicKey ? 'Criador' : groupState?.admins.includes(publicKey) ? 'Administrador' : '';
+		groupState?.creator === publicKey
+			? m.grupo_papel_criador()
+			: groupState?.admins.includes(publicKey)
+				? m.grupo_papel_admin()
+				: '';
 
 	// eu primeiro, depois quem administra, depois os outros; cada parte em ordem alfabética
 	const members = $derived.by(() => {
@@ -101,53 +106,53 @@
 	const heir = $derived(groupState && groupState.creator === me ? successor(groupState, me) : undefined);
 </script>
 
-<svelte:head><title>{groupState?.name ?? 'Grupo'} · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: groupState?.name ?? m.grupo_titulo_pagina() })}</title></svelte:head>
 
 <main>
-	<BackLink href={resolve('/grupo/[id]', { id: groupId })} label="Conversa" />
+	<BackLink href={resolve('/grupo/[id]', { id: groupId })} label={m.conversa_titulo_pagina()} />
 
 	{#if conversation === null}
-		<p class="hint">Este grupo não está neste aparelho.</p>
+		<p class="hint">{m.grupo_nao_esta()}</p>
 	{:else if groupState}
 		<div class="top">
 			<Avatar name={groupState.name} publicKey={groupId} size={88} group />
 			{#if editing}
 				<form class="rename" onsubmit={rename}>
-					<label for="nome">Nome do grupo</label>
+					<label for="nome">{m.grupo_nome_rotulo()}</label>
 					<!-- svelte-ignore a11y_autofocus -->
 					<input id="nome" bind:value={newName} maxlength="60" autocomplete="off" required autofocus />
 					<div class="actions">
-						<button type="button" onclick={() => (editing = false)}>Cancelar</button>
-						<button class="primary" type="submit" disabled={busy || !newName.trim()}>Salvar</button>
+						<button type="button" onclick={() => (editing = false)}>{m.comum_cancelar()}</button>
+						<button class="primary" type="submit" disabled={busy || !newName.trim()}>{m.comum_salvar()}</button>
 					</div>
 				</form>
 			{:else}
 				<h1>
 					{groupState.name}
 					{#if active && canDo(groupState, me, 'renomear')}
-						<button class="icon" onclick={startRename} aria-label="Mudar o nome do grupo"><Icon name="pencil" size={18} /></button>
+						<button class="icon" onclick={startRename} aria-label={m.grupo_mudar_nome()}><Icon name="pencil" size={18} /></button>
 					{/if}
 				</h1>
-				<p class="hint">Grupo · {groupState.members.length} {groupState.members.length === 1 ? 'pessoa' : 'pessoas'}</p>
+				<p class="hint">{m.grupo_subtitulo({ count: groupState.members.length })}</p>
 			{/if}
 		</div>
 
 		{#if !active}
-			<p class="banner" role="status">Você não faz mais parte deste grupo. A lista abaixo é de quando você saiu.</p>
+			<p class="banner" role="status">{m.grupo_fora()}</p>
 		{/if}
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
 
-		<h2>Participantes</h2>
+		<h2>{m.grupo_participantes()}</h2>
 		<ul class="list">
 			{#if active && canDo(groupState, me, 'adicionar')}
 				<li>
 					<a class="row add" href={resolve('/grupo/[id]/adicionar', { id: groupId })}>
 						<span class="circle"><Icon name="user-plus" size={20} /></span>
-						<span class="text">Adicionar pessoas</span>
+						<span class="text">{m.grupo_adicionar_pessoas()}</span>
 					</a>
 				</li>
 			{:else if active && groupState.admins.includes(me)}
-				<li class="hint full">O grupo já tem {MAX_GROUP_MEMBERS} pessoas, o máximo.</li>
+				<li class="hint full">{m.grupo_cheio({ max: MAX_GROUP_MEMBERS })}</li>
 			{/if}
 			{#each members as publicKey (publicKey)}
 				<li>
@@ -160,56 +165,56 @@
 			{/each}
 		</ul>
 		{#if members.some((k) => nameOf(k).startsWith('~'))}
-			<p class="hint">Quem aparece com “~” não está nos seus contatos: é o nome que a própria pessoa escolheu.</p>
+			<p class="hint">{m.grupo_til()}</p>
 		{/if}
 
 		{#if active}
-			<button class="leave" onclick={() => (confirm = 'sair')} disabled={busy}><Icon name="log-out" /> Sair do grupo</button>
+			<button class="leave" onclick={() => (confirm = 'sair')} disabled={busy}><Icon name="log-out" /> {m.grupo_sair()}</button>
 		{/if}
 	{/if}
 </main>
 
 {#if groupState && confirm === 'sair'}
-	<Sheet label="Sair do grupo" onclose={closeSheet}>
-		<p><strong>Sair de “{groupState.name}”?</strong></p>
+	<Sheet label={m.grupo_sair()} onclose={closeSheet}>
+		<p><strong>{m.grupo_sair_pergunta({ grupo: groupState.name })}</strong></p>
 		<p class="hint">
-			Você deixa de receber as mensagens do grupo. As que já chegaram continuam neste aparelho.
-			{#if heir}Como você criou o grupo, {nameOf(heir)} passa a ser o criador.{/if}
+			{m.grupo_sair_dica()}
+			{#if heir}{m.grupo_sair_herdeiro({ nome: nameOf(heir) })}{/if}
 		</p>
 		<div class="actions">
-			<button onclick={closeSheet}>Cancelar</button>
-			<button class="danger" onclick={leave}>Sair do grupo</button>
+			<button onclick={closeSheet}>{m.comum_cancelar()}</button>
+			<button class="danger" onclick={leave}>{m.grupo_sair()}</button>
 		</div>
 	</Sheet>
 {:else if groupState && selected && confirm === 'remover'}
 	{@const target = selected}
-	<Sheet label="Remover do grupo" onclose={closeSheet}>
-		<p><strong>Remover {nameOf(target)} do grupo?</strong></p>
-		<p class="hint">A pessoa deixa de receber as mensagens novas. Todos no grupo veem o aviso.</p>
+	<Sheet label={m.grupo_remover_titulo()} onclose={closeSheet}>
+		<p><strong>{m.grupo_remover_pergunta({ nome: nameOf(target) })}</strong></p>
+		<p class="hint">{m.grupo_remover_dica()}</p>
 		<div class="actions">
-			<button onclick={closeSheet}>Cancelar</button>
-			<button class="danger" onclick={() => act((k) => session.removeFromGroup(conversationId, k))}>Remover</button>
+			<button onclick={closeSheet}>{m.comum_cancelar()}</button>
+			<button class="danger" onclick={() => act((k) => session.removeFromGroup(conversationId, k))}>{m.grupo_remover()}</button>
 		</div>
 	</Sheet>
 {:else if groupState && selected}
 	{@const target = selected}
 	<Sheet label={nameOf(target)} onclose={closeSheet}>
 		<p class="who"><strong>{nameOf(target)}</strong></p>
-		<a class="item" href={resolve('/conversa/[chave]', { chave: target })}><Icon name="message" /> Conversar</a>
+		<a class="item" href={resolve('/conversa/[chave]', { chave: target })}><Icon name="message" /> {m.contato_conversar()}</a>
 		{#if active && canDo(groupState, me, 'promover', target)}
 			<button class="item" onclick={() => act((k) => session.setGroupAdmin(conversationId, k, true))}>
-				<Icon name="shield" /> Tornar administrador
+				<Icon name="shield" /> {m.grupo_tornar_admin()}
 			</button>
 		{/if}
 		{#if active && canDo(groupState, me, 'rebaixar', target)}
 			<button class="item" onclick={() => act((k) => session.setGroupAdmin(conversationId, k, false))}>
-				<Icon name="shield" /> Tirar de administrador
+				<Icon name="shield" /> {m.grupo_tirar_admin()}
 			</button>
 		{/if}
 		{#if active && canDo(groupState, me, 'remover', target)}
-			<button class="item remove" onclick={() => (confirm = 'remover')}><Icon name="user-minus" /> Remover do grupo</button>
+			<button class="item remove" onclick={() => (confirm = 'remover')}><Icon name="user-minus" /> {m.grupo_remover_titulo()}</button>
 		{/if}
-		<button class="item cancel" onclick={closeSheet}>Cancelar</button>
+		<button class="item cancel" onclick={closeSheet}>{m.comum_cancelar()}</button>
 	</Sheet>
 {/if}
 

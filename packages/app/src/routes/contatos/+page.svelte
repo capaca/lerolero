@@ -5,6 +5,7 @@
 	import { contactName, type ContactRecord, type MessageRequest } from '@lerolero/core';
 	import { onMount } from 'svelte';
 	import { previewText } from '#lib/notices.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let contacts = $state.raw<ContactRecord[] | undefined>();
@@ -15,23 +16,21 @@
 	});
 </script>
 
-<svelte:head><title>Contatos · Lero-lero</title></svelte:head>
+<svelte:head><title>{m.titulo_pagina({ pagina: m.contatos_titulo() })}</title></svelte:head>
 
 <main>
-	<BackLink href={resolve('/')} label="Início" />
-	<h1>Contatos</h1>
+	<BackLink href={resolve('/')} label={m.comum_inicio()} />
+	<h1>{m.contatos_titulo()}</h1>
 
 	<div class="actions">
-		<a class="button primary" href={resolve('/contatos/ler')}>Adicionar contato</a>
-		<a class="button" href={resolve('/contatos/meu-convite')}>Meu convite</a>
+		<a class="button primary" href={resolve('/contatos/ler')}>{m.contatos_adicionar()}</a>
+		<a class="button" href={resolve('/contatos/meu-convite')}>{m.contatos_meu_convite()}</a>
 	</div>
 
 	{#if requests.length > 0}
 		<section>
-			<h2>Pedidos de mensagem ({requests.length})</h2>
-			<p class="hint">
-				Gente que não está nos seus contatos. Nada é aberto até você aceitar: links ficam como texto e áudios não tocam.
-			</p>
+			<h2>{m.contatos_pedidos({ count: requests.length })}</h2>
+			<p class="hint">{m.contatos_pedidos_dica()}</p>
 			<ul class="list">
 				{#each requests as { contact, conversation } (contact.publicKey)}
 					<li>
@@ -49,12 +48,9 @@
 	{/if}
 
 	{#if contacts === undefined}
-		<p class="hint">Carregando…</p>
+		<p class="hint">{m.comum_carregando()}</p>
 	{:else if contacts.length === 0}
-		<p class="hint">
-			Para adicionar alguém, leia o QR code da pessoa ou abra o link de convite que ela mandou. Para ser
-			adicionado, mostre ou mande o seu convite.
-		</p>
+		<p class="hint">{m.contatos_vazio()}</p>
 	{:else}
 		<ul class="list">
 			{#each contacts as contact (contact.publicKey)}
@@ -64,7 +60,7 @@
 						<span class="text">
 							<strong>{contactName(contact)}</strong>
 							{#if contact.localName && contact.chosenName && contact.localName !== contact.chosenName}
-								<span class="hint">se apresenta como “{contact.chosenName}”</span>
+								<span class="hint">{m.contatos_se_apresenta({ nome: contact.chosenName })}</span>
 							{/if}
 						</span>
 					</a>
@@ -75,7 +71,7 @@
 
 	{#if blocked.length > 0}
 		<section>
-			<h2>Bloqueados ({blocked.length})</h2>
+			<h2>{m.contatos_bloqueados({ count: blocked.length })}</h2>
 			<ul class="list">
 				{#each blocked as contact (contact.publicKey)}
 					<li>

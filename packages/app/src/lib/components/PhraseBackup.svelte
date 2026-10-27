@@ -3,6 +3,8 @@
 	// Usado no cadastro e em "ver minha frase".
 	import { onDestroy } from 'svelte';
 	import PhraseGrid from './PhraseGrid.svelte';
+	import Rich from './Rich.svelte';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let { words }: { words: string[] } = $props();
 
@@ -30,31 +32,20 @@
 </script>
 
 <div class="banner">
-	<p>
-		<strong>Guarde estas 12 palavras, na ordem.</strong> Se você perder o celular ou esquecer o PIN, só esta
-		frase recupera sua conta. Ninguém mais consegue recuperar para você, nem a equipe do Lero-lero.
-	</p>
-	<p>Escolha um jeito de guardar:</p>
+	<p><Rich text={m.frase_guarde_aviso()} /></p>
+	<p>{m.frase_escolha_jeito()}</p>
 	<ul>
-		<li>
-			<strong>Num papel</strong>, guardado num lugar seguro de casa (não na carteira nem no celular). Papel
-			não pode ser invadido pela internet.
-		</li>
-		<li>
-			<strong>Num gerenciador de senhas</strong> (o do Google, o da Apple, Bitwarden…), se você já usa um.
-		</li>
+		<li><Rich text={m.frase_jeito_papel()} /></li>
+		<li><Rich text={m.frase_jeito_gerenciador()} /></li>
 	</ul>
-	<p>Nunca tire print e nunca mande a frase para ninguém: quem tem a frase vira você.</p>
+	<p>{m.frase_nunca_print()}</p>
 </div>
 
 <PhraseGrid {words} />
 
 <div class="copy">
-	<button type="button" onclick={copy}>{copied ? 'Copiada' : 'Copiar a frase'}</button>
-	<p class="hint">
-		Cole só no gerenciador de senhas. O teclado do celular e a nuvem podem guardar o que você copia; por isso
-		limpamos a cópia depois de 1 minuto, se o app ainda estiver aberto.
-	</p>
+	<button type="button" onclick={copy}>{copied ? m.frase_copiada() : m.frase_copiar()}</button>
+	<p class="hint">{m.frase_copiar_dica()}</p>
 </div>
 
 <style>

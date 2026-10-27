@@ -45,4 +45,10 @@ export function formatWhen(seconds: number, now = new Date()): string {
 	return format('dayMonth', date);
 }
 
-export const dayKey = (seconds: number) => startOfDay(new Date(seconds * 1000));
+/** Um dia escrito como AAAA-MM-DD (ex.: a data da lista de relays), por extenso. */
+export function formatIsoDay(iso: string): string {
+	const [year, month, day] = iso.split('-').map(Number);
+	return format('full', new Date(year!, month! - 1, day));
+}
+
+export const dayKey =(seconds: number) => startOfDay(new Date(seconds * 1000));
