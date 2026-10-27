@@ -3,6 +3,7 @@
 	// só o último ganha a pontinha; nos grupos, o nome vai no primeiro.
 	import { splitLinks, type MessageRecord } from '@lerolero/core';
 	import AudioPlayer from './AudioPlayer.svelte';
+	import PhotoView from './PhotoView.svelte';
 	import { hue } from './Avatar.svelte';
 	import Icon from './Icon.svelte';
 	import { formatTime } from '#lib/format.ts';
@@ -85,6 +86,18 @@
 			<AudioPlayer media={msg.media} />
 			{#if msg.upload?.failed}
 				<!-- desistiu depois de alguns minutos: pede uma decisão em vez de ficar "enviando" para sempre -->
+				<p class="failed" role="alert">{m.bolha_falhou()}</p>
+				<div class="failed-actions">
+					<button type="button" onclick={() => session.retryUpload(msg.id)}>{m.bolha_tentar_de_novo()}</button>
+					<button type="button" class="discard" onclick={() => session.discardUpload(msg.id)}>{m.bolha_apagar()}</button>
+				</div>
+			{/if}
+		{:else if msg.media?.type.startsWith('image/') && links === 'texto'}
+			<!-- pedido de mensagem (RF-12): foto fechada até aceitar -->
+			<p class="hint file"><Icon name="image" size={16} /> {m.bolha_foto_pedido()}</p>
+		{:else if msg.media?.type.startsWith('image/')}
+			<PhotoView media={msg.media} />
+			{#if msg.upload?.failed}
 				<p class="failed" role="alert">{m.bolha_falhou()}</p>
 				<div class="failed-actions">
 					<button type="button" onclick={() => session.retryUpload(msg.id)}>{m.bolha_tentar_de_novo()}</button>

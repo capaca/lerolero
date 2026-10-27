@@ -169,7 +169,7 @@ test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum
 	await ana.page.locator('.row', { hasText: 'oi' }).locator('.bubble').click({ button: 'right' });
 	await semTextoFixo(ana.page, nomes);
 	await ana.page.keyboard.press('Escape');
-	await ana.page.locator('.composer button.round').click();
+	await ana.page.locator('.composer button.round.primary').click();
 	await expect(ana.page.locator('.composer .recording')).toBeVisible();
 	await semTextoFixo(ana.page, nomes);
 	await ana.page.locator('.composer .recording button').first().click();

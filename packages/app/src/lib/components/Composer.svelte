@@ -67,6 +67,21 @@
 		}
 	}
 
+	// foto da galeria (RF-41): o seletor do sistema devolve o arquivo, o resto é por trás do balão
+	let picker = $state<HTMLInputElement>();
+
+	async function pickPhoto() {
+		const file = picker?.files?.[0];
+		if (picker) picker.value = '';
+		if (!file) return;
+		error = '';
+		try {
+			await session.sendPhoto(conversationId, file);
+		} catch (err) {
+			error = friendlyError(err);
+		}
+	}
+
 	onDestroy(cancelAudio);
 
 	const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -112,6 +127,10 @@
 		</div>
 	{:else}
 		<div class="line">
+			<input bind:this={picker} type="file" accept="image/*" hidden onchange={pickPhoto} data-testid="foto" />
+			<button type="button" class="round ghost" onclick={() => picker?.click()} aria-label={m.envio_foto()}>
+				<Icon name="image" />
+			</button>
 			<textarea
 				bind:this={input}
 				bind:value={text}

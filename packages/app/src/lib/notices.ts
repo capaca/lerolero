@@ -45,6 +45,8 @@ export function previewText(conversation: ConversationRecord, nameOf?: NameOf): 
 	switch (conversation.lastMessageKind) {
 		case 'audio':
 			return m.previa_audio();
+		case 'foto':
+			return m.previa_foto();
 		case 'arquivo':
 			return m.previa_arquivo();
 		case 'apagada':
