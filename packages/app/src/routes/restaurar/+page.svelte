@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PhraseInput from '#lib/components/PhraseInput.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let phrase = $state('');

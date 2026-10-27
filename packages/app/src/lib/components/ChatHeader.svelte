@@ -3,12 +3,13 @@
 	import { resolve } from '$app/paths';
 	import type { Snippet } from 'svelte';
 	import Icon from './Icon.svelte';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let { name, subtitle, href, avatar }: { name: string; subtitle?: string; href?: string; avatar: Snippet } = $props();
 </script>
 
 <header>
-	<a class="back" href={resolve('/')} aria-label="Voltar para as conversas"><Icon name="back" size={22} /></a>
+	<a class="back" href={resolve('/')} aria-label={m.conversa_voltar()}><Icon name="back" size={22} /></a>
 	<svelte:element this={href ? 'a' : 'span'} class="who" {href}>
 		{@render avatar()}
 		<span class="text">

@@ -6,10 +6,11 @@
 	import { hue } from './Avatar.svelte';
 	import Icon from './Icon.svelte';
 	import { formatTime } from '#lib/format.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let {
-		message: m,
+		message: msg,
 		mine,
 		first,
 		last,
@@ -56,7 +57,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="bubble"
-		class:deleted={m.deleted}
+		class:deleted={msg.deleted}
 		{onpointerdown}
 		onpointerup={cancelPress}
 		onpointerleave={cancelPress}
@@ -70,31 +71,31 @@
 			</svg>
 		{/if}
 		{#if senderName}
-			<span class="sender" style:--h={hue(m.sender)}>{senderName}</span>
+			<span class="sender" style:--h={hue(msg.sender)}>{senderName}</span>
 		{/if}
-		{#if m.deleted}
+		{#if msg.deleted}
 			<p class="deleted-text">
 				<Icon name="trash" size={14} />
-				{mine ? 'Você apagou esta mensagem' : 'Esta mensagem foi apagada'}
+				{mine ? m.bolha_voce_apagou() : m.bolha_apagada()}
 			</p>
-		{:else if m.media?.type.startsWith('audio/') && links === 'texto'}
+		{:else if msg.media?.type.startsWith('audio/') && links === 'texto'}
 			<!-- pedido de mensagem (RF-12): nada é baixado nem tocado até a pessoa aceitar -->
-			<p class="hint file"><Icon name="mic" size={16} /> Áudio de quem não é seu contato. Aceite o pedido para ouvir.</p>
-		{:else if m.media?.type.startsWith('audio/')}
-			<AudioPlayer media={m.media} />
-			{#if m.upload?.failed}
+			<p class="hint file"><Icon name="mic" size={16} /> {m.bolha_audio_pedido()}</p>
+		{:else if msg.media?.type.startsWith('audio/')}
+			<AudioPlayer media={msg.media} />
+			{#if msg.upload?.failed}
 				<!-- desistiu depois de alguns minutos: pede uma decisão em vez de ficar "enviando" para sempre -->
-				<p class="failed" role="alert">Não foi possível enviar.</p>
+				<p class="failed" role="alert">{m.bolha_falhou()}</p>
 				<div class="failed-actions">
-					<button type="button" onclick={() => session.retryUpload(m.id)}>Tentar de novo</button>
-					<button type="button" class="discard" onclick={() => session.discardUpload(m.id)}>Apagar</button>
+					<button type="button" onclick={() => session.retryUpload(msg.id)}>{m.bolha_tentar_de_novo()}</button>
+					<button type="button" class="discard" onclick={() => session.discardUpload(msg.id)}>{m.bolha_apagar()}</button>
 				</div>
 			{/if}
-		{:else if m.media}
-			<p class="hint file"><Icon name="paperclip" size={16} /> Arquivo (ainda não suportado nesta versão)</p>
+		{:else if msg.media}
+			<p class="hint file"><Icon name="paperclip" size={16} /> {m.bolha_arquivo()}</p>
 		{:else}
 			<p>
-				{#each links === 'texto' ? [{ text: m.text }] : splitLinks(m.text) as part, i (i)}
+				{#each links === 'texto' ? [{ text: msg.text }] : splitLinks(msg.text) as part, i (i)}
 					{#if 'href' in part && links === 'aviso'}
 						<a
 							href={part.href}
@@ -111,10 +112,10 @@
 			</p>
 		{/if}
 		<span class="meta">
-			{formatTime(m.createdAt)}
-			{#if mine && !m.upload?.failed}
-				<span class="status" title={m.status === 'pendente' ? 'Enviando' : 'Enviada'}>
-					<Icon name={m.status === 'pendente' ? 'clock' : 'check'} size={13} label={m.status === 'pendente' ? 'enviando' : 'enviada'} />
+			{formatTime(msg.createdAt)}
+			{#if mine && !msg.upload?.failed}
+				<span class="status" title={msg.status === 'pendente' ? m.bolha_enviando() : m.bolha_enviada()}>
+					<Icon name={msg.status === 'pendente' ? 'clock' : 'check'} size={13} label={msg.status === 'pendente' ? m.bolha_enviando() : m.bolha_enviada()} />
 				</span>
 			{/if}
 		</span>

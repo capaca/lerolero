@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	// nome → PIN, e já entra. A frase fica para quando houver algo a perder: o primeiro

@@ -70,7 +70,6 @@ export {
 	canDo,
 	createGroup,
 	demoteAdmin,
-	describeNotice,
 	groupNames,
 	GROUP_CONTROL_KIND,
 	GROUP_TAG,
@@ -89,6 +88,7 @@ export {
 	type GroupAction,
 	type GroupChange,
 	type ManageAction,
+	type MemberName,
 	type StoredGroupChange
 } from './conversations/groups.ts';
 export { BlossomError, COPIES, download, remove as removeFromBlossom, upload, type BlossomSigner } from './media/blossom.ts';

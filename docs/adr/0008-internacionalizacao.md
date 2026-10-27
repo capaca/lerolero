@@ -55,6 +55,11 @@ Como fica:
   trancar o cofre.
 - **O core não tem texto de interface:** devolve códigos e estruturas (como já fazem `GroupNotice` e os erros com
   `name`) e o app traduz. `describeNotice` passa para o app.
+- **Nada de texto de interface gravado no banco** (decidido pelo Pedro em 2026-10-27, ao chegar na área da conversa):
+  a prévia da lista e os avisos de grupo guardavam frases prontas ("Áudio", "Ana adicionou João") e ficariam em
+  português depois de trocar de língua. Agora guardam o tipo e o aviso estruturado, e uma migração do Dexie (versão 5)
+  refez o que já estava gravado ([06](../06-protocolo-e-dados.md) §4). A alternativa, traduzir só o que é montado na
+  tela e deixar o banco para quando houver a segunda língua, foi descartada.
 - **Mesma localidade em tudo:** o `lang` do HTML, o `Intl.DateTimeFormat`, o `localeCompare` e o `toLocaleUpperCase`
   usam a língua escolhida (RNF-72).
 - **Teste com uma pseudolíngua** (só no teste e2e, nunca no build da produção): a interface inteira numa língua de

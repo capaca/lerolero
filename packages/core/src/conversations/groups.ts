@@ -9,11 +9,12 @@
 import type { Rumor } from '../identity/vault.ts';
 import { cleanName } from '../contacts/invite.ts';
 import type { Storage } from '../storage/repositories.ts';
+import { summaryOf } from '../storage/summary.ts';
 import type { ConversationRecord, GroupEventRecord, GroupInfo, GroupMember, GroupNotice, GroupState, MessageRecord } from '../storage/records.ts';
 import { contactName } from '../contacts/contacts.ts';
 import { toHex } from '../media/crypto.ts';
 import { exclusive } from './lock.ts';
-import { kindOf, NAME_TAG, preview as previewOf, refreshConversation, sendTime } from './messaging.ts';
+import { NAME_TAG, refreshConversation, sendTime } from './messaging.ts';
 
 /** Kind próprio dos avisos de grupo (faixa 4440–4449 reservada ao Lero-lero, Q-P1). */
 export const GROUP_CONTROL_KIND = 4440;
@@ -366,7 +367,6 @@ async function storeGroupControlNow(
  * (ex.: chegou outro que o anula, T17) some da conversa.
  */
 async function syncNotices(storage: Storage, conversation: ConversationRecord, events: GroupEventRecord[], applied: Set<string>, me: string) {
-	const nameOf = await groupNames(storage, conversation.group!, me);
 	let changed = false;
 	for (const e of events) {
 		if (e.action === 'apresentar') continue;
@@ -385,7 +385,8 @@ async function syncNotices(storage: Storage, conversation: ConversationRecord, e
 			conversationId: conversation.id,
 			sender: e.author,
 			kind: GROUP_CONTROL_KIND,
-			text: describeNotice(notice, e.author, nameOf),
+			// sem texto: a tela monta a frase na língua da pessoa, com os nomes atuais (ADR-0008)
+			text: '',
 			createdAt: e.createdAt,
 			status: e.author === me ? 'enviada' : 'recebida',
 			notice
@@ -396,47 +397,20 @@ async function syncNotices(storage: Storage, conversation: ConversationRecord, e
 }
 
 /**
- * Nome de cada membro para os avisos: "Você"; o nome do contato; o nome que a pessoa
- * mandou ao grupo, com "~" (não está nos contatos e pode ter escolhido qualquer nome).
+ * Quem é cada membro, para a tela dar nome: eu; um contato (o nome que dei a ele); alguém que não está nos
+ * contatos, com o nome que mandou ao grupo (a tela marca com "~": pode ter escolhido qualquer nome);
+ * `undefined` para quem nunca se apresentou.
  */
-export async function groupNames(storage: Storage, group: GroupInfo, me: string): Promise<(publicKey: string) => string> {
-	const names = new Map<string, string>();
+export type MemberName = { me: true } | { me?: false; name: string; contact: boolean };
+
+export async function groupNames(storage: Storage, group: GroupInfo, me: string): Promise<(publicKey: string) => MemberName | undefined> {
+	const names = new Map<string, MemberName>();
 	for (const key of group.everMembers) {
 		const contact = await storage.contacts.get(key);
-		if (contact?.state === 'aceito') names.set(key, contactName(contact));
-		else if (group.names[key]) names.set(key, `~${group.names[key]}`);
+		if (contact?.state === 'aceito') names.set(key, { name: contactName(contact), contact: true });
+		else if (group.names[key]) names.set(key, { name: group.names[key], contact: false });
 	}
-	return (key) => (key === me ? 'Você' : (names.get(key) ?? 'Alguém'));
-}
-
-/** "Ana, Bruno e Carla" */
-function listNames(names: string[]): string {
-	return names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`;
-}
-
-/** Texto do aviso na conversa; `nameOf` dá "Você" para mim (no meio da frase vira "você"). */
-export function describeNotice(notice: GroupNotice, author: string, nameOf: (publicKey: string) => string): string {
-	const who = nameOf(author);
-	const target = (k: string) => (nameOf(k) === 'Você' ? 'você' : nameOf(k));
-	const targets = listNames(notice.targets.map(target));
-	switch (notice.action) {
-		case 'criar':
-			return `${who} criou o grupo “${notice.subject ?? ''}”`;
-		case 'adicionar':
-			return `${who} adicionou ${targets}`;
-		case 'remover':
-			return notice.targets[0] === author ? `${who} saiu do grupo` : `${who} removeu ${targets}`;
-		case 'sair':
-			return `${who} saiu do grupo`;
-		case 'renomear':
-			return `${who} mudou o nome do grupo para “${notice.subject ?? ''}”`;
-		case 'promover':
-			return `${who} deu a ${targets} a função de administrador`;
-		case 'rebaixar':
-			return `${who} tirou ${targets} da função de administrador`;
-		default:
-			return `${who} mudou o grupo`;
-	}
+	return (key) => (key === me ? { me: true } : names.get(key));
 }
 
 /**
@@ -462,8 +436,7 @@ async function adoptHeldMessages(storage: Storage, conversation: ConversationRec
 		...conversation,
 		unread: conversation.unread + unread,
 		lastMessageAt: Math.max(conversation.lastMessageAt, latest.createdAt),
-		lastMessagePreview: isLatest ? previewOf(latest) : conversation.lastMessagePreview,
-		lastMessageKind: isLatest ? kindOf(latest) : conversation.lastMessageKind
+		...(isLatest ? summaryOf(latest) : {})
 	});
 }
 

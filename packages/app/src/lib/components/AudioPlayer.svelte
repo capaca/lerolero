@@ -17,6 +17,8 @@
 	import type { MessageMedia } from '@lerolero/core';
 	import { onDestroy } from 'svelte';
 	import Icon from './Icon.svelte';
+	import { intlLocale } from '#lib/i18n.svelte.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let { media }: { media: MessageMedia } = $props();
@@ -44,7 +46,7 @@
 				src = URL.createObjectURL(await session.openMedia(media));
 			} catch {
 				phase = 'erro';
-				error = 'Não foi possível baixar o áudio.';
+				error = m.audio_erro_baixar();
 				return;
 			}
 		}
@@ -55,7 +57,7 @@
 			await audio!.play();
 		} catch {
 			phase = 'erro';
-			error = 'Este aparelho não toca este áudio. No iPhone, é preciso o iOS 18.4 ou mais novo.';
+			error = m.audio_erro_formato();
 		}
 	}
 
@@ -96,7 +98,7 @@
 </script>
 
 <div class="player">
-	<button class="play" onclick={toggle} aria-label={phase === 'tocando' ? 'Pausar' : 'Tocar'} disabled={phase === 'baixando'}>
+	<button class="play" onclick={toggle} aria-label={phase === 'tocando' ? m.audio_pausar() : m.audio_tocar()} disabled={phase === 'baixando'}>
 		<Icon name={phase === 'tocando' ? 'pause' : phase === 'baixando' ? 'loader' : 'play'} size={18} />
 	</button>
 	<input
@@ -106,12 +108,12 @@
 		step="any"
 		value={current}
 		oninput={seek}
-		aria-label="Posição do áudio"
+		aria-label={m.audio_posicao()}
 		disabled={!src}
 		style:--progress="{progress}%"
 	/>
 	<span class="time">{fmt(phase === 'parado' ? Math.max(0, total - skip) : Math.max(0, current - skip))}</span>
-	<button class="speed" onclick={cycleSpeed} aria-label="Velocidade">{String(SPEEDS[speedIndex]).replace('.', ',')}x</button>
+	<button class="speed" onclick={cycleSpeed} aria-label={m.audio_velocidade()}>{new Intl.NumberFormat(intlLocale()).format(SPEEDS[speedIndex]!)}x</button>
 	<audio
 		bind:this={audio}
 		onplay={() => (claimPlayback(audio!), (phase = 'tocando'), followPlayback())}

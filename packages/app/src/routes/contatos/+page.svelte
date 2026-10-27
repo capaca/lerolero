@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { contactName, type ContactRecord, type MessageRequest } from '@lerolero/core';
 	import { onMount } from 'svelte';
+	import { previewText } from '#lib/notices.ts';
 	import { session } from '#lib/session.svelte.ts';
 
 	let contacts = $state.raw<ContactRecord[] | undefined>();
@@ -38,7 +39,7 @@
 							<Avatar name={contactName(contact)} publicKey={contact.publicKey} />
 							<span class="text">
 								<strong>~{contactName(contact)}</strong>
-								<span class="hint preview">{conversation.lastMessageKind === 'texto' || !conversation.lastMessageKind ? (conversation.lastMessagePreview ?? '') : 'Mídia'}</span>
+								<span class="hint preview">{previewText(conversation)}</span>
 							</span>
 						</a>
 					</li>

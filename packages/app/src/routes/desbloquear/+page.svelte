@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let pin = $state('');

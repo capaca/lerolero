@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '#lib/paraglide/messages.js';
 	// Campo para digitar a frase de 12 palavras, com sugestões para a palavra em digitação.
 	import { matchWord, PHRASE_LENGTH, suggestWords } from '@lerolero/core';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let { value = $bindable(''), id }: { value?: string; id: string } = $props();
 

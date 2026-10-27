@@ -2,7 +2,18 @@
 // aparece "[Àššîɱ···]". Texto sem colchetes na tela ficou fixo no código e não seria traduzido.
 // As telas entram aqui à medida que os textos delas saem do código.
 import type { Page } from '@playwright/test';
-import { digitarPin, expect, PIN, test, vencerSessao } from '../ajudantes.ts';
+import {
+	abrirPedido,
+	adicionarPeloConvite,
+	adicionarUmAoOutro,
+	digitarPin,
+	enviarAudio,
+	enviarTexto,
+	expect,
+	PIN,
+	test,
+	vencerSessao
+} from '../ajudantes.ts';
 import { PSEUDO_URL } from '../servidores.ts';
 
 /** Textos visíveis, rótulos e o título que ainda estão fixos; `permitidos` são dados da pessoa (o nome). */
@@ -39,6 +50,12 @@ function textosFixos(page: Page, permitidos: string[] = []) {
 }
 
 const semTextoFixo = async (page: Page, permitidos?: string[]) => expect(await textosFixos(page, permitidos)).toEqual([]);
+
+/**
+ * A mesma tela no build da pseudolíngua. Os dois builds têm a mesma origem e o mesmo banco: o que foi montado
+ * pelo app normal (contas, contatos, mensagens), com os ajudantes de sempre, aparece igual no outro.
+ */
+const naPseudolingua = (page: Page) => page.goto(page.url().replace('/lerolero/', '/lerolero-pseudo/'));
 
 test('entrada (boas-vindas, cadastro, PIN, recuperar, esqueci o PIN): nenhum texto fixo', async ({ novoAparelho }) => {
 	const page = await novoAparelho(PSEUDO_URL);
@@ -81,4 +98,66 @@ test('entrada (boas-vindas, cadastro, PIN, recuperar, esqueci o PIN): nenhum tex
 	await page.locator('a.forgot').click();
 	await expect(page).toHaveURL(/\/esqueci-pin$/);
 	await semTextoFixo(page);
+});
+
+test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum texto fixo', async ({ novaPessoa }) => {
+	const [ana, bia, caio] = await Promise.all(['Ana', 'Bia', 'Caio'].map(novaPessoa));
+	const nomes = ['Ana', 'Bia', 'Caio', 'Amigos', 'oi', 'apagar'];
+	// montado no app normal: texto, áudio e uma mensagem apagada entre a Ana e a Bia; um grupo; um pedido do Caio
+	await adicionarUmAoOutro(ana, bia);
+	await enviarTexto(bia.page, 'oi');
+	await enviarAudio(bia.page, 1);
+	await enviarTexto(bia.page, 'apagar');
+	await bia.page.locator('.row.mine', { hasText: 'apagar' }).locator('.bubble').click({ button: 'right' });
+	const menu = bia.page.getByRole('dialog', { name: 'Opções da mensagem' });
+	await menu.getByRole('button', { name: 'Apagar para todos' }).click();
+	await menu.getByRole('button', { name: 'Apagar para todos' }).click();
+	await ana.page.goto('./grupo/novo');
+	await ana.page.locator('#nome').fill('Amigos');
+	await ana.page.locator('.person', { hasText: 'Bia' }).click();
+	await ana.page.getByRole('button', { name: 'Criar grupo' }).click();
+	await expect(ana.page.locator('.notice-line')).toBeVisible();
+	await adicionarPeloConvite(ana, caio);
+	await enviarTexto(caio.page, 'oi');
+
+	// lista: prévias de aviso de grupo e de mensagem apagada, menu da conversa e "nova conversa"
+	await ana.page.goto('./');
+	await expect(ana.page.locator('.conversations a', { hasText: 'Bia' }).locator('.preview')).toHaveText('Mensagem apagada', { timeout: 20_000 });
+	await naPseudolingua(ana.page);
+	await expect(ana.page.locator('.conversations a')).toHaveCount(2);
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.locator('.conversations a', { hasText: 'Amigos' }).click({ button: 'right' });
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.keyboard.press('Escape');
+	await ana.page.locator('.conversations a', { hasText: 'Bia' }).click({ button: 'right' });
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.keyboard.press('Escape');
+	await ana.page.locator('button.fab').click();
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.keyboard.press('Escape');
+
+	// conversa 1:1: texto, áudio, apagada, dia; menu da mensagem; gravando
+	await ana.page.locator('.conversations a', { hasText: 'Bia' }).click();
+	await expect(ana.page.locator('.player')).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.locator('.row', { hasText: 'oi' }).locator('.bubble').click({ button: 'right' });
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.keyboard.press('Escape');
+	await ana.page.locator('.composer button.round').click();
+	await expect(ana.page.locator('.composer .recording')).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.locator('.composer .recording button').first().click();
+
+	// grupo: o aviso e o subtítulo com "Você"
+	await ana.page.goBack();
+	await ana.page.locator('.conversations a', { hasText: 'Amigos' }).click();
+	await expect(ana.page.locator('.notice-line')).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
+
+	// pedido de mensagem do Caio, aberto por Contatos no app normal
+	await abrirPedido(ana.page, 'Caio');
+	await expect(ana.page).toHaveURL(/\/conversa\//);
+	await naPseudolingua(ana.page);
+	await expect(ana.page.locator('.banner.notice')).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
 });

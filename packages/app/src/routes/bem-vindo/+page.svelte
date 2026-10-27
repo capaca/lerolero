@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
+	import { m } from '#lib/paraglide/messages.js';
 </script>
 
 <svelte:head><title>{m.app_nome()}</title></svelte:head>

@@ -12,3 +12,9 @@ export function changeLanguage(locale: Locale) {
 
 /** Localidade para `Intl`, `localeCompare` e `toLocaleUpperCase` (RNF-72): a mesma da interface. */
 export const intlLocale = (): string => language.current;
+
+/**
+ * Trechos em negrito dentro de uma frase traduzida, marcados com **assim**: a frase fica inteira para quem
+ * traduz, sem HTML no arquivo de mensagens.
+ */
+export const boldParts = (text: string) => text.split(/\*\*(.+?)\*\*/).map((part, i) => ({ text: part, bold: i % 2 === 1 }));
