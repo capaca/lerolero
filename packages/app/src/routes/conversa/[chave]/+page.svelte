@@ -6,6 +6,7 @@
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Chat from '#lib/components/Chat.svelte';
 	import ChatHeader from '#lib/components/ChatHeader.svelte';
+	import { phraseOfferDue } from '#lib/phrase-reminder.ts';
 	import { session } from '#lib/session.svelte.ts';
 
 	const publicKey = $derived(page.params.chave ?? '');
@@ -21,6 +22,8 @@
 	const isContact = $derived(contact?.state === 'aceito');
 	async function accept() {
 		await session.acceptRequest(publicKey);
+		// aceitar o primeiro contato também é a hora de guardar a frase (Q-U1), como ao adicionar pelo convite
+		if (await phraseOfferDue()) await goto(resolve('/guardar-frase') + '?contato=' + publicKey, { replaceState: true });
 	}
 	async function block() {
 		await session.blockContact(publicKey);

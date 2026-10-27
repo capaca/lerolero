@@ -18,6 +18,9 @@ test('Maria convida, João adiciona e os dois conversam', async ({ novaPessoa })
 	await abrirPedido(maria.page, 'João');
 	await expect(maria.page.getByText('Pedido de mensagem: esta pessoa não está nos seus contatos.')).toBeVisible();
 	await maria.page.getByRole('button', { name: 'Aceitar' }).click();
+	await maria.page.getByRole('button', { name: 'Depois' }).click(); // primeiro contato: frase oferecida (Q-U1)
+	await maria.page.goto('./');
+	await maria.page.locator('.conversations a', { hasText: 'João' }).click();
 	await maria.page.getByLabel('Mensagem').fill('Oi João, tudo bem?');
 	await maria.page.getByRole('button', { name: 'Enviar', exact: true }).click();
 
