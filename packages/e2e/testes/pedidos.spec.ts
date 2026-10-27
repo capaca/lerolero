@@ -26,7 +26,13 @@ test('desconhecido vira pedido em Contatos, com ponto no ícone; aceitar abre a 
 	await expect(maria.page.getByText('Áudio de quem não é seu contato')).toBeVisible();
 	await expect(maria.page.locator('.player')).toHaveCount(0);
 
+	// o primeiro contato da Maria vem de um pedido: é aqui que a frase é oferecida (Q-U1)
 	await maria.page.getByRole('button', { name: 'Aceitar' }).click();
+	await expect(maria.page.getByRole('heading', { name: 'Guarde sua frase de recuperação' })).toBeVisible();
+	await maria.page.getByRole('button', { name: 'Depois' }).click();
+	await expect(maria.page.getByRole('heading', { name: 'João' })).toBeVisible();
+	await maria.page.goto('./');
+	await maria.page.locator('.conversations a', { hasText: 'João' }).click();
 	await expect(maria.page.getByText('Pedido de mensagem: esta pessoa não está nos seus contatos.')).toHaveCount(0);
 	await expect(maria.page.locator('.row:not(.mine) a')).toHaveCount(1);
 	await expect(maria.page.locator('.player')).toHaveCount(1);
