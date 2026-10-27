@@ -1,6 +1,12 @@
 // Fotos (RF-41): anexar da galeria, comprimir, enviar cifrada, prévia no balão, abrir em tela cheia no outro lado.
 import { abrirConversa, adicionarUmAoOutro, expect, test } from '../ajudantes.ts';
 
+// PNG 1x1 válido, o bastante para o fluxo de envio
+const PNG_MINIMO = Buffer.from(
+	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+	'base64'
+);
+
 test('João envia uma foto grande; Maria vê a prévia na lista e abre em tela cheia', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
 	await adicionarUmAoOutro(maria, joao);
@@ -49,4 +55,18 @@ test('João envia uma foto grande; Maria vê a prévia na lista e abre em tela c
 	expect(tamanho.w / tamanho.h).toBeCloseTo(1.5, 1);
 	await maria.page.getByRole('button', { name: 'Fechar foto' }).click();
 	await expect(aberta).toHaveCount(0);
+});
+
+test('João escolhe duas fotos de uma vez e as duas chegam para Maria', async ({ novaPessoa }) => {
+	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
+	await adicionarUmAoOutro(maria, joao);
+
+	const fotos = ['a', 'b'].map((nome) => ({ name: `${nome}.png`, mimeType: 'image/png', buffer: PNG_MINIMO }));
+	await joao.page.getByTestId('foto').setInputFiles(fotos);
+	await expect(joao.page.locator('.row.mine:has(.photo)')).toHaveCount(2);
+	await expect(joao.page.locator('.row.mine:has(.photo)').getByLabel('enviada')).toHaveCount(2, { timeout: 30_000 });
+
+	await maria.page.goto('./');
+	await abrirConversa(maria.page, 'João');
+	await expect(maria.page.locator('.photo')).toHaveCount(2);
 });
