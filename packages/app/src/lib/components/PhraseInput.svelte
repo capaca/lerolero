@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '#lib/paraglide/messages.js';
 	// Campo para digitar a frase de 12 palavras, com sugestões para a palavra em digitação.
 	import { matchWord, PHRASE_LENGTH, suggestWords } from '@lerolero/core';
 
@@ -19,24 +20,24 @@
 	}
 </script>
 
-<label for={id}>Sua frase de recuperação</label>
+<label for={id}>{m.frase_rotulo()}</label>
 <textarea
 	{id}
 	rows="4"
 	autocomplete="off"
 	autocapitalize="none"
 	spellcheck="false"
-	placeholder="As 12 palavras, separadas por espaço"
+	placeholder={m.frase_placeholder()}
 	bind:value
 ></textarea>
 <p class="hint">
-	{tokens.length} de {PHRASE_LENGTH} palavras
+	{m.frase_contagem({ count: tokens.length, total: PHRASE_LENGTH })}
 	{#if unknown.length}
-		· <span class="error">não reconheço: {unknown.map(({ t, i }) => `${i + 1}ª "${t}"`).join(', ')}</span>
+		· <span class="error">{m.frase_nao_reconheco({ palavras: unknown.map(({ t, i }) => m.frase_palavra_posicao({ position: i + 1, word: t })).join(', ') })}</span>
 	{/if}
 </p>
 {#if suggestions.length}
-	<div class="suggestions" aria-label="Sugestões">
+	<div class="suggestions" aria-label={m.frase_sugestoes()}>
 		{#each suggestions as word (word)}
 			<button type="button" onclick={() => complete(word)}>{word}</button>
 		{/each}

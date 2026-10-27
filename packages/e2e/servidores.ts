@@ -13,6 +13,16 @@ import { FakeRelay } from '../core/src/testing/fake-relay.ts';
 const PORT = 4190;
 export const APP_URL = `http://127.0.0.1:${PORT}/lerolero/`;
 const BUILD = new URL('../app/build/', import.meta.url).pathname;
+/** O mesmo app com os textos na pseudolíngua (`pnpm build:pseudo`), para o teste de textos fixos (ADR-0008). */
+export const PSEUDO_URL = `http://127.0.0.1:${PORT}/lerolero-pseudo/`;
+const BUILD_PSEUDO = new URL('../app/build-pseudo/', import.meta.url).pathname;
+
+/** Qual build serve o caminho pedido: o da pseudolíngua ou o normal. */
+function site(path: string): { prefix: string; dir: string } | undefined {
+	for (const [prefix, dir] of [['/lerolero-pseudo', BUILD_PSEUDO], ['/lerolero', BUILD]]) {
+		if (path === prefix || path.startsWith(prefix + '/')) return { prefix, dir };
+	}
+}
 
 const TYPES: Record<string, string> = {
 	'.html': 'text/html',
@@ -36,24 +46,25 @@ async function isFile(path: string) {
 export function pagesServer(relays: string, opcoes: { versao?: () => string | undefined } = {}) {
 	return createServer(async (req, res) => {
 		const path = decodeURIComponent(new URL(req.url!, 'http://x').pathname);
-		if (path === '/lerolero/relays.json') {
+		const app = site(path);
+		if (app && path === `${app.prefix}/relays.json`) {
 			res.writeHead(200, { 'content-type': 'application/json' });
 			return res.end(relays);
 		}
-		let file = join(BUILD, path.replace(/^\/lerolero\/?/, ''));
-		if (path.startsWith('/lerolero') && !(await isFile(file))) {
+		let file = app ? join(app.dir, path.slice(app.prefix.length)) : '';
+		if (app && !(await isFile(file))) {
 			file = (await isFile(file + '.html')) ? file + '.html' : join(file, 'index.html');
 		}
-		if (path.startsWith('/lerolero') && (await isFile(file))) {
+		if (app && (await isFile(file))) {
 			res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });
 			let body = await readFile(file);
 			// "versão nova publicada": o service worker muda um byte e o navegador o instala
 			const versao = opcoes.versao?.();
-			if (versao && path === '/lerolero/service-worker.js') body = Buffer.concat([body, Buffer.from(`\n// ${versao}\n`)]);
+			if (versao && path === `${app.prefix}/service-worker.js`) body = Buffer.concat([body, Buffer.from(`\n// ${versao}\n`)]);
 			return res.end(body);
 		}
 		res.writeHead(404, { 'content-type': 'text/html' });
-		res.end(await readFile(join(BUILD, '404.html')));
+		res.end(await readFile(join(app?.dir ?? BUILD, '404.html')));
 	});
 }
 
@@ -70,6 +81,9 @@ function selfSignedCert() {
 export default async function globalSetup() {
 	if (!existsSync(join(BUILD, '404.html'))) {
 		throw new Error('Falta o build do app: rode `BASE_PATH=/lerolero pnpm build` na raiz antes da suíte.');
+	}
+	if (!existsSync(join(BUILD_PSEUDO, '404.html'))) {
+		throw new Error('Falta o build da pseudolíngua: rode `pnpm build:pseudo` em packages/app antes da suíte.');
 	}
 	// dois Blossom, como em produção: o app guarda cada arquivo em dois servidores
 	const tls = selfSignedCert();

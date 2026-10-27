@@ -12,8 +12,14 @@ import { decode, npubEncode } from 'nostr-tools/nip19';
 
 export type Invite = { publicKey: string; name?: string; relays: string[] };
 
+/** O que há de errado no convite; a interface monta o texto (ADR-0008). */
+export type InviteProblem = { reason: 'formato' } | { reason: 'nao-e-pessoa' };
+
 export class InvalidInviteError extends Error {
-	constructor(message = 'Convite inválido') {
+	constructor(
+		message = 'Convite inválido',
+		readonly detail?: InviteProblem
+	) {
 		super(message);
 		this.name = 'InvalidInviteError';
 	}
@@ -56,7 +62,7 @@ export function parseInvite(text: string): Invite {
 	try {
 		decoded = decode(code);
 	} catch {
-		throw new InvalidInviteError('Este não parece ser um convite do Lero-lero');
+		throw new InvalidInviteError('Este não parece ser um convite do Lero-lero', { reason: 'formato' });
 	}
 
 	let invite: Invite;
@@ -65,7 +71,7 @@ export function parseInvite(text: string): Invite {
 	} else if (decoded.type === 'npub') {
 		invite = { publicKey: decoded.data, relays: [] };
 	} else {
-		throw new InvalidInviteError('Este código não é de uma pessoa');
+		throw new InvalidInviteError('Este código não é de uma pessoa', { reason: 'nao-e-pessoa' });
 	}
 
 	if (name) {

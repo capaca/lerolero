@@ -1,9 +1,11 @@
 <script lang="ts" module>
+	import { intlLocale } from '#lib/i18n.svelte.ts';
+
 	/** Até duas iniciais: a do primeiro e a do último nome. */
 	export function initials(name: string): string {
 		const words = name.trim().split(/\s+/).filter(Boolean);
 		if (words.length === 0) return '';
-		const first = (w: string) => [...w][0]!.toLocaleUpperCase('pt-BR');
+		const first = (w: string) => [...w][0]!.toLocaleUpperCase(intlLocale());
 		return words.length === 1 ? first(words[0]!) : first(words[0]!) + first(words.at(-1)!);
 	}
 

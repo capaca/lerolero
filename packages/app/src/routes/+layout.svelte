@@ -4,6 +4,8 @@
 	import { asset, resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { language } from '#lib/i18n.svelte.ts';
+	import { m } from '#lib/paraglide/messages.js';
 	import { savePendingInvite } from '#lib/pending-invite.ts';
 	import { session, type Status } from '#lib/session.svelte.ts';
 	import type { LayoutProps } from './$types';
@@ -42,6 +44,8 @@
 	const PUBLIC = ['/teste', '/teste/roteiro'];
 
 	onMount(() => {
+		// o app.html nasce em pt-BR; a língua escolhida ou a do navegador vale a partir daqui (ADR-0008)
+		document.documentElement.lang = language.current;
 		void session.init();
 		// RF-80: ao voltar para o app ou quando a internet volta, reconecta e esvazia a fila
 		// a primeira troca de controle numa página sem worker é a instalação, não uma versão nova
@@ -91,26 +95,29 @@
 
 {#if showOffline}
 	<!-- faixa fina presa no topo, no fluxo da página: não cobre nada nem fica no meio da tela -->
-	<p class="offline" role="status">Sem conexão. As mensagens saem quando voltar.</p>
+	<p class="offline" role="status">{m.layout_sem_conexao()}</p>
 {/if}
 
 {#if updateReady}
 	<div class="update" role="status">
-		<span>Nova versão disponível.</span>
-		<button onclick={() => location.reload()}>Atualizar</button>
+		<span>{m.layout_versao_nova()}</span>
+		<button onclick={() => location.reload()}>{m.layout_atualizar()}</button>
 	</div>
 {/if}
 
 {#if session.status !== 'carregando'}
 	<!-- a conversa ocupa a altura da tela; com a faixa de sem conexão ela encolhe o mesmo tanto -->
 	<div style:--offline-bar={showOffline ? '1.75rem' : '0px'}>
-		{@render children()}
+		<!-- trocar a língua redesenha a tela sem recarregar, que trancaria o cofre (ADR-0008) -->
+		{#key language.current}
+			{@render children()}
+		{/key}
 	</div>
 {/if}
 
 {#if __APP_HOMOLOG__}
 	<!-- moldura laranja: esta é a homologação, com outra conta, e não o app de verdade (ADR-0007) -->
-	<p class="homolog" aria-hidden="true"><span>Homologação</span></p>
+	<p class="homolog" aria-hidden="true"><span>{m.layout_homologacao()}</span></p>
 {/if}
 
 <style>

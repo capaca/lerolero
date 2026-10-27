@@ -71,5 +71,14 @@ Como fica:
 - Mais uma dependência de build, e as chaves precisam de nome (convenção `area_assunto`, ex.: `cadastro_titulo`).
 - A escolha da língua fica no `localStorage`, não no banco. Num aparelho novo vale a língua do navegador até a pessoa
   escolher de novo. Pode entrar no backup cifrado (RF-06) quando ele existir.
+- As dependências de build pesam: o SDK do inlang traz SQLite em WebAssembly e ~120 pacotes ao lockfile. Nada disso
+  vai para o celular; o app só leva as funções geradas em `src/lib/paraglide/` (fora do git, geradas pelo `pnpm check`
+  e pelo build).
+- O plugin do formato das mensagens é o pacote `@inlang/plugin-message-format`, instalado e travado pelo pnpm, e não
+  baixado de um CDN a cada build, como o modelo do inlang sugere: menos uma porta de entrada para código de fora no build.
+  Pelo mesmo motivo a versão do Paraglide respeita a idade mínima de publicação do pnpm (2.29.1, não a 2.29.2 do dia).
+- A pseudolíngua é um segundo build (`pnpm build:pseudo`, em `build-pseudo/`, servido pelo e2e em `/lerolero-pseudo/`),
+  gerado de `messages/pt-BR.json` por `scripts/pseudolingua.js`. O teste `textos.spec.ts` percorre as telas já
+  extraídas e falha com o texto que ficou de fora. A CI de e2e e o `verificar.sh build` fazem os dois builds.
 - Se o Paraglide parar de ser mantido, as mensagens em JSON e as chamadas `m.chave()` dão para trocar por um módulo
   próprio (opção C) sem mexer nos textos.

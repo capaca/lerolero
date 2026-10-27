@@ -111,6 +111,9 @@ jobs:
         run: pnpm build
         env:
           BASE_PATH: /lerolero
+      # o mesmo app com os textos na pseudolíngua, para o teste de textos fixos (textos.spec.ts, ADR-0008)
+      - name: Build da pseudolíngua
+        run: pnpm --filter @lerolero/app build:pseudo
       # Chrome que já vem no ubuntu-latest, com relays e Blossom locais (packages/e2e/servidores.ts)
       - name: Suíte de ponta a ponta
         working-directory: packages/e2e

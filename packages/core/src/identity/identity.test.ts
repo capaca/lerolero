@@ -52,6 +52,21 @@ describe('frase de recuperação', () => {
 		expect(() => parsePhrase(swapped)).toThrow(InvalidPhraseError);
 	});
 
+	it('diz o problema em código, para a interface traduzir (ADR-0008)', () => {
+		const problem = (input: string | string[]) => {
+			try {
+				parsePhrase(input);
+			} catch (err) {
+				return (err as InvalidPhraseError).detail;
+			}
+		};
+		expect(problem('segredo surreal')).toEqual({ reason: 'tamanho', count: 2 });
+		expect(problem(PHRASE.replace('dissipar', 'xyzw'))).toEqual({ reason: 'palavra', position: 3, word: 'xyzw' });
+		const swapped = PHRASE.split(' ');
+		[swapped[0], swapped[1]] = [swapped[1], swapped[0]];
+		expect(problem(swapped)).toEqual({ reason: 'soma' });
+	});
+
 	it('sorteia posições diferentes para o teste de verificação', () => {
 		for (let i = 0; i < 50; i++) {
 			const [a, b] = pickCheckPositions();

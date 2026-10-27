@@ -5,12 +5,22 @@ class Failure extends Error {
 	override name = 'Failure';
 }
 
+class Detailed extends Error {
+	override name = 'Detailed';
+	constructor(readonly detail: unknown) {
+		super('com código');
+	}
+}
+
 const handlers = {
 	soma: (a: number, b: number) => a + b,
 	devagar: async (x: string) => x.toUpperCase(),
 	bytes: (b: Uint8Array) => b.length,
 	falha: () => {
 		throw new Failure('deu errado');
+	},
+	detalhada: () => {
+		throw new Detailed({ reason: 'palavra', position: 3 });
 	}
 };
 
@@ -38,6 +48,14 @@ describe('RPC com o worker', () => {
 		expect(err).toBeInstanceOf(RemoteError);
 		expect(err.name).toBe('Failure');
 		expect(err.message).toBe('deu errado');
+		expect(err.detail).toBeUndefined();
+		close();
+	});
+
+	it('repassa o código do problema, para a interface traduzir (ADR-0008)', async () => {
+		const { remote, close } = pair();
+		const err = await remote.detalhada().catch((e) => e);
+		expect(err).toMatchObject({ name: 'Detailed', message: 'com código', detail: { reason: 'palavra', position: 3 } });
 		close();
 	});
 });

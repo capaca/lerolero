@@ -21,7 +21,8 @@ for etapa in "${etapas[@]}"; do
 	case "$etapa" in
 		check) pnpm check >"$log" 2>&1 ;;
 		test) pnpm test >"$log" 2>&1 ;;
-		build) BASE_PATH=/lerolero pnpm build >"$log" 2>&1 ;;
+		# o segundo build é o da pseudolíngua, para o teste de textos fixos do e2e (ADR-0008)
+		build) { BASE_PATH=/lerolero pnpm build && pnpm --filter @lerolero/app build:pseudo; } >"$log" 2>&1 ;;
 		e2e) (cd packages/e2e && pnpm e2e) >"$log" 2>&1 ;;
 		*) echo "etapa desconhecida: $etapa (use check, test, build ou e2e)"; exit 2 ;;
 	esac
