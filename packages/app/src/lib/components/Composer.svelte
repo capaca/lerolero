@@ -71,14 +71,17 @@
 	let picker = $state<HTMLInputElement>();
 
 	async function pickPhoto() {
-		const file = picker?.files?.[0];
+		// várias de uma vez: uma por mensagem, na ordem escolhida; a falha de uma não derruba as outras
+		const files = [...(picker?.files ?? [])];
 		if (picker) picker.value = '';
-		if (!file) return;
+		if (!files.length) return;
 		error = '';
-		try {
-			await session.sendPhoto(conversationId, file);
-		} catch (err) {
-			error = friendlyError(err);
+		for (const file of files) {
+			try {
+				await session.sendPhoto(conversationId, file);
+			} catch (err) {
+				error = friendlyError(err);
+			}
 		}
 	}
 
@@ -127,7 +130,7 @@
 		</div>
 	{:else}
 		<div class="line">
-			<input bind:this={picker} type="file" accept="image/*" hidden onchange={pickPhoto} data-testid="foto" />
+			<input bind:this={picker} type="file" accept="image/*" multiple hidden onchange={pickPhoto} data-testid="foto" />
 			<button type="button" class="round ghost" onclick={() => picker?.click()} aria-label={m.envio_foto()}>
 				<Icon name="image" />
 			</button>

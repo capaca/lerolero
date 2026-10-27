@@ -74,7 +74,8 @@
 | RF-41 | **Imagens:** enviar fotos com compressão automática; o destinatário recebe primeiro uma prévia leve e baixa a imagem completa quando quiser (ou automaticamente, conforme configuração) | Must | MVP |
 | RF-42 | Toda mídia é cifrada antes de sair do aparelho | Must | MVP |
 | RF-43 | **Figurinhas**, incluindo a **figurinha sonora** (imagem + áudio curto) | — | v1 |
-| RF-44 | Arquivos, documentos e vídeos | — | Futuro |
+| RF-44 | **Arquivos** (PDF, documentos e outros tipos): enviar como anexo, cifrados e guardados uma vez, como as fotos (RF-41, 70); o balão mostra nome, tipo e tamanho, e o arquivo baixa sob demanda (RF-71). Vídeos ficam de fora por ora. Pedido do Pedro em 2026-10-27 | Should | M3 |
+| RF-45 | **Salvar no aparelho** a foto e o arquivo recebidos (ou enviados), pelo menu da mensagem, para a galeria ou a pasta de downloads | Should | M3 |
 
 ## 6. Status de entrega
 
