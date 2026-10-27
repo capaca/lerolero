@@ -3,6 +3,13 @@
 	// o arquivo só é baixado ao tocar e abre em tela cheia.
 	import type { MessageMedia } from '@lerolero/core';
 	import { onDestroy } from 'svelte';
+
+	// Os blocos da conversa usam content-visibility (contain: layout), que faz o position: fixed valer em relação ao
+	// bloco e não à tela: a foto aberta vazava para baixo. Levar para o body resolve.
+	function toBody(node: HTMLElement) {
+		document.body.appendChild(node);
+		return { destroy: () => node.remove() };
+	}
 	import Icon from './Icon.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
@@ -43,7 +50,7 @@
 {#if error}<p class="hint" role="alert">{error}</p>{/if}
 
 {#if open && src}
-	<div class="full" role="dialog" aria-modal="true" aria-label={m.bolha_foto_abrir()}>
+	<div class="full" use:toBody role="dialog" aria-modal="true" aria-label={m.bolha_foto_abrir()}>
 		<button type="button" class="close" onclick={() => (open = false)} aria-label={m.bolha_foto_fechar()}><Icon name="x" /></button>
 		<img src={src} alt="" data-testid="foto-aberta" />
 	</div>
@@ -81,10 +88,12 @@
 		background: #000e;
 		display: grid;
 		place-items: center;
+		overflow: hidden;
 	}
+	/* em unidades da tela: a % de altura não resolve num grid de altura automática */
 	.full img {
-		max-width: 100%;
-		max-height: 100%;
+		max-width: 100vw;
+		max-height: 100dvh;
 		object-fit: contain;
 	}
 	.close {

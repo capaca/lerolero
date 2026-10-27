@@ -35,6 +35,12 @@ test('João envia uma foto grande; Maria vê a prévia na lista e abre em tela c
 	await foto.click();
 	const aberta = maria.page.getByTestId('foto-aberta');
 	await expect(aberta).toBeVisible();
+	// a foto inteira cabe na tela (antes vazava para baixo e só aparecia o topo)
+	const caixaAberta = (await aberta.boundingBox())!;
+	const tela = maria.page.viewportSize()!;
+	expect(caixaAberta.y).toBeGreaterThanOrEqual(0);
+	expect(caixaAberta.y + caixaAberta.height).toBeLessThanOrEqual(tela.height + 1);
+	expect(caixaAberta.x + caixaAberta.width).toBeLessThanOrEqual(tela.width + 1);
 	const tamanho = await aberta.evaluate(async (img: HTMLImageElement) => {
 		await img.decode();
 		return { w: img.naturalWidth, h: img.naturalHeight };
