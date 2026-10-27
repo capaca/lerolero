@@ -56,6 +56,21 @@ describe('conversas 1:1', () => {
 		expect(got?.conversation).toMatchObject({ unread: 1, lastMessagePreview: 'oi Bob' });
 	});
 
+	// Regressão (2026-10-27): o app recarregou entre guardar a mensagem e criar a conversa; ao reprocessar o
+	// embrulho a mensagem já existia e a conversa nunca mais era criada (e2e `excluir-conversa` falhava na CI).
+	it('reprocessar um embrulho cuja mensagem já foi guardada, mas sem conversa, cria a conversa', async () => {
+		const alice = await device();
+		const bob = await device();
+		const rumor = bob.vault.unwrap(alice.vault.wrapDirectMessage(bob.publicKey, 'oi Bob').toRecipient);
+		await storeIncoming(bob.storage, bob.publicKey, rumor);
+		// o app morreu antes do resto: fica só a mensagem
+		await bob.storage.conversations.delete(directConversationId(alice.publicKey));
+
+		const again = await storeIncoming(bob.storage, bob.publicKey, rumor);
+		expect(again?.isNew).toBe(true);
+		expect(await bob.storage.conversations.get(directConversationId(alice.publicKey))).toMatchObject({ unread: 1, lastMessagePreview: 'oi Bob' });
+	});
+
 	// Regressão (2026-10-22): mensagens no mesmo segundo apareciam fora de ordem para os dois lados.
 	it('várias mensagens no mesmo segundo aparecem na ordem em que foram enviadas', async () => {
 		const alice = await device();
