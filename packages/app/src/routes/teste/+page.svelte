@@ -58,6 +58,7 @@
 		<li><Rich text={m.guia_passo_convite()} /></li>
 		<li><Rich text={m.guia_passo_conversar({ relogio: iconMark('clock'), check: iconMark('check') })} /></li>
 		<li><Rich text={m.guia_passo_audio({ microfone: iconMark('mic'), enviar: iconMark('send') })} /></li>
+		<li><Rich text={m.guia_passo_foto({ imagem: iconMark('image') })} /></li>
 		<li><Rich text={m.guia_passo_grupo()} /></li>
 		<li><Rich text={m.guia_passo_apagar()} /></li>
 	</ol>
@@ -100,6 +101,7 @@
 		<li><Rich text={m.guia_ajuda_convite()} /></li>
 		<li><Rich text={m.guia_ajuda_mensagens()} /></li>
 		<li><Rich text={m.guia_ajuda_audios()} /></li>
+		<li><Rich text={m.guia_ajuda_fotos()} /></li>
 		<li><Rich text={m.guia_ajuda_celular()} /></li>
 	</ul>
 	<p>{m.guia_print()}</p>
