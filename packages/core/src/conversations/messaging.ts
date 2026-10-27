@@ -143,13 +143,13 @@ async function storeIncomingNow(
 	const mine = rumor.pubkey === me;
 
 	const known = await storage.messages.get(rumor.id);
-	if (known) {
-		const conversation = (await storage.conversations.get(known.conversationId))!;
-		return { message: known, conversation, isNew: false };
-	}
+	const knownConversation = known && (await storage.conversations.get(known.conversationId));
+	if (known && knownConversation) return { message: known, conversation: knownConversation, isNew: false };
 
-	const message = incomingRecord(rumor, directConversationId(other), media, mine);
-	await storage.messages.put(message);
+	// Se o app morreu entre guardar a mensagem e criar a conversa, o embrulho volta e a mensagem já existe, sem
+	// conversa: refaz o resto em vez de a mensagem ficar invisível para sempre (a gravação não é atômica).
+	const message = known ?? incomingRecord(rumor, directConversationId(other), media, mine);
+	if (!known) await storage.messages.put(message);
 
 	if (!mine) await rememberSender(storage, other, rumor);
 	const unread = !mine && options.openConversationId !== message.conversationId ? 1 : 0;
