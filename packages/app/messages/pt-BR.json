@@ -179,6 +179,7 @@
 	"conversa_vazia": "Nenhuma mensagem ainda. Diga oi!",
 	"conversa_novas": "Mensagens novas",
 	"conversa_copiada": "Mensagem copiada",
+	"conversa_encaminhada": "Mensagem encaminhada",
 	"conversa_erro_copiar": "Não foi possível copiar a mensagem.",
 	"conversa_ir_fim": "Ir para o fim",
 	"conversa_ir_fim_novas": [
@@ -221,6 +222,9 @@
 	"bolha_enviando": "Enviando",
 	"bolha_enviada": "Enviada",
 	"menu_opcoes": "Opções da mensagem",
+	"menu_encaminhar": "Encaminhar",
+	"encaminhar_titulo": "Encaminhar para…",
+	"encaminhar_vazio": "Você ainda não tem contatos nem grupos para receber.",
 	"menu_copiar": "Copiar",
 	"menu_apagar_mim": "Apagar para mim",
 	"menu_apagar_todos": "Apagar para todos",

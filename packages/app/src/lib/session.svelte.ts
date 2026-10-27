@@ -25,7 +25,9 @@ import {
 	type StoredGroupChange,
 	deleteConversation,
 	deleteForMe,
+	contactName,
 	deletionTags,
+	forwardOf,
 	parseInvite,
 	directConversationId,
 	groupConversationId,
@@ -490,6 +492,34 @@ class Session {
 	/** Envia texto para uma conversa (1:1 ou grupo). */
 	sendText(conversationId: string, text: string) {
 		return this.sendTo(conversationId, text.trim(), [], 14);
+	}
+
+	/**
+	 * Encaminha uma mensagem a outra conversa (RF-28, RF-70): o texto, ou a mesma referência do arquivo, sem baixar
+	 * nem subir de novo. Não encaminha o que ainda não saiu, o que foi apagado nem avisos.
+	 */
+	async forwardMessage(messageId: string, conversationId: string) {
+		const message = await storage.messages.get(messageId);
+		const forward = message && forwardOf(message);
+		if (!forward) throw new Error('Esta mensagem não pode ser encaminhada.');
+		if (conversationId.startsWith('grupo:') && !(await storage.conversations.get(conversationId))?.group?.amMember) {
+			throw new NotInGroupError();
+		}
+		await this.sendTo(conversationId, forward.content, forward.tags, forward.kind);
+	}
+
+	/** Para onde dá para encaminhar: contatos e grupos de que faço parte. */
+	async listForwardTargets(): Promise<Array<{ id: string; name: string; key: string; group: boolean }>> {
+		const contacts = (await this.listContacts()).map((c) => ({
+			id: directConversationId(c.publicKey),
+			name: contactName(c),
+			key: c.publicKey,
+			group: false
+		}));
+		const groups = (await this.listConversations())
+			.filter((c) => c.group?.amMember)
+			.map((c) => ({ id: c.id, name: c.group!.state.name, key: c.id.slice('grupo:'.length), group: true }));
+		return [...groups, ...contacts];
 	}
 
 	/**
