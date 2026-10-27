@@ -11,18 +11,24 @@ test('o player começa depois do silêncio do começo e a barra continua inteira
 
 	await abrirConversa(maria.page, 'João');
 	await expect(maria.page.locator('.player')).toHaveCount(1);
-	await maria.page.evaluate(
+	// a gravação dura o que a máquina deixar (8 s pedidos, 10 s numa máquina cheia): a conferência usa a duração real
+	const duracao = await maria.page.evaluate(
 		() =>
-			new Promise<void>((ok, falha) => {
+			new Promise<number>((ok, falha) => {
 				const req = indexedDB.open('lerolero');
 				req.onerror = () => falha(req.error);
 				req.onsuccess = () => {
 					const tx = req.result.transaction('messages', 'readwrite');
 					const store = tx.objectStore('messages');
+					let duration = 0;
 					store.getAll().onsuccess = (e) => {
-						for (const m of (e.target as IDBRequest).result) if (m.media) store.put({ ...m, media: { ...m.media, start: 2 } });
+						for (const m of (e.target as IDBRequest).result)
+							if (m.media) {
+								duration = m.media.duration;
+								store.put({ ...m, media: { ...m.media, start: 2 } });
+							}
 					};
-					tx.oncomplete = () => ok();
+					tx.oncomplete = () => ok(duration);
 				};
 			})
 	);
@@ -35,8 +41,9 @@ test('o player começa depois do silêncio do começo e a barra continua inteira
 		const [min, seg] = (await tempo.innerText()).split(':').map(Number);
 		return min * 60 + seg;
 	};
-	const total = await mostrado();
-	expect(total).toBeLessThanOrEqual(7);
+	// o tempo aparece com a duração do arquivo e depois sem o silêncio, quando o navegador termina de carregar
+	// (numa máquina cheia isso demora): espera o valor assentar em vez de ler no primeiro quadro (2026-10-27)
+	await expect.poll(mostrado).toBeLessThanOrEqual(duracao - 1);
 
 	await maria.page.getByRole('button', { name: 'Tocar' }).click();
 	await expect(maria.page.getByRole('button', { name: 'Pausar' })).toBeVisible();
@@ -44,10 +51,21 @@ test('o player começa depois do silêncio do começo e a barra continua inteira
 	await expect.poll(() => maria.page.locator('audio').evaluate((a) => (a as HTMLAudioElement).currentTime)).toBeGreaterThanOrEqual(2);
 	// espera o áudio andar de verdade (numa máquina lenta ele ainda carrega, e o navegador só deixa pular depois)
 	await expect.poll(() => maria.page.locator('audio').evaluate((a) => (a as HTMLAudioElement).currentTime)).toBeGreaterThan(2.3);
-	expect(await mostrado()).toBeLessThanOrEqual(2);
+
+	// o tempo mostrado desconta o silêncio: confere contra a posição do áudio lida no mesmo instante. Com a máquina
+	// cheia o áudio andava vários segundos entre duas leituras, e um limite fixo deixava de valer (2026-10-27)
+	await expect
+		.poll(() =>
+			maria.page.evaluate(() => {
+				const a = document.querySelector('audio') as HTMLAudioElement;
+				const [min, seg] = document.querySelector('.player .time')!.textContent!.split(':').map(Number);
+				return min * 60 + seg - Math.max(0, a.currentTime - 2);
+			})
+		)
+		.toBeLessThanOrEqual(1);
+	await maria.page.getByRole('button', { name: 'Pausar' }).click();
 
 	// a barra continua inteira: dá para voltar ao começo e ouvir o trecho vazio
-	await maria.page.getByRole('button', { name: 'Pausar' }).click();
 	await maria.page.getByLabel('Posição do áudio').fill('0');
 	const estado = () =>
 		maria.page.locator('audio').evaluate((el) => {
