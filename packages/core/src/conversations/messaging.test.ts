@@ -13,6 +13,7 @@ import {
 	markDeleted,
 	markRead,
 	markSent,
+	forwardOf,
 	mediaTags,
 	NAME_TAG,
 	nameTagFor,
@@ -223,6 +224,46 @@ describe('conversas 1:1', () => {
 			const tags = [...mediaTags({ ...base }), ['start', bad]];
 			expect((await send(undefined, tags))?.start).toBeUndefined();
 		}
+	});
+
+	it('foto (kind 15): tamanho e prévia vão e voltam; prévia ou tamanho estranhos são descartados', async () => {
+		const alice = await device();
+		const bob = await device();
+		const base = {
+			ox: 'a'.repeat(64),
+			x: 'b'.repeat(64),
+			type: 'image/jpeg',
+			size: 150_000,
+			urls: ['https://um.example/' + 'b'.repeat(64)],
+			key: 'c'.repeat(64),
+			nonce: 'd'.repeat(24)
+		};
+		const photo = { ...base, width: 1200, height: 1600, thumb: 'AAAA/+8=' };
+		const receive = async (tags: string[][]) => {
+			const wrapped = alice.vault.wrapDirectMessage(bob.publicKey, base.urls[0], tags, 15);
+			return (await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(wrapped.toRecipient)))?.message.media;
+		};
+		expect(await receive(mediaTags(photo))).toEqual(photo);
+		const sent = await storeOutgoing(alice.storage, alice.vault.wrapDirectMessage(bob.publicKey, base.urls[0], mediaTags(photo), 15).rumor, bob.publicKey);
+		expect(sent.conversation.lastMessageKind).toBe('foto');
+		// vem de fora: lixo no lugar da prévia ou prévia gigante não entra no banco
+		for (const thumb of ['<script>', 'x'.repeat(9_000)]) {
+			const got = await receive([...mediaTags(base), ['thumb', thumb], ['dim', '10x10']]);
+			expect(got?.thumb).toBeUndefined();
+			expect(got).toMatchObject({ width: 10, height: 10 });
+		}
+		expect((await receive([...mediaTags(base), ['dim', 'enorme']]))?.width).toBeUndefined();
+	});
+
+	it('encaminhar leva a mesma referência do arquivo, sem subir de novo; apagada, aviso e envio em andamento não vão', () => {
+		const media = { ox: 'a'.repeat(64), x: 'b'.repeat(64), type: 'image/jpeg', size: 9, urls: ['https://um.example/f', 'https://dois.example/f'], key: 'c'.repeat(64), nonce: 'd'.repeat(24), width: 4, height: 3 };
+		const msg = { id: 'm', conversationId: 'direta:x', sender: 'y', kind: 15, text: '', createdAt: 1, status: 'enviada' as const };
+		expect(forwardOf({ ...msg, media })).toEqual({ content: 'https://um.example/f', tags: mediaTags(media), kind: 15 });
+		expect(forwardOf({ ...msg, kind: 14, text: 'oi' })).toEqual({ content: 'oi', tags: [], kind: 14 });
+		expect(forwardOf({ ...msg, media, upload: { startedAt: 1, attempts: 0, nextAttemptAt: 1 } })).toBeUndefined();
+		expect(forwardOf({ ...msg, media: { ...media, urls: [] } })).toBeUndefined();
+		expect(forwardOf({ ...msg, deleted: true })).toBeUndefined();
+		expect(forwardOf({ ...msg, notice: { action: 'adicionou', targets: [] } })).toBeUndefined();
 	});
 
 	it('ignora arquivo sem chave ou com outra cifra', async () => {

@@ -55,6 +55,7 @@ export {
 	markDeleted,
 	markRead,
 	markSent,
+	forwardOf,
 	mediaFromRumor,
 	mediaTags,
 	NAME_TAG,
@@ -98,11 +99,13 @@ export {
 	PENDING_UPLOAD_PREFIX,
 	retryPendingUpload,
 	startPendingAudio,
+	startPendingPhoto,
 	tryPendingUpload,
 	uploadRetryDelay,
 	UPLOAD_GIVE_UP_MS,
 	type UploadAttempt
 } from './media/pending-upload.ts';
+export { PHOTO_MAX_BYTES, PHOTO_MAX_SIDE, preparePhoto, THUMB_MAX_BYTES, THUMB_SIDE, type PhotoEncoder, type PreparedPhoto } from './media/photo.ts';
 export { rms, VoiceStartDetector } from './media/voice-start.ts';
 export { decryptFile, encryptFile, MediaIntegrityError, sha256 } from './media/crypto.ts';
 export { openMedia, prepareMedia, type MediaRef } from './media/media.ts';

@@ -5,6 +5,7 @@ import type { Rumor } from '../identity/vault.ts';
 import { cleanName } from '../contacts/invite.ts';
 import { exclusive } from './lock.ts';
 import type { Storage } from '../storage/repositories.ts';
+import { validThumb } from '../media/photo.ts';
 import type { ConversationRecord, MessageMedia, MessageRecord } from '../storage/records.ts';
 import { summaryOf } from '../storage/summary.ts';
 import { groupConversationId, groupIdOf, GROUP_TAG } from './groups.ts';
@@ -48,6 +49,8 @@ export function mediaTags(media: MessageMedia): string[][] {
 	];
 	if (media.duration !== undefined) tags.push(['duration', String(Math.round(media.duration))]);
 	if (media.start) tags.push(['start', String(media.start)]);
+	if (media.width && media.height) tags.push(['dim', `${media.width}x${media.height}`]);
+	if (media.thumb) tags.push(['thumb', media.thumb]);
 	return tags;
 }
 
@@ -66,6 +69,8 @@ export function mediaFromRumor(rumor: Rumor): MessageMedia | undefined {
 	const duration = Number(tag('duration'));
 	// de quem escreveu: valor estranho vira "toca inteiro" (nunca pula além do que o áudio tem)
 	const start = Number(tag('start'));
+	const [width, height] = (tag('dim') ?? '').match(/^(\d{1,5})x(\d{1,5})$/)?.slice(1).map(Number) ?? [];
+	const thumb = validThumb(tag('thumb'));
 	return {
 		ox,
 		x,
@@ -75,8 +80,21 @@ export function mediaFromRumor(rumor: Rumor): MessageMedia | undefined {
 		key,
 		nonce,
 		...(Number.isFinite(duration) && duration > 0 ? { duration } : {}),
-		...(Number.isFinite(start) && start > 0 && start < (Number.isFinite(duration) && duration > 0 ? duration : 0) ? { start } : {})
+		...(Number.isFinite(start) && start > 0 && start < (Number.isFinite(duration) && duration > 0 ? duration : 0) ? { start } : {}),
+		...(width && height ? { width, height } : {}),
+		...(thumb ? { thumb } : {})
 	};
+}
+
+/**
+ * O que mandar para encaminhar uma mensagem a outra conversa (RF-70): o texto, ou a mesma referência do arquivo
+ * (endereço, chave e hashes), sem baixar nem subir de novo. undefined para o que não se encaminha: apagada, aviso
+ * de grupo e arquivo que ainda não terminou de subir.
+ */
+export function forwardOf(message: MessageRecord): { content: string; tags: string[][]; kind: 14 | 15 } | undefined {
+	if (message.deleted || message.notice || message.upload) return undefined;
+	if (message.media) return message.media.urls.length ? { content: message.media.urls[0], tags: mediaTags(message.media), kind: 15 } : undefined;
+	return message.text ? { content: message.text, tags: [], kind: 14 } : undefined;
 }
 
 export type StoredMessage = { message: MessageRecord; conversation: ConversationRecord; isNew: boolean };

@@ -11,6 +11,7 @@ import {
 	listPendingUploads,
 	retryPendingUpload,
 	startPendingAudio,
+	startPendingPhoto,
 	tryPendingUpload,
 	uploadRetryDelay,
 	UPLOAD_GIVE_UP_MS
@@ -149,5 +150,29 @@ describe('áudio que sobe por trás do balão', () => {
 		expect(await storage.messages.get(message.id)).toBeUndefined();
 		expect(await storage.media.get(message.media!.ox)).toBeUndefined();
 		expect(await listPendingUploads(storage)).toEqual([]);
+	});
+});
+
+describe('foto e encaminhar (RF-41, RF-70)', () => {
+	const photo = () => new Blob([crypto.getRandomValues(new Uint8Array(3000))], { type: 'image/jpeg' });
+
+	it('a foto sobe com tamanho e prévia na mensagem, e o balão provisório sai', async () => {
+		const { storage, deps, sent } = await setup();
+		const pending = await startPendingPhoto(storage, { conversationId: CONVERSATION, me: ME, file: photo(), width: 1200, height: 900, thumb: 'AAAA', now: 1_000_000 });
+		expect(pending.media).toMatchObject({ type: 'image/jpeg', width: 1200, height: 900, thumb: 'AAAA' });
+		expect((await tryPendingUpload(storage, pending.id, deps())).state).toBe('enviado');
+		expect(sent[0]).toMatchObject({ width: 1200, height: 900, thumb: 'AAAA' });
+		expect(await storage.messages.get(pending.id)).toBeUndefined();
+	});
+
+	it('encaminhar a mesma foto para outra conversa não sobe de novo', async () => {
+		const { storage, blossoms, deps } = await setup();
+		const file = photo();
+		const first = await startPendingPhoto(storage, { conversationId: CONVERSATION, me: ME, file, width: 4, height: 3, thumb: 'AAAA', now: 1_000_000 });
+		await tryPendingUpload(storage, first.id, deps());
+		const uploads = blossoms.reduce((sum, b) => sum + b.uploads, 0);
+		const second = await startPendingPhoto(storage, { conversationId: `direta:${'c'.repeat(64)}`, me: ME, file, width: 4, height: 3, thumb: 'AAAA', now: 1_000_001 });
+		expect((await tryPendingUpload(storage, second.id, deps())).state).toBe('enviado');
+		expect(blossoms.reduce((sum, b) => sum + b.uploads, 0)).toBe(uploads);
 	});
 });

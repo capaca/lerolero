@@ -38,20 +38,26 @@ async function setPending(storage: Storage, id: string, pending: boolean) {
 	await storage.settings.set(LIST_KEY, ids);
 }
 
-/** Guarda o áudio no aparelho e o balão provisório "enviando"; o envio de verdade é `tryPendingUpload`. */
-export async function startPendingAudio(
-	storage: Storage,
-	input: { conversationId: string; me: string; file: Blob; duration: number; start?: number; now?: number }
-): Promise<MessageRecord> {
+type PendingMediaInput = {
+	conversationId: string;
+	me: string;
+	file: Blob;
+	/** o que descreve o arquivo na mensagem além do endereço: duração e início (áudio), tamanho e prévia (foto) */
+	extra: Pick<MessageMedia, 'duration' | 'start' | 'width' | 'height' | 'thumb'>;
+	now?: number;
+};
+
+/** Guarda o arquivo no aparelho e o balão provisório "enviando"; o envio de verdade é `tryPendingUpload`. */
+async function startPendingMedia(storage: Storage, input: PendingMediaInput): Promise<MessageRecord> {
 	const now = input.now ?? Date.now();
 	const ox = await sha256(new Uint8Array(await input.file.arrayBuffer()));
 	const type = input.file.type || 'application/octet-stream';
 	const known = await storage.media.get(ox);
-	// sem endereço ainda: `prepareMedia` não reaproveita e faz o envio inteiro; `file` deixa o balão tocável
+	// sem endereço ainda: `prepareMedia` não reaproveita e faz o envio inteiro; `file` deixa o balão abrível
 	if (!known) {
 		await storage.media.put({ ox, type, size: input.file.size, file: input.file, urls: [], x: '', key: '', nonce: '', keep: false, lastAccess: now });
 	}
-	const media: MessageMedia = { ox, x: '', type, size: input.file.size, urls: [], key: '', nonce: '', duration: input.duration, ...(input.start ? { start: input.start } : {}) };
+	const media: MessageMedia = { ox, x: '', type, size: input.file.size, urls: [], key: '', nonce: '', ...input.extra };
 	const message: MessageRecord = {
 		id: `${PENDING_UPLOAD_PREFIX}${crypto.randomUUID()}`,
 		conversationId: input.conversationId,
@@ -66,6 +72,22 @@ export async function startPendingAudio(
 	await storePendingMessage(storage, message);
 	await setPending(storage, message.id, true);
 	return message;
+}
+
+export function startPendingAudio(
+	storage: Storage,
+	input: { conversationId: string; me: string; file: Blob; duration: number; start?: number; now?: number }
+) {
+	const { duration, start, ...rest } = input;
+	return startPendingMedia(storage, { ...rest, extra: { duration, ...(start ? { start } : {}) } });
+}
+
+export function startPendingPhoto(
+	storage: Storage,
+	input: { conversationId: string; me: string; file: Blob; width: number; height: number; thumb: string; now?: number }
+) {
+	const { width, height, thumb, ...rest } = input;
+	return startPendingMedia(storage, { ...rest, extra: { width, height, thumb } });
 }
 
 export type UploadAttempt =
@@ -85,7 +107,7 @@ export async function tryPendingUpload(
 		servers: string[];
 		signer: BlossomSigner;
 		/** manda a mensagem de verdade (kind 15, pela fila de sempre) */
-		send: (media: MediaRef & { duration?: number; start?: number }) => Promise<void>;
+		send: (media: MediaRef & Pick<MessageMedia, 'duration' | 'start' | 'width' | 'height' | 'thumb'>) => Promise<void>;
 		now?: () => number;
 		random?: () => number;
 	}
@@ -97,7 +119,8 @@ export async function tryPendingUpload(
 		const file = (await storage.media.get(message.media.ox))?.file;
 		if (!file) throw new Error('arquivo não está mais no aparelho');
 		const ref = await prepareMedia(storage, file, { servers: deps.servers, signer: deps.signer, now: now() });
-		await deps.send({ ...ref, duration: message.media.duration, start: message.media.start });
+		const { duration, start, width, height, thumb } = message.media;
+		await deps.send({ ...ref, duration, start, width, height, thumb });
 	} catch {
 		const attempts = message.upload.attempts + 1;
 		const at = now() + uploadRetryDelay(attempts, deps.random);
