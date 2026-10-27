@@ -1,11 +1,12 @@
 <script lang="ts">
 	// Conversa (1:1 ou grupo): mensagens, avisos de grupo, menu da mensagem e campo de envio.
 	// O topo e os avisos de cima ficam com a tela que usa o componente.
-	import type { MessageRecord } from '@lerolero/core';
+	import { forwardOf, type MessageRecord } from '@lerolero/core';
 	import { onDestroy, tick, type Snippet } from 'svelte';
 	import Composer from './Composer.svelte';
 	import Icon from './Icon.svelte';
 	import MessageBubble from './MessageBubble.svelte';
+	import ForwardSheet from './ForwardSheet.svelte';
 	import MessageMenu from './MessageMenu.svelte';
 	import Sheet from './Sheet.svelte';
 	import { dayKey, formatDay } from '#lib/format.ts';
@@ -82,6 +83,25 @@
 	}
 	onDestroy(() => clearTimeout(copiedTimer));
 
+
+	// encaminhar: o menu fecha e abre a escolha do destino; ao escolher, vai para a conversa e a tela segue nela
+	let forwarding = $state.raw<MessageRecord>();
+	async function forwardTo(destination: string) {
+		const message = forwarding;
+		forwarding = undefined;
+		if (!message) return;
+		try {
+			await session.forwardMessage(message.id, destination);
+			forwarded = true;
+			clearTimeout(forwardedTimer);
+			forwardedTimer = setTimeout(() => (forwarded = false), 2000);
+		} catch (err) {
+			error = friendlyError(err);
+		}
+	}
+	let forwarded = $state(false);
+	let forwardedTimer: ReturnType<typeof setTimeout> | undefined;
+	onDestroy(() => clearTimeout(forwardedTimer));
 
 	async function deleteMessage(forEveryone: boolean) {
 		const message = menuFor;
@@ -318,7 +338,9 @@
 				</div>
 			{/each}
 		</div>
-		{#if copied}
+		{#if forwarded}
+			<p class="copied" role="status">{m.conversa_encaminhada()}</p>
+		{:else if copied}
 			<p class="copied" role="status">{m.conversa_copiada()}</p>
 		{/if}
 		{#if farFromEnd || pending}
@@ -335,9 +357,19 @@
 			group={!!nameOf}
 			onclose={() => (menuFor = undefined)}
 			oncopy={menuFor.media ? undefined : copyMessage}
+			onforward={forwardOf(menuFor)
+				? () => {
+						forwarding = menuFor;
+						menuFor = undefined;
+					}
+				: undefined}
 			ondeleteForMe={() => deleteMessage(false)}
 			ondeleteForEveryone={() => deleteMessage(true)}
 		/>
+	{/if}
+
+	{#if forwarding}
+		<ForwardSheet onclose={() => (forwarding = undefined)} onpick={forwardTo} />
 	{/if}
 
 	{#if pendingLink}

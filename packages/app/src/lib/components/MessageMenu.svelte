@@ -9,6 +9,7 @@
 		group = false,
 		onclose,
 		oncopy,
+		onforward,
 		ondeleteForMe,
 		ondeleteForEveryone
 	}: {
@@ -17,6 +18,8 @@
 		onclose: () => void;
 		/** só nas mensagens de texto */
 		oncopy?: () => void;
+		/** só no que já saiu e não foi apagado */
+		onforward?: () => void;
 		ondeleteForMe: () => void;
 		ondeleteForEveryone: () => void;
 	} = $props();
@@ -35,6 +38,9 @@
 	{:else}
 		{#if oncopy}
 			<button class="item" onclick={oncopy}><Icon name="copy" /> {m.menu_copiar()}</button>
+		{/if}
+		{#if onforward}
+			<button class="item" onclick={onforward}><Icon name="forward" /> {m.menu_encaminhar()}</button>
 		{/if}
 		{#if mine}
 			<button class="item" onclick={() => (confirming = true)}><Icon name="trash" /> {m.menu_apagar_todos()}</button>

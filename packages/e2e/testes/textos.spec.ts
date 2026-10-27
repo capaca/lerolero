@@ -168,6 +168,10 @@ test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum
 	await semTextoFixo(ana.page, nomes);
 	await ana.page.locator('.row', { hasText: 'oi' }).locator('.bubble').click({ button: 'right' });
 	await semTextoFixo(ana.page, nomes);
+	// "Encaminhar" é o segundo item (depois de Copiar): abre a escolha do destino
+	await ana.page.locator('.sheet .item').nth(1).click();
+	await expect(ana.page.locator('.sheet .targets button')).not.toHaveCount(0);
+	await semTextoFixo(ana.page, nomes);
 	await ana.page.keyboard.press('Escape');
 	await ana.page.locator('.composer button.round.primary').click();
 	await expect(ana.page.locator('.composer .recording')).toBeVisible();
