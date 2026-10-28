@@ -38,6 +38,14 @@ test('João envia uma foto grande; Maria vê a prévia na lista e abre em tela c
 	const caixa = (await foto.boundingBox())!;
 	expect(caixa.width / caixa.height).toBeCloseTo(1.5, 1);
 
+	// prévia de 96 px (era 48, um borrão esticado no balão), ainda dentro dos 5 KB (RNF-24)
+	const previa = await foto.locator('img').evaluate(async (img: HTMLImageElement) => {
+		await img.decode();
+		return { lado: Math.max(img.naturalWidth, img.naturalHeight), bytes: Math.floor(((img.src.split(',')[1] ?? '').length * 3) / 4) };
+	});
+	expect(previa.lado).toBe(96);
+	expect(previa.bytes).toBeLessThanOrEqual(5_000);
+
 	await foto.click();
 	const aberta = maria.page.getByTestId('foto-aberta');
 	await expect(aberta).toBeVisible();

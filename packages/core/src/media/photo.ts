@@ -7,7 +7,8 @@ export const PHOTO_MAX_SIDE = 1600;
 /** Tamanho que a foto enviada deve ter, em bytes (RNF-23). */
 export const PHOTO_MAX_BYTES = 200_000;
 /** Lado maior e tamanho da prévia (RNF-24). */
-export const THUMB_SIDE = 48;
+// 96 px: o balão mostra a prévia a ~256 px, e com 48 ela ficava um borrão esticado 5 vezes; segue dentro dos 5 KB
+export const THUMB_SIDE = 96;
 export const THUMB_MAX_BYTES = 5_000;
 
 /** Desenha a foto original com o lado maior até `maxSide` e a codifica em JPEG na `quality` (0 a 1). */
@@ -23,7 +24,7 @@ const ATTEMPTS: Array<[side: number, quality: number]> = [
 	[1280, 0.55],
 	[1024, 0.5]
 ];
-const THUMB_QUALITIES = [0.6, 0.45, 0.3];
+const THUMB_QUALITIES = [0.6, 0.45, 0.3, 0.2];
 
 async function toBase64(blob: Blob): Promise<string> {
 	let binary = '';
