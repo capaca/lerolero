@@ -370,8 +370,12 @@ class Session {
 		const wrapped = await vault.wrapGroupMessage(change.recipients, '', change.tags, GROUP_CONTROL_KIND, change.createdAt);
 		await storeGroupControl(storage, this.current.publicKey, wrapped.rumor);
 		this.version++;
-		for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap);
-		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+		// os relays de todos são buscados antes de devolver e a fila recebe os avisos na sequência: se a página
+		// recarregasse no meio da busca solta, o aviso sumia e o membro nunca era adicionado ao grupo
+		const relays = await Promise.all(wrapped.toRecipients.map(({ recipient }) => this.relaysOrDefault(recipient)));
+		const mine = await this.myDmRelays();
+		wrapped.toRecipients.forEach(({ wrap }, i) => void network.engine.enqueue(wrap, relays[i]));
+		void network.engine.enqueue(wrapped.toSelf, mine);
 	}
 
 	/** Cria um grupo (RF-31) e devolve o id da conversa. */
@@ -417,8 +421,12 @@ class Session {
 	 * perdido deixa o grupo diferente no celular dele.
 	 */
 	private async enqueueTo(recipient: string, wrap: Parameters<SyncEngine['enqueue']>[0], messageId?: string) {
-		const relays = await this.deliveryRelays(recipient).catch(async () => (await relayList()).dm);
-		await this.requireNetwork().engine.enqueue(wrap, relays, messageId);
+		await this.requireNetwork().engine.enqueue(wrap, await this.relaysOrDefault(recipient), messageId);
+	}
+
+	/** Onde o contato recebe; sem saber, os relays padrão. */
+	private relaysOrDefault(recipient: string) {
+		return this.deliveryRelays(recipient).catch(async () => (await relayList()).dm);
 	}
 
 	private requireNetwork() {

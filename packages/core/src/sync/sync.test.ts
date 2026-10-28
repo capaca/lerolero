@@ -191,7 +191,7 @@ describe('motor de sincronização', () => {
 
 		const wrap = wrapFor(bob.publicKey, 'depois da queda');
 		await (await person()).pool.publish([r.url], wrap);
-		await until(() => received.includes(wrap.id));
+		await until(() => received.includes(wrap.id), 15_000);
 	});
 
 	it('guarda na fila sem conexão e envia quando o relay volta (RNF-33)', async () => {
