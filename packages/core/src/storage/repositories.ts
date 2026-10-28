@@ -47,6 +47,8 @@ export interface MessageRepository {
 	delete(id: string): Promise<void>;
 	/** quantas mensagens ainda usam o arquivo `ox` */
 	countUsingMedia(ox: string): Promise<number>;
+	/** as favoritas de todas as conversas, mais recentes primeiro (percorre a tabela: são poucas) */
+	listStarred(): Promise<MessageRecord[]>;
 }
 
 export interface OutboxRepository {
@@ -145,7 +147,8 @@ export function openStorage(name?: string): Storage {
 				return newestFirst.reverse();
 			},
 			delete: (id) => db.messages.delete(id),
-			countUsingMedia: (ox) => db.messages.where('media.ox').equals(ox).count()
+			countUsingMedia: (ox) => db.messages.where('media.ox').equals(ox).count(),
+			listStarred: async () => (await db.messages.filter((message) => !!message.starred).toArray()).sort((a, b) => b.createdAt - a.createdAt)
 		},
 		outbox: {
 			put: async (item) => void (await db.outbox.put(item)),

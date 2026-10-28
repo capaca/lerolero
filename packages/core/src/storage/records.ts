@@ -134,6 +134,8 @@ export type MessageRecord = {
 	receipts?: Record<string, Receipt>;
 	/** só nas recebidas: o que eu já confirmei ao remetente, para não repetir */
 	ack?: Receipt;
+	/** favoritada por mim (RF-28): marca só deste aparelho, sem aviso a ninguém */
+	starred?: boolean;
 	/** apagada para todos (RF-25): fica o aviso no lugar, sem conteúdo */
 	deleted?: boolean;
 	/** aviso de grupo ("Ana adicionou Bruno"); a tela monta o texto, com os nomes atuais e na língua da pessoa */

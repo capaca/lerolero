@@ -52,6 +52,8 @@ import {
 	markDeleted,
 	markRead,
 	markSent,
+	setStarred,
+	toNpub,
 	mediaTags,
 	nameTagFor,
 	openMedia,
@@ -621,6 +623,29 @@ class Session {
 		}
 		const rumor = await this.sendTo(conversationId, emoji, reactionTags(message), REACTION_KIND, false);
 		if (rumor && (await storeReaction(storage, me, rumor))) this.version++;
+	}
+
+	/** Favoritar ou tirar dos favoritos (RF-28): só neste aparelho. */
+	async setStarred(messageIds: string[], starred: boolean) {
+		await setStarred(storage, messageIds, starred);
+		this.version++;
+	}
+
+	/** As mensagens favoritas de todas as conversas, com o nome da conversa e o endereço da tela dela. */
+	async listStarred(): Promise<Array<{ message: MessageRecord; title: string; direct: boolean; key: string }>> {
+		const out = [];
+		for (const message of await storage.messages.listStarred()) {
+			const conversation = await storage.conversations.get(message.conversationId);
+			if (!conversation) continue;
+			if (conversation.group) {
+				out.push({ message, title: conversation.group.state.name, direct: false, key: conversation.id.slice('grupo:'.length) });
+			} else {
+				const key = conversation.members[0];
+				const contact = await storage.contacts.get(key);
+				out.push({ message, title: contact ? contactName(contact) : `${toNpub(key).slice(0, 12)}…`, direct: true, key });
+			}
+		}
+		return out;
 	}
 
 	getReactions(conversationId: string): Promise<ReactionRecord[]> {

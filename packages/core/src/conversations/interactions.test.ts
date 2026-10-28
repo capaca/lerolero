@@ -13,7 +13,7 @@ import {
 	storeReaction,
 	storeReceipt
 } from './interactions.ts';
-import { deletionTags, deleteForMe, directConversationId, markDeleted, storeIncoming, storeOutgoing } from './messaging.ts';
+import { deletionTags, deleteForMe, directConversationId, markDeleted, setStarred, storeIncoming, storeOutgoing } from './messaging.ts';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 const closers: Array<() => void> = [];
@@ -172,5 +172,20 @@ describe('confirmações de entrega e leitura (RF-50, 51)', () => {
 		await markAcknowledged(alice.storage, [msg.id], 'entregue');
 		expect((await receiptsDue(alice.storage, alice.publicKey, [msg.id], 'entregue')).size).toBe(0);
 		expect((await receiptsDue(alice.storage, alice.publicKey, [msg.id], 'lida')).size).toBe(1);
+	});
+});
+
+describe('favoritas (RF-28)', () => {
+	it('favorita e desfavorita só aqui; apagar para todos tira a estrela', async () => {
+		const [alice, bob] = [await person(), await person()];
+		const msg = await say(alice, bob, 'guarde isto');
+		const other = await say(alice, bob, 'outra');
+		await setStarred(alice.storage, [msg.id, other.id], true);
+		expect((await alice.storage.messages.listStarred()).map((m) => m.id).sort()).toEqual([msg.id, other.id].sort());
+		expect(await bob.storage.messages.listStarred()).toEqual([]);
+		await setStarred(alice.storage, [other.id], false);
+		expect((await alice.storage.messages.listStarred()).map((m) => m.id)).toEqual([msg.id]);
+		await markDeleted(alice.storage, (await alice.storage.messages.get(msg.id))!);
+		expect(await alice.storage.messages.listStarred()).toEqual([]);
 	});
 });

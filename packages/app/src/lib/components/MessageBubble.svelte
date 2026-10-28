@@ -21,6 +21,9 @@
 		delivery = 'enviada',
 		quote,
 		reactions = [],
+		selecting = false,
+		selected = false,
+		onpick,
 		onlink,
 		onquote,
 		onreact,
@@ -43,6 +46,10 @@
 		quote?: { name: string; message?: MessageRecord };
 		/** reações somadas por emoji (RF-23); `mine` marca a que eu dei */
 		reactions?: Array<{ emoji: string; count: number; mine: boolean }>;
+		/** modo de seleção de várias mensagens (RF-28): qualquer toque no balão marca ou desmarca */
+		selecting?: boolean;
+		selected?: boolean;
+		onpick?: () => void;
 		onquote?: () => void;
 		onreact?: (emoji: string) => void;
 		/** toque longo (celular) ou botão direito (computador) */
@@ -67,20 +74,43 @@
 	}
 
 	// foto aberta ocupa o balão inteiro, como no WhatsApp; a fechada (pedido de mensagem) é só uma linha
+	// mensagem apagada não entra na seleção
+	const picking = $derived(selecting && !msg.deleted);
 	const isPhoto = $derived(!msg.deleted && !!msg.media?.type.startsWith('image/') && links !== 'texto');
 </script>
 
-<div class="row" class:mine class:first class:last data-day={day} data-id={msg.id}>
+<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+<div
+	class="row"
+	class:mine
+	class:first
+	class:last
+	class:selected
+	data-day={day}
+	data-id={msg.id}
+	role={picking ? 'checkbox' : undefined}
+	aria-checked={picking ? selected : undefined}
+	onclickcapture={(event) => {
+		// na seleção o toque em qualquer parte do balão (link, áudio, foto, citação) só marca
+		if (!picking) return;
+		event.preventDefault();
+		event.stopPropagation();
+		onpick?.();
+	}}
+>
+	{#if picking}
+		<span class="pick" class:on={selected} aria-hidden="true">{#if selected}<Icon name="check" size={14} />{/if}</span>
+	{/if}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="bubble"
 		class:deleted={msg.deleted}
 		class:with-photo={isPhoto}
-		{onpointerdown}
+		onpointerdown={picking ? undefined : onpointerdown}
 		onpointerup={cancelPress}
 		onpointerleave={cancelPress}
 		{onpointermove}
-		oncontextmenu={(e) => (e.preventDefault(), onmenu())}
+		oncontextmenu={(e) => (e.preventDefault(), picking || onmenu())}
 	>
 		{#if last}
 			<svg class="tail" viewBox="0 0 10 12" aria-hidden="true">
@@ -178,6 +208,7 @@
 			</div>
 		{/if}
 		<span class="meta">
+			{#if msg.starred}<span class="star"><Icon name="star" size={12} label={m.bolha_favorita()} /></span>{/if}
 			{formatTime(msg.createdAt)}
 			{#if mine && !msg.upload?.failed}
 				{@const label = { pendente: m.bolha_enviando(), enviada: m.bolha_enviada(), entregue: m.bolha_entregue(), lida: m.bolha_lida() }[delivery]}
@@ -332,6 +363,40 @@
 	.status {
 		display: inline-block;
 		vertical-align: -2px;
+	}
+	.star {
+		display: inline-block;
+		vertical-align: -1px;
+		margin-right: 0.15rem;
+	}
+	.star :global(svg) {
+		fill: currentColor;
+	}
+	.row.selected {
+		background: color-mix(in srgb, var(--accent) 14%, transparent);
+		margin-left: -0.5rem;
+		margin-right: -0.5rem;
+		padding: 0 0.5rem;
+	}
+	.pick {
+		flex-shrink: 0;
+		align-self: center;
+		display: grid;
+		place-items: center;
+		width: 1.3rem;
+		height: 1.3rem;
+		margin-right: 0.5rem;
+		border: 2px solid var(--muted);
+		border-radius: 50%;
+	}
+	.pick.on {
+		border-color: var(--accent);
+		background: var(--accent);
+		color: var(--accent-fg);
+	}
+	/* na minha fileira o balão vai à direita, e a marca fica na borda esquerda */
+	.row.mine .pick {
+		margin-right: auto;
 	}
 	.status.read {
 		color: var(--accent);

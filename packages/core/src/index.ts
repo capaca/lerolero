@@ -76,6 +76,7 @@ export {
 	NAME_TAG,
 	nameTagFor,
 	sendTime,
+	setStarred,
 	storeIncoming,
 	storeOutgoing,
 	storePendingMessage,

@@ -12,6 +12,9 @@
 		myReaction,
 		onreact,
 		onreply,
+		starred = false,
+		onstar,
+		onselect,
 		oncopy,
 		onforward,
 		ondeleteForMe,
@@ -25,6 +28,10 @@
 		/** só no que já saiu e não foi apagado */
 		onreact?: (emoji: string) => void;
 		onreply?: () => void;
+		/** favorita agora; `onstar` alterna (RF-28) */
+		starred?: boolean;
+		onstar?: () => void;
+		onselect?: () => void;
 		/** só nas mensagens de texto */
 		oncopy?: () => void;
 		/** só no que já saiu e não foi apagado */
@@ -57,11 +64,17 @@
 		{#if onreply}
 			<button class="item" onclick={onreply}><Icon name="reply" /> {m.menu_responder()}</button>
 		{/if}
+		{#if onstar}
+			<button class="item" onclick={onstar}><Icon name="star" /> {starred ? m.menu_desfavoritar() : m.menu_favoritar()}</button>
+		{/if}
 		{#if oncopy}
 			<button class="item" onclick={oncopy}><Icon name="copy" /> {m.menu_copiar()}</button>
 		{/if}
 		{#if onforward}
 			<button class="item" onclick={onforward}><Icon name="forward" /> {m.menu_encaminhar()}</button>
+		{/if}
+		{#if onselect}
+			<button class="item" onclick={onselect}><Icon name="check" /> {m.menu_selecionar()}</button>
 		{/if}
 		{#if mine}
 			<button class="item" onclick={() => (confirming = true)}><Icon name="trash" /> {m.menu_apagar_todos()}</button>

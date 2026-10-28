@@ -9,7 +9,7 @@
 	import ForwardSheet from './ForwardSheet.svelte';
 	import MessageMenu from './MessageMenu.svelte';
 	import Sheet from './Sheet.svelte';
-	import { dayKey, formatDay } from '#lib/format.ts';
+	import { dayKey, formatDay, formatTime } from '#lib/format.ts';
 	import { friendlyError } from '#lib/errors.ts';
 	import { memberName, noticeText, type NameOf } from '#lib/notices.ts';
 	import { m } from '#lib/paraglide/messages.js';
@@ -63,6 +63,73 @@
 		menuFor = message;
 		// vibração curta confirma o toque longo (no iPhone o navegador não vibra)
 		navigator.vibrate?.(15);
+	}
+
+	// seleção de várias mensagens (RF-28): favoritar, copiar, encaminhar e apagar de uma vez
+	let selecting = $state(false);
+	let selected = $state.raw(new Set<string>());
+	let confirmingDelete = $state(false);
+	const picked = $derived(messages.filter((x) => selected.has(x.id)));
+
+	function startSelecting(message: MessageRecord) {
+		menuFor = undefined;
+		selected = new Set([message.id]);
+		selecting = true;
+	}
+	function stopSelecting() {
+		selecting = false;
+		confirmingDelete = false;
+		selected = new Set();
+	}
+	function togglePick(id: string) {
+		const next = new Set(selected);
+		if (!next.delete(id)) next.add(id);
+		selected = next;
+		// desmarcou a última: sai do modo
+		if (!next.size) stopSelecting();
+	}
+	async function starMessages(ids: string[], starred: boolean) {
+		menuFor = undefined;
+		try {
+			await session.setStarred(ids, starred);
+			stopSelecting();
+		} catch (err) {
+			error = friendlyError(err);
+		}
+	}
+	/** Sem a estrela em todas, favorita todas; se todas já são favoritas, tira. */
+	const allStarred = $derived(picked.length > 0 && picked.every((x) => x.starred));
+	const copyable = $derived(picked.filter((x) => !x.media && x.text));
+	const forwardable = $derived(picked.filter((x) => forwardOf(x)));
+	const allMine = $derived(picked.length > 0 && picked.every((x) => x.sender === me));
+
+	async function copyPicked() {
+		// uma só: o texto como está; várias: com hora e nome, para o texto colado fazer sentido
+		const text =
+			copyable.length === 1
+				? copyable[0].text
+				: copyable.map((x) => `[${formatTime(x.createdAt)}] ${nameFor(x.sender)}: ${x.text}`).join('\n');
+		try {
+			await navigator.clipboard.writeText(text);
+			stopSelecting();
+			copied = true;
+			clearTimeout(copiedTimer);
+			copiedTimer = setTimeout(() => (copied = false), 2000);
+		} catch {
+			error = m.conversa_erro_copiar();
+		}
+	}
+	async function deletePicked(forEveryone: boolean) {
+		const list = picked;
+		stopSelecting();
+		try {
+			for (const message of list) {
+				if (forEveryone) await session.deleteForEveryone(conversationId, message.id);
+				else await session.deleteForMe(message.id);
+			}
+		} catch (err) {
+			error = friendlyError(err);
+		}
 	}
 
 	// responder (RF-22): o campo mostra a citação; vale para o próximo texto enviado
@@ -135,13 +202,16 @@
 
 
 	// encaminhar: o menu fecha e abre a escolha do destino; ao escolher, vai para a conversa e a tela segue nela
-	let forwarding = $state.raw<MessageRecord>();
+	let forwarding = $state.raw<MessageRecord[]>();
+	let forwardedCount = $state(1);
 	async function forwardTo(destination: string) {
-		const message = forwarding;
+		const list = forwarding;
 		forwarding = undefined;
-		if (!message) return;
+		if (!list?.length) return;
 		try {
-			await session.forwardMessage(message.id, destination);
+			for (const message of list) await session.forwardMessage(message.id, destination);
+			forwardedCount = list.length;
+			stopSelecting();
 			forwarded = true;
 			clearTimeout(forwardedTimer);
 			forwardedTimer = setTimeout(() => (forwarded = false), 2000);
@@ -381,7 +451,28 @@
 </script>
 
 <div class="chat">
-	{@render header()}
+	{#if selecting}
+		<div class="selection" role="toolbar" aria-label={m.selecao_contagem({ count: picked.length })}>
+			<button type="button" class="round ghost" onclick={stopSelecting} aria-label={m.selecao_cancelar()}><Icon name="x" /></button>
+			<strong class="count">{m.selecao_contagem({ count: picked.length })}</strong>
+			<button type="button" class="round ghost" onclick={() => starMessages(picked.map((x) => x.id), !allStarred)} aria-label={allStarred ? m.menu_desfavoritar() : m.menu_favoritar()}>
+				<Icon name="star" />
+			</button>
+			<button type="button" class="round ghost" disabled={!copyable.length} onclick={copyPicked} aria-label={m.menu_copiar()}><Icon name="copy" /></button>
+			<button
+				type="button"
+				class="round ghost"
+				disabled={!forwardable.length}
+				onclick={() => ((forwarding = forwardable), (forwardedCount = forwardable.length))}
+				aria-label={m.menu_encaminhar()}
+			>
+				<Icon name="forward" />
+			</button>
+			<button type="button" class="round ghost" onclick={() => (confirmingDelete = true)} aria-label={m.selecao_apagar()}><Icon name="trash" /></button>
+		</div>
+	{:else}
+		{@render header()}
+	{/if}
 	{@render banner?.()}
 
 	<div class="area">
@@ -420,6 +511,9 @@
 										})()
 									: undefined}
 								reactions={chipsOf(msg.id)}
+								selecting={selecting}
+								selected={selected.has(msg.id)}
+								onpick={() => togglePick(msg.id)}
 								onquote={() => goToQuoted(msg.replyTo!)}
 								onreact={(emoji) => react(msg, emoji)}
 								onlink={(href, host) => (pendingLink = { href, host })}
@@ -431,7 +525,7 @@
 			{/each}
 		</div>
 		{#if forwarded}
-			<p class="copied" role="status">{m.conversa_encaminhada()}</p>
+			<p class="copied" role="status">{forwardedCount > 1 ? m.selecao_encaminhadas({ count: forwardedCount }) : m.conversa_encaminhada()}</p>
 		{:else if copied}
 			<p class="copied" role="status">{m.conversa_copiada()}</p>
 		{/if}
@@ -454,13 +548,31 @@
 			oncopy={menuFor.media ? undefined : copyMessage}
 			onforward={forwardOf(menuFor)
 				? () => {
-						forwarding = menuFor;
+						forwarding = [menuFor!];
+						forwardedCount = 1;
 						menuFor = undefined;
 					}
 				: undefined}
+			starred={!!menuFor.starred}
+			onstar={() => starMessages([menuFor!.id], !menuFor!.starred)}
+			onselect={() => startSelecting(menuFor!)}
 			ondeleteForMe={() => deleteMessage(false)}
 			ondeleteForEveryone={() => deleteMessage(true)}
 		/>
+	{/if}
+
+	{#if confirmingDelete}
+		<Sheet label={m.selecao_apagar()} onclose={() => (confirmingDelete = false)}>
+			<p><strong>{m.selecao_apagar_pergunta({ count: picked.length })}</strong></p>
+			{#if allMine}
+				<p class="hint">{nameOf ? m.menu_apagar_todos_dica_grupo() : m.menu_apagar_todos_dica_contato()}</p>
+			{/if}
+			<div class="actions stack">
+				<button class="danger" onclick={() => deletePicked(false)}>{m.menu_apagar_mim()}</button>
+				{#if allMine}<button class="danger" onclick={() => deletePicked(true)}>{m.menu_apagar_todos()}</button>{/if}
+				<button onclick={() => (confirmingDelete = false)}>{m.comum_cancelar()}</button>
+			</div>
+		</Sheet>
 	{/if}
 
 	{#if forwarding}
@@ -494,6 +606,25 @@
 		flex-direction: column;
 		max-width: 720px;
 		margin: 0 auto;
+	}
+	.selection {
+		display: flex;
+		align-items: center;
+		gap: 0.2rem;
+		padding: 0.5rem 0.6rem;
+		border-bottom: 1px solid var(--line);
+		background: var(--surface);
+	}
+	.selection .count {
+		flex: 1;
+	}
+	.selection button:disabled {
+		opacity: 0.35;
+	}
+	.danger {
+		background: var(--danger);
+		border-color: var(--danger);
+		color: white;
 	}
 	.notice-line {
 		text-align: center;

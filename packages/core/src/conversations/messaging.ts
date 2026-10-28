@@ -274,6 +274,15 @@ async function markReadNow(storage: Storage, conversationId: string) {
 	if (conversation && conversation.unread > 0) await storage.conversations.put({ ...conversation, unread: 0 });
 }
 
+/** Favoritar ou desfavoritar (RF-28): só neste aparelho. Não favorita o que foi apagado nem aviso de grupo. */
+async function setStarredNow(storage: Storage, messageIds: string[], starred: boolean) {
+	for (const id of messageIds) {
+		const message = await storage.messages.get(id);
+		if (!message || message.deleted || message.notice || !!message.starred === starred) continue;
+		await storage.messages.put({ ...message, starred: starred || undefined });
+	}
+}
+
 /** A primeira mensagem de cada conversa leva meu nome. `recipient`: o contato, ou o id de uma conversa de grupo. */
 export async function nameTagFor(storage: Storage, recipient: string, myName: string): Promise<string[][]> {
 	const id = recipient.startsWith('grupo:') ? recipient : directConversationId(recipient);
@@ -308,7 +317,7 @@ async function dropMediaIfUnused(storage: Storage, ox: string | undefined) {
 
 /** Troca a mensagem pelo aviso "apagada": some o texto e o arquivo, fica o lugar na conversa. */
 export async function markDeleted(storage: Storage, message: MessageRecord): Promise<MessageRecord> {
-	const deleted: MessageRecord = { ...message, text: '', media: undefined, replyTo: undefined, deleted: true };
+	const deleted: MessageRecord = { ...message, text: '', media: undefined, replyTo: undefined, starred: undefined, deleted: true };
 	await storage.messages.put(deleted);
 	await storage.reactions.deleteByMessage(message.id);
 	await dropMediaIfUnused(storage, message.media?.ox);
@@ -381,5 +390,6 @@ export const storeIncoming = (...args: Parameters<typeof storeIncomingNow>) => e
 export const storeOutgoing = (...args: Parameters<typeof storeOutgoingNow>) => exclusive(args[0], () => storeOutgoingNow(...args));
 export const storePendingMessage = (...args: Parameters<typeof storePendingMessageNow>) =>
 	exclusive(args[0], () => storePendingMessageNow(...args));
+export const setStarred = (...args: Parameters<typeof setStarredNow>) => exclusive(args[0], () => setStarredNow(...args));
 export const markRead = (...args: Parameters<typeof markReadNow>) => exclusive(args[0], () => markReadNow(...args));
 export const deleteForMe = (...args: Parameters<typeof deleteForMeNow>) => exclusive(args[0], () => deleteForMeNow(...args));

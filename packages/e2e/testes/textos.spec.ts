@@ -168,8 +168,8 @@ test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum
 	await semTextoFixo(ana.page, nomes);
 	await ana.page.locator('.row', { hasText: 'oi' }).locator('.bubble').click({ button: 'right' });
 	await semTextoFixo(ana.page, nomes);
-	// "Encaminhar" é o terceiro item (depois de Responder e Copiar): abre a escolha do destino
-	await ana.page.locator('.sheet .item').nth(2).click();
+	// "Encaminhar" é o quarto item (depois de Responder, Favoritar e Copiar): abre a escolha do destino
+	await ana.page.locator('.sheet .item').nth(3).click();
 	await expect(ana.page.locator('.sheet .targets button')).not.toHaveCount(0);
 	await semTextoFixo(ana.page, nomes);
 	await ana.page.keyboard.press('Escape');
@@ -337,6 +337,9 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('button[type="submit"]').click();
 	await expect(page.getByRole('status')).toBeVisible();
 	await semTextoFixo(page, palavras);
+	await page.goto(PSEUDO_URL + 'ajustes/favoritas');
+	await expect(page.locator('main .hint')).toBeVisible();
+	await semTextoFixo(page);
 	await page.goto(PSEUDO_URL + 'ajustes/comentario');
 	await expect(page.locator('pre.device')).toBeVisible();
 	await semTextoFixo(page);

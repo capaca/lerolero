@@ -244,6 +244,60 @@
 	"encaminhar_titulo": "Encaminhar para…",
 	"encaminhar_vazio": "Você ainda não tem contatos nem grupos para receber.",
 	"menu_copiar": "Copiar",
+	"menu_selecionar": "Selecionar",
+	"menu_favoritar": "Favoritar",
+	"menu_desfavoritar": "Tirar dos favoritos",
+	"bolha_favorita": "Favorita",
+	"selecao_contagem": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} selecionada",
+				"countPlural=other": "{count} selecionadas"
+			}
+		}
+	],
+	"selecao_cancelar": "Cancelar seleção",
+	"selecao_apagar": "Apagar",
+	"selecao_apagar_pergunta": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "Apagar {count} mensagem?",
+				"countPlural=other": "Apagar {count} mensagens?"
+			}
+		}
+	],
+	"selecao_encaminhadas": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "{count} mensagem encaminhada",
+				"countPlural=other": "{count} mensagens encaminhadas"
+			}
+		}
+	],
+	"ajustes_favoritas": "Mensagens favoritas",
+	"favoritas_vazia": "Você ainda não favoritou nenhuma mensagem. Toque e segure uma mensagem e escolha “Favoritar”.",
+	"favoritas_titulo_pagina": "Mensagens favoritas",
 	"menu_apagar_mim": "Apagar para mim",
 	"menu_apagar_todos": "Apagar para todos",
 	"menu_apagar_todos_pergunta": "Apagar para todos?",

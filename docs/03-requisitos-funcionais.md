@@ -54,7 +54,7 @@
 | RF-25 | Apagar mensagem para todos. Num sistema descentralizado isso é um **pedido**, não uma garantia: apps de terceiros podem ignorá-lo, e o app deve deixar isso claro | Should | MVP |
 | RF-26 | Busca local nas conversas | Could | MVP |
 | RF-27 | Mensagens temporárias (somem após 24 h, 7 dias etc.) | — | v1 |
-| RF-28 | **Selecionar várias mensagens** e agir de uma vez: favoritar, excluir (para mim ou para todos, RF-25), copiar e encaminhar. Favoritar é local. Pedido do Pedro em 2026-10-26 | — | Futuro |
+| RF-28 | **Selecionar várias mensagens** e agir de uma vez: favoritar, excluir (para mim ou para todos, RF-25), copiar e encaminhar. Favoritar é local. Pedido do Pedro em 2026-10-26 | Should | M3 ✅ (2026-10-28) |
 
 ## 4. Grupos
 
