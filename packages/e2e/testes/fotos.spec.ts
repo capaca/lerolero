@@ -68,6 +68,13 @@ test('João envia uma foto grande; Maria vê a prévia na lista e abre em tela c
 	const noBalao = foto.locator('img');
 	await expect(noBalao).toHaveAttribute('src', /^blob:/);
 	expect(await noBalao.evaluate((img) => getComputedStyle(img).filter)).toBe('none');
+
+	// sair da conversa e voltar (sem recarregar o app) não traz o borrão de volta
+	await maria.page.getByRole('link', { name: 'Voltar para as conversas' }).click();
+	await maria.page.locator('.conversations a', { hasText: 'João' }).click();
+	const depois = maria.page.locator('.photo img');
+	await expect(depois).toHaveAttribute('src', /^blob:/);
+	expect(await depois.evaluate((img) => getComputedStyle(img).filter)).toBe('none');
 });
 
 test('João escolhe duas fotos de uma vez e as duas chegam para Maria', async ({ novaPessoa }) => {
