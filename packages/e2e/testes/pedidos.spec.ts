@@ -18,7 +18,7 @@ test('desconhecido vira pedido em Contatos, com ponto no ícone; aceitar abre a 
 	await expect(maria.page.locator('.conversations a')).toHaveCount(0);
 
 	await maria.page.getByRole('link', { name: /^Contatos/ }).click();
-	await expect(maria.page.getByRole('heading', { name: 'Pedidos de mensagem (1)' })).toBeVisible();
+	await expect(maria.page.getByRole('tab', { name: 'Pedidos (1)', selected: true })).toBeVisible(); // o ponto abre a aba
 	await maria.page.getByRole('link', { name: /João/ }).click();
 
 	// aberto, mas fechado: texto sem link e áudio sem player
@@ -43,6 +43,16 @@ test('desconhecido vira pedido em Contatos, com ponto no ícone; aceitar abre a 
 	await expect(maria.page.getByRole('link', { name: 'Contatos', exact: true })).toBeVisible(); // sem ponto
 });
 
+test('pedido que chega com Contatos aberto aparece sem recarregar', async ({ novaPessoa }) => {
+	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
+	await adicionarPeloConvite(maria, joao);
+	await maria.page.goto('./contatos');
+	await expect(maria.page.getByRole('tab', { name: 'Pedidos', exact: true })).toBeVisible(); // ainda sem pedido
+
+	await enviarTexto(joao.page, 'oi, sou eu');
+	await expect(maria.page.getByRole('tab', { name: 'Pedidos (1)' })).toBeVisible({ timeout: 20_000 });
+});
+
 test('bloquear apaga a conversa e descarta o que vier; desbloquear volta como pedido', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
 	await adicionarPeloConvite(maria, joao);
@@ -50,11 +60,12 @@ test('bloquear apaga a conversa e descarta o que vier; desbloquear volta como pe
 	await joao.page.getByRole('button', { name: 'Enviar', exact: true }).click();
 	await expect(joao.page.locator('.row.mine').getByLabel('enviada')).toBeVisible();
 
-	await maria.page.goto('./contatos');
+	await maria.page.goto('./contatos?aba=pedidos');
 	await maria.page.getByRole('link', { name: /João/ }).click();
 	await maria.page.getByRole('button', { name: 'Bloquear' }).click();
 	await expect(maria.page).toHaveURL(/\/contatos\/?$/);
-	await expect(maria.page.getByRole('heading', { name: 'Pedidos de mensagem (1)' })).toHaveCount(0);
+	await expect(maria.page.getByRole('tab', { name: 'Pedidos', exact: true })).toBeVisible(); // sem número
+	await maria.page.getByRole('tab', { name: 'Pedidos' }).click();
 	await expect(maria.page.getByRole('heading', { name: 'Bloqueados (1)' })).toBeVisible();
 
 	// o João segue escrevendo, sem saber; nada aparece para a Maria
@@ -67,7 +78,7 @@ test('bloquear apaga a conversa e descarta o que vier; desbloquear volta como pe
 	await expect(maria.page.getByRole('link', { name: 'Contatos', exact: true })).toBeVisible();
 
 	// desbloquear: a próxima mensagem cai nos pedidos, sem as antigas
-	await maria.page.goto('./contatos');
+	await maria.page.goto('./contatos?aba=pedidos');
 	await maria.page.getByRole('link', { name: /João/ }).click();
 	await maria.page.getByRole('button', { name: 'Desbloquear' }).click();
 	await joao.page.getByLabel('Mensagem').fill('terceira');
@@ -101,8 +112,11 @@ test('grupo de quem não é contato vira pedido; aceitar o põe na lista e bloqu
 	await bia.page.goto('./');
 	await expect(bia.page.getByRole('link', { name: 'Contatos (há pedidos de mensagem)' })).toBeVisible({ timeout: 20_000 });
 	await expect(bia.page.locator('.conversations a')).toHaveCount(0);
-	await bia.page.getByRole('link', { name: /^Contatos/ }).click();
-	await expect(bia.page.getByRole('heading', { name: 'Pedidos de mensagem (2)' })).toBeVisible();
+	// a página carrega os pedidos ao abrir; o segundo (conversa ou grupo) pode chegar depois do ponto
+	await expect(async () => {
+		await bia.page.goto('./contatos?aba=pedidos');
+		await expect(bia.page.getByRole('tab', { name: 'Pedidos (2)' })).toBeVisible({ timeout: 2000 });
+	}).toPass({ timeout: 20_000 });
 	await bia.page.getByRole('link', { name: /Vizinhos/ }).click();
 
 	// aberto, mas fechado: sem link, sem campo de mensagem
@@ -120,10 +134,11 @@ test('grupo de quem não é contato vira pedido; aceitar o põe na lista e bloqu
 	await expect(bia.page.locator('.conversations a', { hasText: 'Amigos' })).toHaveCount(0);
 
 	// o Caio bloqueia um deles: o grupo e quem o criou saem, e o grupo não volta com o que a Ana disser depois
-	await caio.page.goto('./contatos');
+	await caio.page.goto('./contatos?aba=pedidos');
 	await caio.page.getByRole('link', { name: /Amigos/ }).click();
 	await caio.page.getByRole('button', { name: 'Bloquear' }).click();
 	await expect(caio.page).toHaveURL(/\/contatos\/?$/);
+	await caio.page.getByRole('tab', { name: 'Pedidos' }).click();
 	await expect(caio.page.getByRole('heading', { name: 'Bloqueados (1)' })).toBeVisible();
 	await enviarTexto(ana.page, 'ninguém responde?');
 	await caio.page.goto('./');

@@ -110,7 +110,7 @@
 	<header>
 		<h1>{m.app_nome()}</h1>
 		<nav>
-			<a class="icon-button" href={resolve('/contatos')} aria-label={hasRequests ? m.inicio_contatos_pedidos() : m.inicio_contatos()}>
+			<a class="icon-button" href={hasRequests ? `${resolve('/contatos')}?aba=pedidos` : resolve('/contatos')} aria-label={hasRequests ? m.inicio_contatos_pedidos() : m.inicio_contatos()}>
 				<Icon name="users" size={22} />
 				{#if hasRequests}<span class="dot" aria-hidden="true"></span>{/if}
 			</a>

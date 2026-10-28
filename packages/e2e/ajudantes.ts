@@ -81,7 +81,7 @@ export async function adicionarUmAoOutro(a: Pessoa, b: Pessoa) {
 
 /** Abre, por Contatos, o pedido de mensagem de quem ainda não é contato. */
 export async function abrirPedido(page: Page, de: string) {
-	await page.goto('./contatos');
+	await page.goto('./contatos?aba=pedidos');
 	await page.getByRole('link', { name: new RegExp(de) }).click();
 }
 
