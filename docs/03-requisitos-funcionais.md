@@ -35,7 +35,7 @@
 |---|---|---|---|
 | RF-10 | Adicionar contato escaneando o **QR code** da outra pessoa | Must | MVP |
 | RF-11 | Adicionar contato por **link de convite**, que pode ser enviado por qualquer meio (inclusive pelo WhatsApp) | Must | MVP |
-| RF-12 | **Pedidos de mensagem:** mensagens de quem não é contato vão para uma caixa separada, sem notificação e sem carregar links ou mídia até o usuário aceitar | Must | MVP |
+| RF-12 | **Pedidos de mensagem:** mensagens de quem não é contato vão para uma caixa separada, sem notificação e sem carregar links ou mídia até o usuário aceitar; vale também para grupo em que me põe alguém que não é contato | Must | MVP |
 | RF-13 | Bloquear contato (bloqueio local: mensagens daquela chave são descartadas) | Must | MVP |
 | RF-14 | Renomear o contato localmente; o nome que o usuário deu prevalece sobre o nome que o contato escolheu (dificulta o golpe do falso parente) | Should | MVP |
 | RF-15 | Encontrar contatos por **CPF ou chave Pix**, só entre usuários que optaram pela recuperação via Pix/gov.br (Q-F4) | — | Futuro |

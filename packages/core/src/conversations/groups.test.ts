@@ -27,6 +27,7 @@ import {
 	type GroupChange
 } from './groups.ts';
 import { storeIncoming, storeOutgoing } from './messaging.ts';
+import { acceptGroupRequest, blockGroupRequest, listGroupRequests } from '../contacts/requests.ts';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 const closers: Array<() => void> = [];
@@ -569,5 +570,51 @@ describe('avisos de grupo ao mesmo tempo', () => {
 				expect(conversation.group!.names[carol.publicKey], `minha ação primeiro=${mineFirst}, atraso=${delay}`).toBe('Carol');
 			}
 		}
+	});
+});
+
+describe('pedidos de grupo (RF-12, T7)', () => {
+	const addContact = (p: Person, who: Person) =>
+		p.storage.contacts.put({ publicKey: who.publicKey, state: 'aceito', dmRelays: [], addedAt: 1 });
+	const discard = async () => {};
+
+	it('quem me pôs no grupo sem ser contato: vira pedido, não se apresenta e some da lista', async () => {
+		const { bob, groupId, results } = await family();
+		expect(results.get('Bob')?.joined).toBe(true);
+		expect((await conversationOf(bob, groupId)).group?.request?.state).toBe('pedido');
+		expect((await listGroupRequests(bob.storage)).map((r) => r.conversation.group?.state.name)).toEqual(['Família']);
+	});
+
+	it('quem me pôs é contato: grupo normal', async () => {
+		const alice = await person('Alice');
+		const bob = await person('Bob');
+		await addContact(bob, alice);
+		const created = createGroup(alice.publicKey, 'Amigos', [bob.publicKey], 'Alice', tick());
+		await act(alice, created, [bob]);
+		expect((await conversationOf(bob, created.groupId)).group?.request).toBeUndefined();
+		expect(await listGroupRequests(bob.storage)).toEqual([]);
+	});
+
+	it('aceitar tira do pedido; o grupo que eu mesmo crio nunca é pedido', async () => {
+		const { alice, bob, groupId } = await family();
+		expect((await conversationOf(alice, groupId)).group?.request).toBeUndefined();
+		await acceptGroupRequest(bob.storage, groupConversationId(groupId));
+		expect((await conversationOf(bob, groupId)).group?.request).toBeUndefined();
+		expect(await listGroupRequests(bob.storage)).toEqual([]);
+	});
+
+	it('bloquear: bloqueia quem me pôs, apaga as mensagens e descarta o que vier do grupo; avisos novos não o trazem de volta', async () => {
+		const { alice, bob, carol, groupId } = await family();
+		await say(carol, groupId, 'oi', [bob]);
+		expect((await conversationOf(bob, groupId)).lastMessageKind).toBe('texto');
+		await blockGroupRequest(bob.storage, groupConversationId(groupId), discard);
+		expect((await bob.storage.contacts.get(alice.publicKey))?.state).toBe('bloqueado');
+		expect(await listGroupRequests(bob.storage)).toEqual([]);
+
+		const later = await say(carol, groupId, 'e aí?', [bob]);
+		expect(later.got.get('Bob')).toBeUndefined();
+		expect(await bob.storage.messages.listByConversation(groupConversationId(groupId), 100)).toEqual([]);
+		await act(alice, renameGroup(await conversationOf(alice, groupId), alice.publicKey, 'Outro', 'Alice', tick()), [bob]);
+		expect((await conversationOf(bob, groupId)).group?.request?.state).toBe('recusado');
 	});
 });

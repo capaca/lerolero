@@ -2,7 +2,7 @@
 // some da lista e vai para Contatos, sem links nem áudio abertos, até a pessoa aceitar. Bloquear apaga a conversa e
 // descarta o que vier dessa chave (messaging.ts, storeIncoming).
 
-import { deleteConversation, directConversationId } from '../conversations/messaging.ts';
+import { clearConversation, deleteConversation, directConversationId } from '../conversations/messaging.ts';
 import type { ContactRecord, ConversationRecord } from '../storage/records.ts';
 import type { Storage } from '../storage/repositories.ts';
 
@@ -44,4 +44,40 @@ export async function blockContact(storage: Storage, publicKey: string, discard:
 export async function unblockContact(storage: Storage, publicKey: string): Promise<void> {
 	const contact = await storage.contacts.get(publicKey);
 	if (contact?.state === 'bloqueado') await storage.contacts.put({ ...contact, state: 'pedido' });
+}
+
+export type GroupRequest = { conversation: ConversationRecord; by: ContactRecord | undefined };
+
+/** Grupos para os quais alguém que não é contato me adicionou, o mais recente primeiro (RF-12, T7). */
+export async function listGroupRequests(storage: Storage): Promise<GroupRequest[]> {
+	const found: GroupRequest[] = [];
+	for (const conversation of await storage.conversations.listByRecent()) {
+		const request = conversation.group?.request;
+		if (request?.state !== 'pedido' || !conversation.group?.amMember) continue;
+		found.push({ conversation, by: request.by ? await storage.contacts.get(request.by) : undefined });
+	}
+	return found.sort((a, b) => b.conversation.lastMessageAt - a.conversation.lastMessageAt);
+}
+
+/** Aceitar o grupo: sai dos pedidos e passa à lista. Quem chama se apresenta aos membros (só agora, T7). */
+export async function acceptGroupRequest(storage: Storage, conversationId: string): Promise<ConversationRecord | undefined> {
+	const conversation = await storage.conversations.get(conversationId);
+	if (conversation?.group?.request?.state !== 'pedido') return undefined;
+	const { request: _, ...group } = conversation.group;
+	const accepted = { ...conversation, group };
+	await storage.conversations.put(accepted);
+	return accepted;
+}
+
+/**
+ * Bloquear o grupo: bloqueia quem me adicionou, apaga as mensagens daqui e descarta o que vier dele, sem aviso a
+ * ninguém. O estado do grupo fica (como em "Excluir conversa"), para um aviso novo não o trazer de volta como pedido.
+ */
+export async function blockGroupRequest(storage: Storage, conversationId: string, discard: (messageId: string) => Promise<void>) {
+	const conversation = await storage.conversations.get(conversationId);
+	if (!conversation?.group?.request) return;
+	const { by } = conversation.group.request;
+	await storage.conversations.put({ ...conversation, group: { ...conversation.group, request: { state: 'recusado', by } } });
+	await clearConversation(storage, conversationId, discard);
+	if (by) await blockContact(storage, by, discard);
 }

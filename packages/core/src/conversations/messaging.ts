@@ -191,6 +191,7 @@ async function storeGroupMessage(
 	const known = await storage.messages.get(rumor.id);
 	const existing = await storage.conversations.get(id);
 	if (known) return existing && { message: known, conversation: existing, isNew: false };
+	if (existing?.group?.request?.state === 'recusado') return undefined; // grupo bloqueado (RF-13): descartado
 
 	const mine = rumor.pubkey === me;
 	if (existing && !mine && !existing.group?.everMembers.includes(rumor.pubkey)) return undefined;
@@ -333,6 +334,11 @@ const EVERY_MESSAGE = 1_000_000_000;
  * (`discard`, que tem a sua própria vez); o que já está na fila de envio de texto sai normalmente.
  */
 export async function deleteConversation(storage: Storage, conversationId: string, discard: (messageId: string) => Promise<void>) {
+	await clearConversation(storage, conversationId, discard, true);
+}
+
+/** Apaga as mensagens e, com `drop`, a conversa; sem ele a conversa fica (grupo recusado: guarda o estado, T7). */
+export async function clearConversation(storage: Storage, conversationId: string, discard: (messageId: string) => Promise<void>, drop = false) {
 	const all = await storage.messages.listByConversation(conversationId, EVERY_MESSAGE);
 	for (const message of all) if (message.upload) await discard(message.id);
 	await exclusive(storage, async () => {
@@ -340,7 +346,11 @@ export async function deleteConversation(storage: Storage, conversationId: strin
 			await storage.messages.delete(message.id);
 			await dropMediaIfUnused(storage, message.media?.ox);
 		}
-		await storage.conversations.delete(conversationId);
+		if (drop) await storage.conversations.delete(conversationId);
+		else {
+			const conversation = await storage.conversations.get(conversationId);
+			if (conversation) await storage.conversations.put({ ...conversation, unread: 0, lastMessageKind: undefined, lastMessagePreview: undefined, lastNotice: undefined });
+		}
 	});
 }
 

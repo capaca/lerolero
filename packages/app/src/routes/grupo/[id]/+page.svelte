@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { groupConversationId, type ConversationRecord } from '@lerolero/core';
@@ -28,6 +29,17 @@
 	}
 
 	const group = $derived(conversation?.group);
+	// quem me pôs no grupo não é contato: é um pedido, com tudo fechado até eu aceitar (RF-12, T7, T18)
+	const request = $derived(group?.request?.state === 'pedido' ? group.request : undefined);
+	const addedBy = $derived(request?.by ? nameOf(request.by) : undefined);
+
+	async function accept() {
+		await session.acceptGroupRequest(groupConversationId(groupId));
+	}
+	async function block() {
+		await session.blockGroupRequest(groupConversationId(groupId));
+		await goto(resolve('/contatos'));
+	}
 	// "Você, Ana, ~Bruno": eu primeiro, depois os outros pela ordem de entrada
 	const subtitle = $derived(
 		group
@@ -46,14 +58,33 @@
 	<main>
 		<p class="hint">{m.grupo_nao_esta()}</p>
 	</main>
+{:else if group && group.request?.state === 'recusado'}
+	<main>
+		<p class="hint">{m.grupo_nao_esta()}</p>
+	</main>
 {:else if group}
 	{#key groupId}
 		<Chat
 			conversationId={groupConversationId(groupId)}
 			{nameOf}
-			linkMode={(key) => (contactKeys.has(key) ? 'aberto' : 'aviso')}
-			closed={group.amMember ? undefined : m.erro_fora_do_grupo()}
+			linkMode={(key) => (request ? 'texto' : contactKeys.has(key) ? 'aberto' : 'aviso')}
+			closed={request ? m.grupo_pedido_fechado() : group.amMember ? undefined : m.erro_fora_do_grupo()}
 		>
+			{#snippet banner()}
+				{#if request}
+					<div class="banner notice">
+						<p>
+							<strong>{m.grupo_pedido_titulo()}</strong>
+							{#if addedBy && !addedBy.me && !addedBy.contact}{m.grupo_pedido_por({ nome: addedBy.name })}{/if}
+							{m.grupo_pedido_limites()}
+						</p>
+						<div class="actions">
+							<button class="primary" onclick={accept}>{m.grupo_pedido_aceitar()}</button>
+							<button class="danger" onclick={block}>{m.grupo_pedido_bloquear()}</button>
+						</div>
+					</div>
+				{/if}
+			{/snippet}
 			{#snippet header()}
 				<ChatHeader name={group.state.name} {subtitle} href={resolve('/grupo/[id]/detalhes', { id: groupId })}>
 					{#snippet avatar()}
@@ -64,3 +95,14 @@
 		</Chat>
 	{/key}
 {/if}
+
+<style>
+	.danger {
+		background: var(--danger);
+		border-color: var(--danger);
+		color: white;
+	}
+	.notice {
+		margin: 0.6rem 1rem 0;
+	}
+</style>

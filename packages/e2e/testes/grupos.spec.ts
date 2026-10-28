@@ -1,7 +1,7 @@
 // Grupos (RF-30..34): criar, conversar, e a gestão com quatro pessoas: detalhes, renomear, adicionar, promover,
 // remover, sair e a herança do título de criador.
 import type { Page } from '@playwright/test';
-import { adicionarPeloConvite, enviarTexto, expect, test } from '../ajudantes.ts';
+import { adicionarUmAoOutro, enviarTexto, expect, test } from '../ajudantes.ts';
 
 async function abrirGrupo(page: Page, nome: string) {
 	await page.goto('./');
@@ -26,7 +26,8 @@ async function menuDe(page: Page, nome: string) {
 
 test('Ana cria o grupo e gerencia: renomear, adicionar, promover, remover e sair', async ({ novaPessoa }) => {
 	const [ana, bia, caio, davi] = await Promise.all(['Ana', 'Bia', 'Caio', 'Davi'].map(novaPessoa));
-	for (const p of [bia, caio, davi]) await adicionarPeloConvite(p, ana);
+	// contatos de verdade dos dois lados: quem não tem a Ana nos contatos recebe o grupo como pedido (RF-12)
+	for (const p of [bia, caio, davi]) await adicionarUmAoOutro(p, ana);
 
 	await ana.page.goto('./grupo/novo');
 	await ana.page.locator('#nome').fill('Amigos');
@@ -68,11 +69,11 @@ test('Ana cria o grupo e gerencia: renomear, adicionar, promover, remover e sair
 
 	// Davi, que entrou depois, recebe o grupo já renomeado
 	await abrirGrupo(davi.page, 'Amigos de sempre');
-	await expect(davi.page.locator('.notice-line', { hasText: '~Ana adicionou você' })).toBeVisible();
+	await expect(davi.page.locator('.notice-line', { hasText: 'Ana adicionou você' })).toBeVisible();
 
 	// Caio, membro comum: vê tudo, não mexe em nada
 	await abrirGrupo(caio.page, 'Amigos de sempre');
-	await expect(caio.page.locator('.notice-line', { hasText: '~Ana deu a ~Bia a função de administrador' })).toBeVisible();
+	await expect(caio.page.locator('.notice-line', { hasText: 'Ana deu a ~Bia a função de administrador' })).toBeVisible();
 	await abrirDetalhes(caio.page);
 	await expect(caio.page.getByText('Grupo · 4 pessoas')).toBeVisible();
 	await expect(caio.page.getByRole('link', { name: 'Adicionar pessoas' })).toHaveCount(0);
@@ -84,7 +85,7 @@ test('Ana cria o grupo e gerencia: renomear, adicionar, promover, remover e sair
 	await abrirGrupo(bia.page, 'Amigos de sempre');
 	await abrirDetalhes(bia.page);
 	await expect(bia.page.getByText('Grupo · 4 pessoas')).toBeVisible();
-	expect((await papeis(bia.page)).slice(0, 2)).toEqual(['Você:Administrador', '~Ana:Criador']);
+	expect((await papeis(bia.page)).slice(0, 2)).toEqual(['Você:Administrador', 'Ana:Criador']);
 	expect(await menuDe(bia.page, 'Ana')).toEqual(['Conversar', 'Cancelar']);
 	await bia.page.getByRole('button', { name: 'Cancelar' }).click();
 	expect(await menuDe(bia.page, 'Caio')).toEqual(['Conversar', 'Tornar administrador', 'Remover do grupo', 'Cancelar']);

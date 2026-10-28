@@ -338,7 +338,8 @@ async function storeGroupControlNow(
 	const before = existing?.group;
 	const amMember = isMember(state, me);
 	// nomes que vieram nas mensagens (messaging.ts) continuam; os das apresentações valem por cima
-	const group: GroupInfo = { state, names: { ...before?.names, ...names }, everMembers, amMember };
+	const request = before?.request ?? (amMember && !before?.amMember ? await requestOnJoin(storage, me, all, new Set(applied)) : undefined);
+	const group: GroupInfo = { state, names: { ...before?.names, ...names }, everMembers, amMember, ...(request ? { request } : {}) };
 	const conversation: ConversationRecord = {
 		unread: 0,
 		lastMessageAt: event.createdAt,
@@ -360,6 +361,21 @@ async function storeGroupControlNow(
 		joined: amMember && !wasMember,
 		newMembers: wasMember ? conversation.members.filter((k) => !previous.has(k)) : []
 	};
+}
+
+/**
+ * Quem me pôs no grupo decide se ele chega como pedido (RF-12, T7): contato aceito ou eu mesmo, grupo normal; qualquer
+ * outro, pedido; bloqueado, já nasce recusado. Sem saber quem foi (aviso fora de ordem), fica como pedido.
+ */
+async function requestOnJoin(storage: Storage, me: string, events: GroupEventRecord[], applied: Set<string>): Promise<GroupInfo['request']> {
+	const adders = events
+		.filter((e) => applied.has(e.id) && (e.action === 'criar' ? e.state?.members.some((m) => m.publicKey === me) : e.action === 'adicionar' && e.targets.includes(me)))
+		.sort((a, b) => b.createdAt - a.createdAt);
+	const by = adders[0]?.author;
+	if (by === me) return undefined;
+	const state = by ? (await storage.contacts.get(by))?.state : undefined;
+	if (state === 'aceito') return undefined;
+	return { state: state === 'bloqueado' ? 'recusado' : 'pedido', by: by ?? '' };
 }
 
 /**

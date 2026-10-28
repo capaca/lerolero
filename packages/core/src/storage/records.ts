@@ -49,6 +49,11 @@ export type GroupInfo = {
 	everMembers: string[];
 	/** eu ainda estou no grupo */
 	amMember: boolean;
+	/**
+	 * Quem me pôs no grupo não é contato (RF-12): o grupo fica em Contatos, como pedido, até eu aceitar. `recusado` é o
+	 * bloqueio: o grupo some e o que vier dele é descartado. Sem o campo, o grupo é normal.
+	 */
+	request?: { state: 'pedido' | 'recusado'; by: string };
 };
 
 export type ConversationRecord = {
