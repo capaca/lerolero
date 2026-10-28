@@ -222,6 +222,23 @@ Revisão do app inteiro com olhar de operação. Como não há servidor do proje
 - Denúncia e listas de bloqueio compartilhadas (RF-17).
 - Resumo periódico (RF-66); vídeos (RF-44 cobre só arquivos, no M3).
 
+## Escala e infraestrutura própria (registrado em 2026-10-28; nada decidido nem iniciado)
+
+Vem do [estudo de escala](estudos/escala-whatsapp.md). Só entra na ordem do trabalho depois que o Pedro decidir
+a Q-N7 (custo zero × servidor de referência) e a Q-N8 (teto de usuários); as prioridades são as do estudo.
+
+| Prio | Item | Servidor / efeito |
+|---|---|---|
+| P1 (antes do lançamento público) | Sondas sintéticas na CI: entrega, latência e retenção a cada hora nos relays e Blossom da lista; fecha a Q-R1 | observabilidade |
+| P1 | Relay e Blossom de referência próprios, com o "kit do operador" (imagem Docker + guia), ligado ao programa de relays brasileiros | relay + mídia |
+| P1 | Medir o custo de sincronização (KB por abertura com 0, 50 e 500 mensagens; hipótese: ~170 KB contra a meta de 50 KB do RNF-20) e pôr o RNF-20 como teste na CI | cliente |
+| P1 | Mídia em espelho (2 servidores) e expiração visível ("arquivo expirado") | mídia |
+| P2 (antes de ~100 mil) | Sorteio dos relays de cada pessoa a partir da lista; Negentropy (NIP-77) na sincronização; PWA no Cloudflare Pages ou cache garantido; prova de trabalho (RF-90); limites e limpeza de mídia | relays, estático, cliente |
+| P2 | Gateway de push sem conteúdo (Web Push) e aditivo no [ADR-0005](adr/0005-notificacoes.md) sobre custo em escala | push |
+| P3 | Chamadas de áudio 1:1 com STUN público e TURN (`coturn`) | TURN |
+| P3 | Marmot/MLS e canais (grupos acima de 20); multi-dispositivo; chamada em grupo com SFU | SFU, cliente |
+| P3 | Modelo de sustentação (Q-N8) | — |
+
 ## Pontos de decisão
 
 | Quando | Decisão |
