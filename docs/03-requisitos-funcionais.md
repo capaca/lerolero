@@ -9,7 +9,7 @@
 |---|---|---|
 | **MVP** | Web/PWA | Validar o núcleo: identidade, contatos, conversas 1:1 e em grupos pequenos, áudio, fotos, modo foco |
 | **v1** | Android nativo (Capacitor) + desktop nativo (Tauri) | Notificações soberanas, figurinhas, modos de banda, proteção do app |
-| **Futuro** | + iOS | Chamadas, grupos grandes, multi-dispositivo, forward secrecy, recuperação de conveniência |
+| **Futuro** | + iOS | Chamadas, grupos grandes, multi-dispositivo, forward secrecy, recuperação de conveniência (Pix e gov.br) |
 
 **Prioridade dentro do MVP (MoSCoW):** **Must** = sem isso não há MVP · **Should** = importante, mas pode ser cortado se o prazo apertar · **Could** = só se sobrar tempo.
 
@@ -26,7 +26,8 @@
 | RF-05 | Restaurar a identidade num aparelho novo a partir da frase | Must | MVP |
 | RF-06 | Backup cifrado de contatos e configurações nos relays, restaurado junto com a identidade | Should | MVP |
 | RF-07 | Bloqueio do app com PIN ou biometria do aparelho (opcional) | — | v1 |
-| RF-08 | Recuperação de conveniência via passkey, Pix ou gov.br (opt-in; ver Q-A6 e Q-A7 do [02](02-modelo-de-ameacas.md)) | — | Futuro |
+| RF-08 | **Passkey** (WebAuthn com PRF): entrar com digital ou rosto no lugar do PIN e restaurar num aparelho novo sem digitar a frase; o backup cifrado com a chave da passkey fica nos relays. Opt-in, nunca no lugar da frase; começa só depois da decisão do domínio (Q-N1). [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md). Pix e gov.br seguem adiados (Q-A7) | Should | MVP, depois de Q-N1 |
+| RF-09 | **Guardar o código de recuperação sem copiar à mão** ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): (a) botão que abre o menu de compartilhar com um arquivo autoexplicativo (o que é, aviso para não enviar a ninguém, como restaurar, link de restauração e as 12 palavras) e opção de imprimir um cartão; (b) a frase salva no gerenciador de senhas do navegador, por um formulário que ele reconhece. Tela única "Proteção da conta" com o estado; uma camada concluída basta para parar o lembrete do RF-04. Restaurar também a partir do arquivo, do link ou do preenchimento automático | Should | MVP |
 
 ## 2. Contatos
 

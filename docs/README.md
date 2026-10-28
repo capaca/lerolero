@@ -33,6 +33,7 @@ Cada decisão relevante tem um ADR em [`adr/`](adr/), seguindo o [template](adr/
 | [0006](adr/0006-fluxo-de-trabalho-e-releases.md) | Fluxo de trabalho e releases (PR, testes por rótulo, SemVer) | ✅ aceito |
 | [0007](adr/0007-homologacao.md) | Homologação antes da produção (outra organização GitHub, a cada merge) | ✅ aceito |
 | [0008](adr/0008-internacionalizacao.md) | Internacionalização (Paraglide JS, pt-BR como base) | ✅ aceito |
+| [0009](adr/0009-protecao-e-recuperacao-da-conta.md) | Proteção e recuperação da conta em camadas (arquivo, gerenciador de senhas, passkey) | ✅ aceito |
 
 ## Estudos
 
