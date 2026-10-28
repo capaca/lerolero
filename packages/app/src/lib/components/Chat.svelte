@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Conversa (1:1 ou grupo): mensagens, avisos de grupo, menu da mensagem e campo de envio.
 	// O topo e os avisos de cima ficam com a tela que usa o componente.
-	import { forwardOf, type MessageRecord } from '@lerolero/core';
+	import { contactName, deliveryOf, forwardOf, type MessageRecord, type ReactionRecord } from '@lerolero/core';
 	import { onDestroy, tick, type Snippet } from 'svelte';
 	import Composer from './Composer.svelte';
 	import Icon from './Icon.svelte';
@@ -9,7 +9,7 @@
 	import ForwardSheet from './ForwardSheet.svelte';
 	import MessageMenu from './MessageMenu.svelte';
 	import Sheet from './Sheet.svelte';
-	import { dayKey, formatDay } from '#lib/format.ts';
+	import { dayKey, formatDay, formatTime } from '#lib/format.ts';
 	import { friendlyError } from '#lib/errors.ts';
 	import { memberName, noticeText, type NameOf } from '#lib/notices.ts';
 	import { m } from '#lib/paraglide/messages.js';
@@ -48,6 +48,12 @@
 	let firstLoad = true;
 	let error = $state('');
 	let scroller = $state<HTMLDivElement>();
+	// quem recebe o que eu escrevo (os estados de entrega são os do mais atrasado), as reações por mensagem e as
+	// mensagens citadas que não estão na página carregada
+	let recipients = $state.raw<string[]>([]);
+	let reactions = $state.raw(new Map<string, ReactionRecord[]>());
+	let quoted = $state.raw(new Map<string, MessageRecord>());
+	let otherName = $state('');
 
 	// menu da mensagem: toque longo (celular) ou botão direito (computador)
 	let menuFor = $state.raw<MessageRecord>();
@@ -57,6 +63,117 @@
 		menuFor = message;
 		// vibração curta confirma o toque longo (no iPhone o navegador não vibra)
 		navigator.vibrate?.(15);
+	}
+
+	// seleção de várias mensagens (RF-28): favoritar, copiar, encaminhar e apagar de uma vez
+	let selecting = $state(false);
+	let selected = $state.raw(new Set<string>());
+	let confirmingDelete = $state(false);
+	const picked = $derived(messages.filter((x) => selected.has(x.id)));
+
+	function startSelecting(message: MessageRecord) {
+		menuFor = undefined;
+		selected = new Set([message.id]);
+		selecting = true;
+	}
+	function stopSelecting() {
+		selecting = false;
+		confirmingDelete = false;
+		selected = new Set();
+	}
+	function togglePick(id: string) {
+		const next = new Set(selected);
+		if (!next.delete(id)) next.add(id);
+		selected = next;
+		// desmarcou a última: sai do modo
+		if (!next.size) stopSelecting();
+	}
+	async function starMessages(ids: string[], starred: boolean) {
+		menuFor = undefined;
+		try {
+			await session.setStarred(ids, starred);
+			stopSelecting();
+		} catch (err) {
+			error = friendlyError(err);
+		}
+	}
+	/** Sem a estrela em todas, favorita todas; se todas já são favoritas, tira. */
+	const allStarred = $derived(picked.length > 0 && picked.every((x) => x.starred));
+	const copyable = $derived(picked.filter((x) => !x.media && x.text));
+	const forwardable = $derived(picked.filter((x) => forwardOf(x)));
+	const allMine = $derived(picked.length > 0 && picked.every((x) => x.sender === me));
+
+	async function copyPicked() {
+		// uma só: o texto como está; várias: com hora e nome, para o texto colado fazer sentido
+		const text =
+			copyable.length === 1
+				? copyable[0].text
+				: copyable.map((x) => `[${formatTime(x.createdAt)}] ${nameFor(x.sender)}: ${x.text}`).join('\n');
+		try {
+			await navigator.clipboard.writeText(text);
+			stopSelecting();
+			copied = true;
+			clearTimeout(copiedTimer);
+			copiedTimer = setTimeout(() => (copied = false), 2000);
+		} catch {
+			error = m.conversa_erro_copiar();
+		}
+	}
+	async function deletePicked(forEveryone: boolean) {
+		const list = picked;
+		stopSelecting();
+		try {
+			for (const message of list) {
+				if (forEveryone) await session.deleteForEveryone(conversationId, message.id);
+				else await session.deleteForMe(message.id);
+			}
+		} catch (err) {
+			error = friendlyError(err);
+		}
+	}
+
+	// responder (RF-22): o campo mostra a citação; vale para o próximo texto enviado
+	let replying = $state.raw<MessageRecord>();
+
+	const nameFor = (sender: string) => (sender === me ? m.citada_voce() : nameOf ? memberName(nameOf(sender)) : otherName);
+	function previewOf(message: MessageRecord): string {
+		if (message.deleted) return m.citada_apagada();
+		if (message.media) return message.media.type.startsWith('audio/') ? m.previa_audio() : message.media.type.startsWith('image/') ? m.previa_foto() : '';
+		return message.text.replace(/\s+/g, ' ').trim().slice(0, 120);
+	}
+
+	function startReply() {
+		replying = menuFor;
+		menuFor = undefined;
+	}
+
+	async function react(message: MessageRecord, emoji: string) {
+		menuFor = undefined;
+		try {
+			await session.react(conversationId, message.id, emoji);
+		} catch (err) {
+			error = friendlyError(err);
+		}
+	}
+
+	/** Reações de uma mensagem somadas por emoji, na ordem em que apareceram. */
+	function chipsOf(messageId: string) {
+		const chips: Array<{ emoji: string; count: number; mine: boolean }> = [];
+		for (const reaction of reactions.get(messageId) ?? []) {
+			const chip = chips.find((c) => c.emoji === reaction.emoji);
+			if (chip) {
+				chip.count++;
+				chip.mine ||= reaction.sender === me;
+			} else chips.push({ emoji: reaction.emoji, count: 1, mine: reaction.sender === me });
+		}
+		return chips;
+	}
+	const myReactionTo = (messageId: string) => reactions.get(messageId)?.find((r) => r.sender === me)?.emoji;
+
+	// a citação leva à mensagem original, se ela está na tela
+	function goToQuoted(id: string) {
+		const el = scroller?.querySelector<HTMLElement>(`[data-id="${id}"]`);
+		el?.scrollIntoView({ block: 'center' });
 	}
 
 	// endereço de quem não é contato: confirma antes de abrir, mostrando o domínio inteiro
@@ -85,13 +202,16 @@
 
 
 	// encaminhar: o menu fecha e abre a escolha do destino; ao escolher, vai para a conversa e a tela segue nela
-	let forwarding = $state.raw<MessageRecord>();
+	let forwarding = $state.raw<MessageRecord[]>();
+	let forwardedCount = $state(1);
 	async function forwardTo(destination: string) {
-		const message = forwarding;
+		const list = forwarding;
 		forwarding = undefined;
-		if (!message) return;
+		if (!list?.length) return;
 		try {
-			await session.forwardMessage(message.id, destination);
+			for (const message of list) await session.forwardMessage(message.id, destination);
+			forwardedCount = list.length;
+			stopSelecting();
 			forwarded = true;
 			clearTimeout(forwardedTimer);
 			forwardedTimer = setTimeout(() => (forwarded = false), 2000);
@@ -227,10 +347,25 @@
 
 	async function load() {
 		const limit = PAGE_SIZE * (1 + extraPages);
-		const [list, conversation] = await Promise.all([
+		const [list, conversation, reactionList] = await Promise.all([
 			session.getMessages(conversationId, limit + 1),
-			session.getConversation(conversationId)
+			session.getConversation(conversationId),
+			session.getReactions(conversationId)
 		]);
+		const byMessage = new Map<string, ReactionRecord[]>();
+		for (const reaction of reactionList.sort((a, b) => a.createdAt - b.createdAt)) {
+			byMessage.set(reaction.messageId, [...(byMessage.get(reaction.messageId) ?? []), reaction]);
+		}
+		reactions = byMessage;
+		recipients = conversation?.members ?? [];
+		// citações de mensagens mais antigas que a página
+		const here = new Set(list.map((x) => x.id));
+		const found = new Map<string, MessageRecord>();
+		for (const id of new Set(list.flatMap((x) => (x.replyTo && !here.has(x.replyTo) ? [x.replyTo] : [])))) {
+			const original = await session.getMessage(id);
+			if (original) found.set(id, original);
+		}
+		quoted = found;
 		const stick = firstLoad || nearBottom() || list.at(-1)?.sender === me;
 		const fromOthers = (m: MessageRecord) => m.sender !== me && !m.notice;
 		if (firstLoad) {
@@ -259,7 +394,24 @@
 		}
 		firstLoad = false;
 		if (conversation?.unread) await session.markRead(conversationId);
+		acknowledgeVisible();
 	}
+
+	// "Lida" (RF-50): o que está na tela e veio dos outros; só com o app à vista, não com a aba escondida
+	function acknowledgeVisible() {
+		if (document.visibilityState !== 'visible') return;
+		const ids = messages.filter((x) => x.sender !== me && !x.notice && !x.deleted && x.ack !== 'lida').map((x) => x.id);
+		if (ids.length) void session.acknowledgeRead(ids);
+	}
+	$effect(() => {
+		document.addEventListener('visibilitychange', acknowledgeVisible);
+		return () => document.removeEventListener('visibilitychange', acknowledgeVisible);
+	});
+	// nome do outro lado, para a citação de uma conversa 1:1
+	$effect(() => {
+		if (!conversationId.startsWith('direta:')) return;
+		void session.getContact(conversationId.slice('direta:'.length)).then((contact) => (otherName = contact ? contactName(contact) : ''));
+	});
 
 	// Pulo direto, sem rolagem suave: os blocos desenhados no caminho crescem do tamanho estimado
 	// para o real e o fim se afasta; por isso confere de novo nos quadros seguintes.
@@ -299,7 +451,28 @@
 </script>
 
 <div class="chat">
-	{@render header()}
+	{#if selecting}
+		<div class="selection" role="toolbar" aria-label={m.selecao_contagem({ count: picked.length })}>
+			<button type="button" class="round ghost" onclick={stopSelecting} aria-label={m.selecao_cancelar()}><Icon name="x" /></button>
+			<strong class="count">{m.selecao_contagem({ count: picked.length })}</strong>
+			<button type="button" class="round ghost" onclick={() => starMessages(picked.map((x) => x.id), !allStarred)} aria-label={allStarred ? m.menu_desfavoritar() : m.menu_favoritar()}>
+				<Icon name="star" />
+			</button>
+			<button type="button" class="round ghost" disabled={!copyable.length} onclick={copyPicked} aria-label={m.menu_copiar()}><Icon name="copy" /></button>
+			<button
+				type="button"
+				class="round ghost"
+				disabled={!forwardable.length}
+				onclick={() => ((forwarding = forwardable), (forwardedCount = forwardable.length))}
+				aria-label={m.menu_encaminhar()}
+			>
+				<Icon name="forward" />
+			</button>
+			<button type="button" class="round ghost" onclick={() => (confirmingDelete = true)} aria-label={m.selecao_apagar()}><Icon name="trash" /></button>
+		</div>
+	{:else}
+		{@render header()}
+	{/if}
 	{@render banner?.()}
 
 	<div class="area">
@@ -330,6 +503,19 @@
 								day={item.day}
 								senderName={nameOf && item.first && msg.sender !== me ? memberName(nameOf(msg.sender)) : undefined}
 								links={msg.sender === me ? 'aberto' : (linkMode?.(msg.sender) ?? 'texto')}
+								delivery={msg.sender === me ? deliveryOf(msg, recipients) : undefined}
+								quote={msg.replyTo
+									? (() => {
+											const original = messages.find((x) => x.id === msg.replyTo) ?? quoted.get(msg.replyTo);
+											return { name: original ? nameFor(original.sender) : '', message: original };
+										})()
+									: undefined}
+								reactions={chipsOf(msg.id)}
+								selecting={selecting}
+								selected={selected.has(msg.id)}
+								onpick={() => togglePick(msg.id)}
+								onquote={() => goToQuoted(msg.replyTo!)}
+								onreact={(emoji) => react(msg, emoji)}
 								onlink={(href, host) => (pendingLink = { href, host })}
 								onmenu={() => openMenu(msg)}
 							/>
@@ -339,7 +525,7 @@
 			{/each}
 		</div>
 		{#if forwarded}
-			<p class="copied" role="status">{m.conversa_encaminhada()}</p>
+			<p class="copied" role="status">{forwardedCount > 1 ? m.selecao_encaminhadas({ count: forwardedCount }) : m.conversa_encaminhada()}</p>
 		{:else if copied}
 			<p class="copied" role="status">{m.conversa_copiada()}</p>
 		{/if}
@@ -356,16 +542,37 @@
 			mine={menuFor.sender === me}
 			group={!!nameOf}
 			onclose={() => (menuFor = undefined)}
+			myReaction={myReactionTo(menuFor.id)}
+			onreact={menuFor.upload ? undefined : (emoji) => react(menuFor!, emoji)}
+			onreply={menuFor.upload || closed ? undefined : startReply}
 			oncopy={menuFor.media ? undefined : copyMessage}
 			onforward={forwardOf(menuFor)
 				? () => {
-						forwarding = menuFor;
+						forwarding = [menuFor!];
+						forwardedCount = 1;
 						menuFor = undefined;
 					}
 				: undefined}
+			starred={!!menuFor.starred}
+			onstar={() => starMessages([menuFor!.id], !menuFor!.starred)}
+			onselect={() => startSelecting(menuFor!)}
 			ondeleteForMe={() => deleteMessage(false)}
 			ondeleteForEveryone={() => deleteMessage(true)}
 		/>
+	{/if}
+
+	{#if confirmingDelete}
+		<Sheet label={m.selecao_apagar()} onclose={() => (confirmingDelete = false)}>
+			<p><strong>{m.selecao_apagar_pergunta({ count: picked.length })}</strong></p>
+			{#if allMine}
+				<p class="hint">{nameOf ? m.menu_apagar_todos_dica_grupo() : m.menu_apagar_todos_dica_contato()}</p>
+			{/if}
+			<div class="actions stack">
+				<button class="danger" onclick={() => deletePicked(false)}>{m.menu_apagar_mim()}</button>
+				{#if allMine}<button class="danger" onclick={() => deletePicked(true)}>{m.menu_apagar_todos()}</button>{/if}
+				<button onclick={() => (confirmingDelete = false)}>{m.comum_cancelar()}</button>
+			</div>
+		</Sheet>
 	{/if}
 
 	{#if forwarding}
@@ -383,7 +590,13 @@
 		</Sheet>
 	{/if}
 
-	<Composer {conversationId} {closed} bind:error />
+	<Composer
+		{conversationId}
+		{closed}
+		reply={replying ? { id: replying.id, name: nameFor(replying.sender), preview: previewOf(replying) } : undefined}
+		onclearReply={() => (replying = undefined)}
+		bind:error
+	/>
 </div>
 
 <style>
@@ -393,6 +606,25 @@
 		flex-direction: column;
 		max-width: 720px;
 		margin: 0 auto;
+	}
+	.selection {
+		display: flex;
+		align-items: center;
+		gap: 0.2rem;
+		padding: 0.5rem 0.6rem;
+		border-bottom: 1px solid var(--line);
+		background: var(--surface);
+	}
+	.selection .count {
+		flex: 1;
+	}
+	.selection button:disabled {
+		opacity: 0.35;
+	}
+	.danger {
+		background: var(--danger);
+		border-color: var(--danger);
+		color: white;
 	}
 	.notice-line {
 		text-align: center;

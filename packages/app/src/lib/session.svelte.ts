@@ -31,6 +31,19 @@ import {
 	contactName,
 	deletionTags,
 	forwardOf,
+	markAcknowledged,
+	MAX_RECEIPT_IDS,
+	REACTION_KIND,
+	reactionTags,
+	RECEIPT_KIND,
+	receiptsDue,
+	removeReactions,
+	replyTags,
+	storeReaction,
+	storeReceipt,
+	type MessageKind,
+	type Receipt,
+	type ReactionRecord,
 	parseInvite,
 	directConversationId,
 	groupConversationId,
@@ -39,6 +52,8 @@ import {
 	markDeleted,
 	markRead,
 	markSent,
+	setStarred,
+	toNpub,
 	mediaTags,
 	nameTagFor,
 	openMedia,
@@ -80,6 +95,9 @@ export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloquea
 
 const ATTEMPTS_KEY = 'tentativasPin';
 const OPEN_SESSION_KEY = 'sessaoAberta';
+export const READ_RECEIPTS_KEY = 'confirmacaoLeitura';
+/** Espera para juntar as confirmações que chegam em sequência num evento só. */
+const ACK_DELAY_MS = 1500;
 
 const storage = openStorage();
 const vault = connect<Vault>(new Worker(new URL('./core.worker.ts', import.meta.url), { type: 'module' }));
@@ -122,7 +140,7 @@ class Session {
 	/** gravação da sessão aberta em andamento: bloquear espera, senão ela voltaria depois de apagada */
 	private savingSession?: Promise<void>;
 	/** fila de envios (sendTo) */
-	private sending: Promise<void> = Promise.resolve();
+	private sending: Promise<unknown> = Promise.resolve();
 	/** sem internet, ou sem nenhum relay conectado há alguns segundos: a tela avisa que as mensagens ficam na fila */
 	offline = $state(false);
 	private noRelaysSince?: number;
@@ -339,8 +357,88 @@ class Session {
 	private async receive(wrap: Parameters<Vault['unwrap']>[0]) {
 		const rumor = await vault.unwrap(wrap);
 		if (rumor.kind === GROUP_CONTROL_KIND) return this.receiveGroupControl(rumor);
-		const stored = await storeIncoming(storage, this.current.publicKey, rumor, { openConversationId: this.openConversationId });
-		if (stored?.isNew) this.version++;
+		const me = this.current.publicKey;
+		if (rumor.kind === REACTION_KIND) {
+			if (await storeReaction(storage, me, rumor)) this.version++;
+			return;
+		}
+		if (rumor.kind === RECEIPT_KIND) {
+			const readReceipts = await this.readReceiptsOn();
+			if (await storeReceipt(storage, me, rumor, { readReceipts })) this.version++;
+			return;
+		}
+		const stored = await storeIncoming(storage, me, rumor, { openConversationId: this.openConversationId });
+		if (rumor.kind === 5 && (await removeReactions(storage, rumor))) this.version++;
+		if (stored?.isNew) {
+			this.version++;
+			// chegou aqui: "entregue" (RF-50); a "lida" vem quando a conversa aparece na tela
+			if (stored.message.sender !== me && !stored.message.notice) void this.acknowledge([stored.message.id], 'entregue');
+		}
+	}
+
+	// ---------- confirmações de entrega e leitura (RF-50, 51) ----------
+
+	/** Confirmação de leitura ligada por padrão (RF-51). */
+	async readReceiptsOn(): Promise<boolean> {
+		return (await storage.settings.get<boolean>(READ_RECEIPTS_KEY)) !== false;
+	}
+
+	private pendingAcks = new Map<string, Record<Receipt, Set<string>>>();
+	private ackTimer?: ReturnType<typeof setTimeout>;
+
+	/**
+	 * Confirma ao remetente que as mensagens chegaram ou foram lidas. Agrupa por um instante, para uma conversa que
+	 * chega de uma vez gerar um evento só, e só confirma a contato (receiptsDue). Com a leitura desligada, a "lida"
+	 * não sai (e as dos outros também não contam, RF-51).
+	 */
+	async acknowledge(messageIds: string[], status: Receipt) {
+		if (!messageIds.length || !this.network) return;
+		const due = await receiptsDue(storage, this.current.publicKey, messageIds, status);
+		if (status === 'lida' && !(await this.readReceiptsOn())) {
+			// o remetente segue sabendo que chegou, mas não que li; guarda para não reavaliar a cada abertura
+			for (const ids of due.values()) await markAcknowledged(storage, ids, 'lida');
+			return;
+		}
+		for (const [sender, ids] of due) {
+			const entry = this.pendingAcks.get(sender) ?? { entregue: new Set(), lida: new Set() };
+			for (const id of ids) entry[status].add(id);
+			this.pendingAcks.set(sender, entry);
+		}
+		if (due.size) this.ackTimer ??= setTimeout(() => void this.flushAcks(), ACK_DELAY_MS);
+	}
+
+	private async flushAcks() {
+		this.ackTimer = undefined;
+		const batch = [...this.pendingAcks];
+		this.pendingAcks.clear();
+		for (const [sender, entry] of batch) {
+			// quem já vai receber "lida" não precisa de "entregue" (lida vale pelas duas)
+			const delivered = [...entry.entregue].filter((id) => !entry.lida.has(id));
+			for (const [status, ids] of [['entregue', delivered], ['lida', [...entry.lida]]] as const) {
+				for (let i = 0; i < ids.length; i += MAX_RECEIPT_IDS) {
+					const chunk = ids.slice(i, i + MAX_RECEIPT_IDS);
+					try {
+						await this.sendReceipt(sender, chunk, status);
+						await markAcknowledged(storage, chunk, status);
+					} catch {
+						// sem rede ou sem relays: a próxima abertura da conversa tenta de novo (a "entregue" se perde, a "lida" cobre)
+					}
+				}
+			}
+		}
+	}
+
+	/** Um evento de confirmação só para quem escreveu as mensagens (nos grupos também: os outros não precisam saber). */
+	private async sendReceipt(recipient: string, ids: string[], status: Receipt) {
+		const network = this.requireNetwork();
+		const tags = [...ids.map((id) => ['e', id]), ['status', status], ['alt', 'confirmação de entrega do Lero-lero']];
+		const wrapped = await vault.wrapDirectMessage(recipient, '', tags, RECEIPT_KIND);
+		await network.engine.enqueue(wrapped.toRecipient, await this.relaysOrDefault(recipient));
+	}
+
+	/** A conversa apareceu na tela: confirma como lidas as mensagens dos outros que ainda não confirmei. */
+	acknowledgeRead(messageIds: string[]) {
+		return this.acknowledge(messageIds, 'lida');
 	}
 
 	/** Aviso de grupo: atualiza o grupo, me apresento a quem entrou e repasso o que faltou (docs/06 §3.3). */
@@ -439,7 +537,7 @@ class Session {
 	 * A mensagem aparece na hora como "enviando" (RNF-12) e segue pela fila; sem internet,
 	 * sai quando a conexão voltar. `store: false` para o que não vira mensagem (pedido de apagar).
 	 */
-	private sendTo(conversationId: string, content: string, tags: string[][], kind: 14 | 15 | 5, store = true) {
+	private sendTo(conversationId: string, content: string, tags: string[][], kind: MessageKind, store = true) {
 		// Em fila: o horário de cada mensagem sai depois da anterior (sendTime), e a primeira para
 		// alguém espera a busca dos relays dele; sem a fila, a segunda pegava o mesmo segundo e
 		// chegava trocada (2026-10-22).
@@ -448,13 +546,13 @@ class Session {
 		return run;
 	}
 
-	private async sendNow(conversationId: string, content: string, tags: string[][], kind: 14 | 15 | 5, store: boolean) {
+	private async sendNow(conversationId: string, content: string, tags: string[][], kind: MessageKind, store: boolean) {
 		const network = this.requireNetwork();
 		if (conversationId.startsWith('grupo:')) {
 			const conversation = await storage.conversations.get(conversationId);
 			if (!conversation?.group?.amMember) throw new NotInGroupError();
 			const groupTag = ['g', conversationId.slice('grupo:'.length)];
-			const nameTags = kind === 5 ? [] : await nameTagFor(storage, conversationId, this.current.displayName);
+			const nameTags = kind !== 14 && kind !== 15 ? [] : await nameTagFor(storage, conversationId, this.current.displayName);
 			const wrapped = await vault.wrapGroupMessage(
 				conversation.members,
 				content,
@@ -468,10 +566,10 @@ class Session {
 			}
 			for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap, store ? wrapped.rumor.id : undefined);
 			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
-			return;
+			return wrapped.rumor;
 		}
 		const recipient = conversationId.slice('direta:'.length);
-		const nameTags = kind === 5 ? [] : await nameTagFor(storage, recipient, this.current.displayName);
+		const nameTags = kind !== 14 && kind !== 15 ? [] : await nameTagFor(storage, recipient, this.current.displayName);
 		const wrapped = await vault.wrapDirectMessage(
 			recipient,
 			content,
@@ -499,11 +597,63 @@ class Session {
 		// a fila guarda e tenta de novo sozinha: a tela não espera a rede
 		void network.engine.enqueue(wrapped.toRecipient, relays, store ? wrapped.rumor.id : undefined);
 		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+		return wrapped.rumor;
 	}
 
-	/** Envia texto para uma conversa (1:1 ou grupo). */
-	sendText(conversationId: string, text: string) {
-		return this.sendTo(conversationId, text.trim(), [], 14);
+	/** Envia texto para uma conversa (1:1 ou grupo), respondendo a uma mensagem dela se `replyTo` vier (RF-22). */
+	sendText(conversationId: string, text: string, replyTo?: string) {
+		return this.sendTo(conversationId, text.trim(), replyTo ? replyTags(replyTo) : [], 14);
+	}
+
+	/**
+	 * Reage a uma mensagem com um emoji (RF-23); o mesmo emoji de novo desfaz. Uma reação por pessoa: trocar de emoji
+	 * substitui a anterior em todos os aparelhos. Aparece na hora, antes de a rede confirmar.
+	 */
+	async react(conversationId: string, messageId: string, emoji: string) {
+		const message = await storage.messages.get(messageId);
+		if (!message || message.deleted || message.notice || message.upload || message.conversationId !== conversationId) return;
+		const me = this.current.publicKey;
+		const [current] = await storage.reactions.listBySender(messageId, me);
+		if (current?.emoji === emoji) {
+			await storage.reactions.delete(current.id);
+			this.version++;
+			// desfazer é um pedido de apagar a reação (NIP-25 e NIP-09)
+			await this.sendTo(conversationId, '', [['e', current.id], ['k', String(REACTION_KIND)]], 5, false);
+			return;
+		}
+		const rumor = await this.sendTo(conversationId, emoji, reactionTags(message), REACTION_KIND, false);
+		if (rumor && (await storeReaction(storage, me, rumor))) this.version++;
+	}
+
+	/** Favoritar ou tirar dos favoritos (RF-28): só neste aparelho. */
+	async setStarred(messageIds: string[], starred: boolean) {
+		await setStarred(storage, messageIds, starred);
+		this.version++;
+	}
+
+	/** As mensagens favoritas de todas as conversas, com o nome da conversa e o endereço da tela dela. */
+	async listStarred(): Promise<Array<{ message: MessageRecord; title: string; direct: boolean; key: string }>> {
+		const out = [];
+		for (const message of await storage.messages.listStarred()) {
+			const conversation = await storage.conversations.get(message.conversationId);
+			if (!conversation) continue;
+			if (conversation.group) {
+				out.push({ message, title: conversation.group.state.name, direct: false, key: conversation.id.slice('grupo:'.length) });
+			} else {
+				const key = conversation.members[0];
+				const contact = await storage.contacts.get(key);
+				out.push({ message, title: contact ? contactName(contact) : `${toNpub(key).slice(0, 12)}…`, direct: true, key });
+			}
+		}
+		return out;
+	}
+
+	getReactions(conversationId: string): Promise<ReactionRecord[]> {
+		return storage.reactions.listByConversation(conversationId);
+	}
+
+	getMessage(messageId: string) {
+		return storage.messages.get(messageId);
 	}
 
 	/**
@@ -572,7 +722,7 @@ class Session {
 			const result = await tryPendingUpload(storage, id, {
 				servers: [...list.blossom, ...list.blossomReserva],
 				signer: (template) => vault.sign(template),
-				send: (media) => this.sendTo(conversationId!, media.urls[0], mediaTags(media as MessageMedia), 15)
+				send: async (media) => void (await this.sendTo(conversationId!, media.urls[0], mediaTags(media as MessageMedia), 15))
 			});
 			if (result.state === 'depois') {
 				this.uploadTimers.set(

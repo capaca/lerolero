@@ -72,6 +72,16 @@ export type WrappedGroupMessage = { rumor: Rumor; toRecipients: { recipient: str
 
 export const MAX_TEXT_LENGTH = 4000;
 
+/** Reação (NIP-25) e confirmação de entrega/leitura (kind próprio, docs/06 §3.4); o 4441 sai da faixa 4440–4449 reservada. */
+export const REACTION_KIND = 7;
+export const RECEIPT_KIND = 4441;
+/** Confirmações agrupadas: um evento cobre várias mensagens, mas não um número sem fim. */
+export const MAX_RECEIPT_IDS = 200;
+export const MAX_REACTION_LENGTH = 16;
+
+/** Tipos de rumor que o app escreve. */
+export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND;
+
 /** Membros de grupo além de mim que recebem um embrulho; 20 cobre os 19 outros membros e alguém que acabou de sair (RF-30). */
 const MAX_GROUP_RECIPIENTS = 20;
 
@@ -82,6 +92,15 @@ function checkMessage(kind: number, content: string, tags: string[][]) {
 	if (kind === 14 && (!content.trim() || content.length > MAX_TEXT_LENGTH)) throw new Error('mensagem vazia ou longa demais');
 	if (kind === 15 && !/^https:\/\/\S+$/.test(content)) throw new Error('arquivo sem endereço https');
 	if (kind === 5 && !tags.some((t) => t[0] === 'e')) throw new Error('pedido de apagar sem a mensagem');
+	if (kind === REACTION_KIND) {
+		if (!content.trim() || [...content].length > MAX_REACTION_LENGTH) throw new Error('reação vazia ou longa demais');
+		if (tags.filter((t) => t[0] === 'e').length !== 1) throw new Error('reação sem a mensagem');
+	}
+	if (kind === RECEIPT_KIND) {
+		const ids = tags.filter((t) => t[0] === 'e').length;
+		if (ids === 0 || ids > MAX_RECEIPT_IDS) throw new Error('confirmação sem mensagens ou com mensagens demais');
+		if (!tags.some((t) => t[0] === 'status' && (t[1] === 'entregue' || t[1] === 'lida'))) throw new Error('confirmação sem o estado');
+	}
 }
 
 /**
@@ -184,7 +203,7 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 			recipient: string,
 			content: string,
 			extraTags: string[][] = [],
-			kind: 14 | 15 | 5 = 14,
+			kind: MessageKind = 14,
 			createdAt?: number
 		): WrappedMessage {
 			if (!secretKey) throw new LockedError();
@@ -211,7 +230,7 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 			recipients: string[],
 			content: string,
 			tags: string[][],
-			kind: 14 | 15 | 5 | 4440 = 14,
+			kind: MessageKind | 4440 = 14,
 			createdAt?: number
 		): WrappedGroupMessage {
 			if (!secretKey) throw new LockedError();

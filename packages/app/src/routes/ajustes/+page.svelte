@@ -7,13 +7,22 @@
 	import { formatIsoDay } from '#lib/format.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { relayList } from '#lib/relays.ts';
-	import { session } from '#lib/session.svelte.ts';
+	import { READ_RECEIPTS_KEY, session } from '#lib/session.svelte.ts';
 	import { FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
 
 	const npub = $derived(session.identity ? toNpub(session.identity.publicKey) : '');
 	let copied = $state(false);
 
 	const relays = relayList();
+
+	// confirmação de leitura (RF-51): ligada por padrão
+	let readReceipts = $state(true);
+	$effect(() => {
+		void session.readReceiptsOn().then((on) => (readReceipts = on));
+	});
+	function toggleReceipts() {
+		void session.setSetting(READ_RECEIPTS_KEY, readReceipts);
+	}
 
 	// estado da rede, atualizado a cada 2 s enquanto a tela está aberta
 	let connected = $state<string[]>([]);
@@ -59,6 +68,21 @@
 	</section>
 
 	<section class="card">
+		<div class="actions stack">
+			<a href={resolve('/ajustes/favoritas')}>{m.ajustes_favoritas()}</a>
+		</div>
+	</section>
+
+	<section class="card">
+		<h2>{m.ajustes_privacidade()}</h2>
+		<label class="check">
+			<input type="checkbox" bind:checked={readReceipts} onchange={toggleReceipts} />
+			<span>{m.ajustes_leitura()}</span>
+		</label>
+		<p class="hint">{m.ajustes_leitura_dica()}</p>
+	</section>
+
+	<section class="card">
 		<h2>{m.ajustes_teste()}</h2>
 		<div class="actions stack">
 			{#if FEEDBACK_INVITE || FEEDBACK_FORM_URL}
@@ -94,6 +118,16 @@
 </main>
 
 <style>
+	.check {
+		display: flex;
+		gap: 0.6rem;
+		align-items: center;
+		font-weight: 500;
+	}
+	.check input {
+		width: auto;
+		transform: scale(1.3);
+	}
 	.release {
 		text-align: center;
 	}

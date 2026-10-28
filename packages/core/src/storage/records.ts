@@ -77,6 +77,20 @@ export type ConversationRecord = {
 
 export type MessageStatus = 'pendente' | 'enviada' | 'recebida';
 
+/** O que o destinatário confirmou de uma mensagem minha (docs/06 §3.4); `lida` vale também como entregue. */
+export type Receipt = 'entregue' | 'lida';
+
+/** Reação de uma pessoa a uma mensagem (kind 7, RF-23): uma por pessoa e mensagem, a mais recente vale. */
+export type ReactionRecord = {
+	/** id do rumor da reação: é o que um pedido de apagar (kind 5) cita para desfazê-la */
+	id: string;
+	messageId: string;
+	conversationId: string;
+	sender: string;
+	emoji: string;
+	createdAt: number;
+};
+
 /** Arquivo anexado a uma mensagem kind 15: o suficiente para baixar, conferir e decifrar. */
 export type MessageMedia = {
 	ox: string;
@@ -114,6 +128,14 @@ export type MessageRecord = {
 	 * mensagem de verdade só nasce depois do envio. `failed`: desistiu depois de tentar por alguns minutos.
 	 */
 	upload?: { startedAt: number; attempts: number; nextAttemptAt: number; failed?: boolean };
+	/** resposta a outra mensagem da mesma conversa (RF-22): id do rumor citado */
+	replyTo?: string;
+	/** só nas minhas: o que cada destinatário já confirmou (RF-50); nos grupos, uma entrada por membro */
+	receipts?: Record<string, Receipt>;
+	/** só nas recebidas: o que eu já confirmei ao remetente, para não repetir */
+	ack?: Receipt;
+	/** favoritada por mim (RF-28): marca só deste aparelho, sem aviso a ninguém */
+	starred?: boolean;
 	/** apagada para todos (RF-25): fica o aviso no lugar, sem conteúdo */
 	deleted?: boolean;
 	/** aviso de grupo ("Ana adicionou Bruno"); a tela monta o texto, com os nomes atuais e na língua da pessoa */

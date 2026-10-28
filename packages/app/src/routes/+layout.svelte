@@ -26,6 +26,7 @@
 			'/ajustes',
 			'/ajustes/frase',
 			'/ajustes/comentario',
+			'/ajustes/favoritas',
 			'/contatos',
 			'/contatos/meu-convite',
 			'/contatos/ler',

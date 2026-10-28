@@ -11,11 +11,16 @@
 	let {
 		conversationId,
 		closed,
+		reply,
+		onclearReply,
 		error = $bindable('')
 	}: {
 		conversationId: string;
 		/** sem envio (ex.: saí do grupo): o texto aparece no lugar do campo */
 		closed?: string;
+		/** a mensagem que o texto vai responder (RF-22); vale só para texto, áudio e foto seguem como mensagem nova */
+		reply?: { id: string; name: string; preview: string };
+		onclearReply?: () => void;
 		/** erros da conversa toda (enviar, copiar, apagar) aparecem aqui, acima do campo */
 		error?: string;
 	} = $props();
@@ -87,6 +92,11 @@
 
 	onDestroy(cancelAudio);
 
+	// ao escolher "Responder", o teclado já abre no campo
+	$effect(() => {
+		if (reply) input?.focus();
+	});
+
 	const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 	async function send(event?: SubmitEvent) {
@@ -96,7 +106,8 @@
 		error = '';
 		text = '';
 		try {
-			await session.sendText(conversationId, message);
+			await session.sendText(conversationId, message, reply?.id);
+			onclearReply?.();
 		} catch (err) {
 			text = message;
 			error = friendlyError(err);
@@ -129,6 +140,17 @@
 			</button>
 		</div>
 	{:else}
+		{#if reply}
+			<div class="reply">
+				<span class="reply-text">
+					<strong>{m.resposta_para({ nome: reply.name })}</strong>
+					<span>{reply.preview}</span>
+				</span>
+				<button type="button" class="round ghost" onclick={onclearReply} aria-label={m.resposta_cancelar()}>
+					<Icon name="x" />
+				</button>
+			</div>
+		{/if}
 		<div class="line">
 			<input bind:this={picker} type="file" accept="image/*" multiple hidden onchange={pickPhoto} data-testid="foto" />
 			<button type="button" class="round ghost" onclick={() => picker?.click()} aria-label={m.envio_foto()}>
@@ -169,6 +191,32 @@
 		display: flex;
 		gap: 0.5rem;
 		align-items: flex-end;
+	}
+	.reply {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 0.4rem;
+		padding: 0.25rem 0.25rem 0.25rem 0.6rem;
+		border-left: 3px solid var(--accent);
+		border-radius: 6px;
+		background: color-mix(in srgb, var(--fg) 7%, transparent);
+		font-size: 0.85rem;
+	}
+	.reply-text {
+		flex: 1;
+		min-width: 0;
+	}
+	.reply-text strong {
+		display: block;
+		color: var(--accent);
+	}
+	.reply-text span {
+		display: block;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--muted);
 	}
 	.recording {
 		align-items: center;

@@ -7,6 +7,7 @@ import type {
 	MediaRecord,
 	MessageRecord,
 	OutboxRecord,
+	ReactionRecord,
 	SeenWrapRecord,
 	SettingRecord,
 	SyncRecord
@@ -25,6 +26,7 @@ export class LeroleroDb extends Dexie {
 	seen_wraps!: EntityTable<SeenWrapRecord, 'id'>;
 	media!: EntityTable<MediaRecord, 'ox'>;
 	group_events!: EntityTable<GroupEventRecord, 'id'>;
+	reactions!: EntityTable<ReactionRecord, 'id'>;
 
 	constructor(name = 'lerolero') {
 		super(name);
@@ -58,5 +60,7 @@ export class LeroleroDb extends Dexie {
 				await conversations.put({ ...conversation, ...summaryOf(latest) });
 			}
 		});
+		// reações às mensagens (RF-23): por mensagem, para somar os chips, e por conversa, para carregar a tela de uma vez
+		this.version(6).stores({ reactions: 'id, messageId, conversationId' });
 	}
 }
