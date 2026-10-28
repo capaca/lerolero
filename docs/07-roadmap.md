@@ -50,7 +50,10 @@ Critério escolhido pelo Pedro: **uso no dia a dia**, o que faz um grupo de amig
 10. Backup cifrado de contatos, grupos e configurações (M4).
 11. Pedidos de mensagem, bloqueio e prova de trabalho (M4). ✅ Pedidos e bloqueio feitos em 2026-10-26; falta a prova de trabalho.
 12. Detecção de perdas (M4).
-13. Polimento (M5), com a velocidade da suíte e2e, revisão de prontidão e beta.
+13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): botão que abre o menu de compartilhar com um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), opção de imprimir o cartão, restaurar a partir do arquivo ou do link, e a tela "Proteção da conta" com o estado. Sem dependências; entra com e2e.
+14. Frase no gerenciador de senhas (M4; D1, RF-09 b): **começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra (o ADR prevê rever se não aparecer).
+15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1)**; mantém a frase como base.
+16. Polimento (M5), com a velocidade da suíte e2e, revisão de prontidão e beta.
 
 **Achados e pedidos do Pedro depois de usar o app (2026-10-26), ainda sem implementar:**
 
@@ -209,7 +212,8 @@ Revisão do app inteiro com olhar de operação. Como não há servidor do proje
 - Multi-dispositivo.
 - Chamadas de voz e vídeo.
 - iOS; Google Play (Q-N2); notarização no macOS (Q-N5).
-- Recuperação de conveniência: passkeys, Pix, gov.br (RF-08, Q-A6, Q-A7) e busca por CPF/Pix (RF-15).
+- Recuperação de conveniência: Pix e gov.br (Q-A7) e busca por CPF/Pix (RF-15). A passkey saiu daqui e está na ordem do MVP (item 15, RF-08, [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)).
+- PIN forte opcional (passphrase de 4 palavras, cerca de 44 bits contra 20 do PIN de 6 dígitos) para fechar o T15 sem passkey; ideia registrada em 2026-10-28.
 - Antigolpe: verificação de contato, alerta de chave nova, alertas locais (RF-16, Q-A4).
 - Denúncia e listas de bloqueio compartilhadas (RF-17).
 - Resumo periódico (RF-66); vídeos (RF-44 cobre só arquivos, no M3).
@@ -229,4 +233,5 @@ Revisão do app inteiro com olhar de operação. Como não há servidor do proje
 |---|---|---|
 | Q-M1 | Revisar as estimativas ao fim do M1, com base no ritmo real | Pedro |
 | Q-I1 | Internacionalização: qual mecanismo (Paraglide, svelte-i18n ou módulo próprio) e quais línguas depois do português? Registrar em ADR | ✅ Resolvida em 2026-10-27: Paraglide JS 2, só pt-BR por enquanto, pseudolíngua nos testes ([ADR-0008](adr/0008-internacionalizacao.md)) |
+| Q-U2 | Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): o arquivo de recuperação fica em texto aberto (recomendado) ou cifrado com o PIN? E a D1 vale a pena se o aviso de salvar senha não aparecer no PWA instalado? | Pedro (ao implementar os itens 13 e 14) |
 | Q-U1 | Como tornar o cadastro menos pesado sem perder a recuperação da conta? Hoje o RF-03 exige copiar e guardar 12 palavras. Pedido do Pedro em 2026-10-26: pensar em alternativas | ✅ Resolvida em 2026-10-26: a frase sai do cadastro e é pedida ao ganhar o primeiro contato (RF-03, RF-04, T19); passkey adiada para depois da Q-N1 (Q-A6 do [02](02-modelo-de-ameacas.md)) |

@@ -27,6 +27,8 @@
 | **Nostr** | Protocolo aberto em que clientes publicam eventos assinados em relays independentes |
 | **Padding** | Completar mensagens até tamanhos padronizados, para que o tamanho não revele o conteúdo |
 | **Passkey** | Credencial guardada pelo sistema (Google/Apple) e liberada por biometria |
+| **PRF (WebAuthn)** | Extensão da passkey que entrega um segredo de 256 bits ao app; serve de chave para cifrar o backup da identidade |
+| **Código de recuperação** | Como a interface chama a frase de 12 palavras; pode ser guardada em arquivo, cartão impresso ou gerenciador de senhas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)) |
 | **Prova de trabalho** | Pequeno cálculo obrigatório antes de enviar, que encarece o spam em massa (NIP-13) |
 | **PWA** | *Progressive Web App*: site que pode ser instalado e funciona como app |
 | **Relay** | Servidor Nostr que recebe, guarda temporariamente e repassa eventos |
