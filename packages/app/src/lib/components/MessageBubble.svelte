@@ -52,6 +52,9 @@
 	function onpointermove(event: PointerEvent) {
 		if (Math.hypot(event.clientX - pressStart.x, event.clientY - pressStart.y) > 10) cancelPress();
 	}
+
+	// foto aberta ocupa o balão inteiro, como no WhatsApp; a fechada (pedido de mensagem) é só uma linha
+	const isPhoto = $derived(!msg.deleted && !!msg.media?.type.startsWith('image/') && links !== 'texto');
 </script>
 
 <div class="row" class:mine class:first class:last data-day={day}>
@@ -59,6 +62,7 @@
 	<div
 		class="bubble"
 		class:deleted={msg.deleted}
+		class:with-photo={isPhoto}
 		{onpointerdown}
 		onpointerup={cancelPress}
 		onpointerleave={cancelPress}
@@ -170,6 +174,20 @@
 		border: 1px solid var(--bubble-line);
 		-webkit-touch-callout: none;
 		user-select: none;
+	}
+	/* balão de foto: a foto vai quase de borda a borda, na largura que a tela der */
+	.bubble.with-photo {
+		width: min(80%, 24rem);
+		padding: 3px;
+	}
+	.bubble.with-photo .sender,
+	.bubble.with-photo .failed,
+	.bubble.with-photo .failed-actions {
+		margin-left: 0.4rem;
+		margin-right: 0.4rem;
+	}
+	.bubble.with-photo .meta {
+		padding: 0 0.4rem;
 	}
 	/* balões seguidos: o canto do lado de quem escreveu fica mais reto */
 	.row:not(.first) .bubble {
