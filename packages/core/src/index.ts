@@ -86,6 +86,7 @@ export {
 	deliveryOf,
 	markAcknowledged,
 	QUICK_REACTIONS,
+	REACTION_PICKER,
 	reactionTags,
 	receiptsDue,
 	removeReactions,

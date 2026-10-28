@@ -337,7 +337,7 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('button[type="submit"]').click();
 	await expect(page.getByRole('status')).toBeVisible();
 	await semTextoFixo(page, palavras);
-	await page.goto(PSEUDO_URL + 'ajustes/favoritas');
+	await page.goto(PSEUDO_URL + 'favoritas');
 	await expect(page.locator('main .hint')).toBeVisible();
 	await semTextoFixo(page);
 	await page.goto(PSEUDO_URL + 'ajustes/comentario');

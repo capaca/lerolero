@@ -32,12 +32,22 @@ test('favoritar, copiar e encaminhar várias; favoritas listadas em Ajustes', as
 	await selecionar(maria, 'primeira', 'segunda');
 	await maria.page.getByRole('button', { name: 'Favoritar', exact: true }).click();
 	await expect(maria.page.locator('.row .star')).toHaveCount(2);
-	await maria.page.goto('./ajustes/favoritas');
+	// a tela Favoritas fica no menu ⋮ da tela inicial
+	await maria.page.goto('./');
+	await maria.page.getByRole('button', { name: 'Mais opções' }).click();
+	await maria.page.getByRole('dialog', { name: 'Mais opções' }).getByRole('link', { name: 'Favoritas' }).click();
 	await expect(maria.page.locator('.starred li')).toHaveCount(2);
 	await expect(maria.page.locator('.starred li').first()).toContainText('João');
 
+	// o detalhe do contato mostra só as favoritas daquela conversa; o toque abre a conversa na mensagem
+	await abrirConversa(maria.page, 'João');
+	await maria.page.getByRole('link', { name: /^João/ }).first().click();
+	await expect(maria.page.locator('.starred li')).toHaveCount(2);
+	await maria.page.locator('.starred li', { hasText: 'segunda' }).locator('a').click();
+	await expect(linha(maria, 'segunda')).toBeVisible();
+	await expect(maria.page.locator('.row.flash')).toContainText('segunda');
+
 	// tirar dos favoritos pelo menu de uma mensagem
-	await maria.page.locator('.starred a').first().click();
 	await linha(maria, 'segunda').locator('.bubble').click({ button: 'right' });
 	await menu(maria).getByRole('button', { name: 'Tirar dos favoritos' }).click();
 	await expect(maria.page.locator('.row .star')).toHaveCount(1);
@@ -81,4 +91,47 @@ test('apagar várias: para mim some só aqui; para todos só vale nas minhas', a
 	await joao.page.getByRole('dialog', { name: 'Apagar' }).getByRole('button', { name: 'Apagar para todos' }).click();
 	await expect(joao.page.getByText('Você apagou esta mensagem')).toHaveCount(2);
 	await expect(maria.page.getByText('Esta mensagem foi apagada')).toHaveCount(1, { timeout: 30_000 });
+});
+
+test('no grupo, os detalhes listam as favoritas com o nome de quem escreveu', async ({ novaPessoa }) => {
+	const [ana, bia] = await Promise.all([novaPessoa('Ana'), novaPessoa('Bia')]);
+	await adicionarUmAoOutro(bia, ana);
+	await ana.page.goto('./grupo/novo');
+	await ana.page.locator('#nome').fill('Amigos');
+	await ana.page.locator('.person', { hasText: 'Bia' }).click();
+	await ana.page.getByRole('button', { name: 'Criar grupo' }).click();
+	await expect(ana.page.locator('.notice-line')).toBeVisible();
+
+	await enviarTexto(ana.page, 'ideia do churrasco');
+	await linha(ana, 'ideia do churrasco').locator('.bubble').click({ button: 'right' });
+	await menu(ana).getByRole('button', { name: 'Favoritar' }).click();
+	await expect(ana.page.locator('.row .star')).toHaveCount(1);
+
+	await ana.page.locator('header a.who').click();
+	await expect(ana.page.locator('.starred li')).toHaveCount(1);
+	await expect(ana.page.locator('.starred li')).toContainText('Você');
+	await expect(ana.page.locator('.starred li')).toContainText('ideia do churrasco');
+	await ana.page.locator('.starred a').click();
+	await expect(ana.page.locator('.row.flash')).toContainText('ideia do churrasco');
+});
+
+test('favoritar uma mensagem lá em cima não leva a conversa de volta ao fim', async ({ novaPessoa }) => {
+	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
+	await adicionarUmAoOutro(maria, joao);
+	// mensagens altas, a última minha: antes, qualquer recarga da lista rolava até o fim
+	const alta = (n: number) => `mensagem ${n}\n` + 'linha\n'.repeat(14);
+	for (let n = 1; n <= 8; n++) {
+		await joao.page.getByLabel('Mensagem').fill(alta(n));
+		await joao.page.getByRole('button', { name: 'Enviar', exact: true }).click();
+	}
+	await expect(joao.page.locator('.row.mine')).toHaveCount(8);
+	const rolagem = () => joao.page.locator('.messages').evaluate((el) => el.scrollTop);
+	await joao.page.locator('.messages').evaluate((el) => (el.scrollTop = 0));
+	await expect.poll(rolagem).toBe(0);
+
+	await linha(joao, 'mensagem 1').locator('.bubble').click({ button: 'right' });
+	await menu(joao).getByRole('button', { name: 'Favoritar' }).click();
+	await expect(joao.page.locator('.row .star')).toHaveCount(1);
+	await joao.page.waitForTimeout(500);
+	expect(await rolagem()).toBe(0);
 });

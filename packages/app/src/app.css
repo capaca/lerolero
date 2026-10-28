@@ -6,6 +6,8 @@
 	--line: #deded8;
 	--accent: #1f6f5c;
 	--accent-fg: #ffffff;
+	/* o tique de "lida": azul, para não se perder no verde do balão */
+	--read: #1769d6;
 	--warn-bg: #fff4d6;
 	--warn-fg: #6b4e00;
 	--danger: #b3261e;
@@ -22,6 +24,7 @@
 		--line: #34342f;
 		--accent: #5cc2a6;
 		--accent-fg: #0f2a23;
+		--read: #6db3ff;
 		--warn-bg: #3a3014;
 		--warn-fg: #f3d98a;
 		--danger: #ff8a80;

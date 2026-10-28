@@ -40,7 +40,9 @@ test('João encaminha um texto e uma foto da conversa com Maria para Ana', async
 	await abrirConversa(ana.page, 'João');
 	await expect(ana.page.locator('.row', { hasText: 'segredo de família' })).toBeVisible({ timeout: 30_000 });
 	await expect(ana.page.locator('.photo')).toHaveCount(1, { timeout: 30_000 });
-	await ana.page.locator('.photo').click();
+	await ana.page.locator('.photo').click(); // baixa
+	await expect(ana.page.locator('.photo img')).toHaveAttribute('src', /^blob:/);
+	await ana.page.locator('.photo').click(); // abre
 	const aberta = ana.page.getByTestId('foto-aberta');
 	await expect(aberta).toBeVisible();
 	expect(await aberta.evaluate(async (img: HTMLImageElement) => (await img.decode(), img.naturalWidth))).toBe(400);

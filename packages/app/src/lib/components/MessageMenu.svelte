@@ -2,7 +2,7 @@
 	// Menu de uma mensagem (toque longo no celular, botão direito no computador).
 	import Icon from './Icon.svelte';
 	import Sheet from './Sheet.svelte';
-	import { QUICK_REACTIONS } from '@lerolero/core';
+	import { QUICK_REACTIONS, REACTION_PICKER } from '@lerolero/core';
 	import { m } from '#lib/paraglide/messages.js';
 
 	let {
@@ -41,6 +41,8 @@
 	} = $props();
 
 	let confirming = $state(false);
+	// "+" abre o seletor completo no lugar dos seis principais
+	let picking = $state(false);
 </script>
 
 <Sheet label={m.menu_opcoes()} {onclose}>
@@ -53,12 +55,15 @@
 		</div>
 	{:else}
 		{#if onreact}
-			<div class="reactions" role="group" aria-label={m.menu_reacoes()}>
-				{#each QUICK_REACTIONS as emoji (emoji)}
+			<div class="reactions" class:all={picking} role="group" aria-label={m.menu_reacoes()}>
+				{#each picking ? REACTION_PICKER : QUICK_REACTIONS as emoji (emoji)}
 					<button type="button" class="emoji" class:chosen={myReaction === emoji} aria-pressed={myReaction === emoji} aria-label={m.menu_reagir({ emoji })} onclick={() => onreact(emoji)}>
 						{emoji}
 					</button>
 				{/each}
+				<button type="button" class="emoji more" aria-expanded={picking} aria-label={picking ? m.menu_menos_reacoes() : m.menu_mais_reacoes()} onclick={() => (picking = !picking)}>
+					<Icon name={picking ? 'chevron-down' : 'plus'} size={22} />
+				</button>
 			</div>
 		{/if}
 		{#if onreply}
@@ -91,8 +96,22 @@
 		gap: 0.2rem;
 		margin-bottom: 0.4rem;
 	}
+	/* o seletor completo: oito por fileira, rolando se faltar altura */
+	.reactions.all {
+		display: grid;
+		grid-template-columns: repeat(8, minmax(0, 1fr));
+		max-height: 40vh;
+		overflow-y: auto;
+	}
+	.emoji.more {
+		display: grid;
+		place-items: center;
+		color: var(--muted);
+	}
 	.emoji {
 		flex: 1;
+		min-width: 0;
+		padding: 0;
 		min-height: 3rem;
 		font-size: 1.6rem;
 		line-height: 1;

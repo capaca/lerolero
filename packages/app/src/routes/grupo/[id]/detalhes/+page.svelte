@@ -9,6 +9,7 @@
 	import BackLink from '#lib/components/BackLink.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
+	import StarredList from '#lib/components/StarredList.svelte';
 	import { friendlyError } from '#lib/errors.ts';
 	import { intlLocale } from '#lib/i18n.svelte.ts';
 	import { memberName } from '#lib/notices.ts';
@@ -167,6 +168,9 @@
 		{#if members.some((k) => nameOf(k).startsWith('~'))}
 			<p class="hint">{m.grupo_til()}</p>
 		{/if}
+
+		<h2>{m.favoritas_titulo()}</h2>
+		<StarredList {conversationId} />
 
 		{#if active}
 			<button class="leave" onclick={() => (confirm = 'sair')} disabled={busy}><Icon name="log-out" /> {m.grupo_sair()}</button>

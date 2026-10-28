@@ -1,5 +1,5 @@
 // Material do teste: o guia e o roteiro abrem sem conta, e "Enviar comentário" chega como conversa cifrada.
-import { desviados, expect, test } from '../ajudantes.ts';
+import { abrirAjustes, desviados, expect, test } from '../ajudantes.ts';
 
 test('guia e roteiro abrem sem conta, com o link nas boas-vindas', async ({ novoAparelho }) => {
 	const page = await novoAparelho();
@@ -14,7 +14,7 @@ test('guia e roteiro abrem sem conta, com o link nas boas-vindas', async ({ novo
 
 test('"Enviar comentário" vai como conversa com a equipe, com os dados do aparelho', async ({ novaPessoa }) => {
 	const { page } = await novaPessoa('Testadora');
-	await page.getByRole('link', { name: 'Ajustes' }).click();
+	await abrirAjustes(page);
 	await page.getByRole('link', { name: 'Enviar comentário (bug ou sugestão)' }).click();
 	await expect(page.locator('pre.device')).toContainText('Versão do app:');
 	await page.getByLabel('O que aconteceu ou o que você sugere?').fill('O botão de enviar ficou meio escondido.');

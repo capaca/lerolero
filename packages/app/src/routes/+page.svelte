@@ -87,6 +87,7 @@
 			})
 		);
 	}
+	let moreOpen = $state(false);
 	let showInstallWarning = $state(false);
 
 	onMount(async () => {
@@ -114,7 +115,9 @@
 				<Icon name="users" size={22} />
 				{#if hasRequests}<span class="dot" aria-hidden="true"></span>{/if}
 			</a>
-			<a class="icon-button" href={resolve('/ajustes')} aria-label={m.inicio_ajustes()}><Icon name="settings" size={22} /></a>
+			<button class="icon-button" aria-label={m.inicio_mais()} aria-haspopup="dialog" onclick={() => (moreOpen = true)}>
+				<Icon name="more-vertical" size={22} />
+			</button>
 		</nav>
 	</header>
 
@@ -222,6 +225,14 @@
 		</Sheet>
 	{/if}
 
+	{#if moreOpen}
+		<Sheet label={m.inicio_mais()} onclose={() => (moreOpen = false)}>
+			<a class="item" href={resolve('/favoritas')}><Icon name="star" /> {m.inicio_favoritas()}</a>
+			<a class="item" href={resolve('/ajustes')}><Icon name="settings" /> {m.inicio_ajustes()}</a>
+			<button class="item cancel" onclick={() => (moreOpen = false)}>{m.comum_cancelar()}</button>
+		</Sheet>
+	{/if}
+
 	{#if newChatOpen}
 		<Sheet label={m.inicio_nova_conversa()} onclose={() => (newChatOpen = false)}>
 			<a class="item" href={resolve('/contatos')}><Icon name="message" /> {m.inicio_novo_contato()}</a>
@@ -257,6 +268,10 @@
 		gap: 0.2rem;
 	}
 	.icon-button {
+		border: 0;
+		background: none;
+		padding: 0;
+		cursor: pointer;
 		position: relative;
 		display: grid;
 		place-items: center;

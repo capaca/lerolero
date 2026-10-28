@@ -1,5 +1,5 @@
 // Cadastro, PIN e recuperação da conta (RF-01..06): o caminho de quem chega no app pela primeira vez.
-import { criarConta, digitarPin, esquecerAjuste, expect, meuConvite, noInicio, PIN, test, vencerSessao, verFrase } from '../ajudantes.ts';
+import { abrirAjustes, criarConta, digitarPin, esquecerAjuste, expect, meuConvite, noInicio, PIN, test, vencerSessao, verFrase } from '../ajudantes.ts';
 
 test('cadastro: PINs diferentes avisam, iguais criam a conta sem tocar em botão e sem pedir a frase', async ({ novoAparelho }) => {
 	const page = await novoAparelho();
@@ -83,7 +83,7 @@ test('PIN: a sessão vencida pede o PIN; errado avisa, certo abre', async ({ nov
 
 test('recuperar a conta com a frase em outro aparelho dá a mesma chave', async ({ novaPessoa, novoAparelho }) => {
 	const maria = await novaPessoa('Maria');
-	await maria.page.getByRole('link', { name: 'Ajustes' }).click();
+	await abrirAjustes(maria.page);
 	const chave = await maria.page.locator('.key').textContent();
 	expect(chave).toMatch(/^npub1/);
 	const frase = await verFrase(maria.page);
@@ -97,7 +97,7 @@ test('recuperar a conta com a frase em outro aparelho dá a mesma chave', async 
 	await outro.keyboard.type('246810');
 	await outro.getByRole('button', { name: 'Recuperar conta' }).click();
 	await noInicio(outro);
-	await outro.getByRole('link', { name: 'Ajustes' }).click();
+	await abrirAjustes(outro);
 	await expect(outro.locator('.key')).toHaveText(chave!);
 });
 
