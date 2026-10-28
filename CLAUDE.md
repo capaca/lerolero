@@ -25,6 +25,9 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
 - Suíte e2e (`packages/e2e`, Playwright no Chrome instalado, relays e Blossom locais): `scripts/verificar.sh build e2e`.
   Funcionalidade nova entra com o seu teste em `packages/e2e/testes/`.
 - `pnpm test:rede` em `packages/core`: relays e Blossom reais (lento, só sob demanda).
+- `scripts/celular.sh` (em segundo plano): o app em dev na rede Wi-Fi, porta 5180, com QR para o Pedro abrir no
+  celular. Ajuste de tela é revisado ali, com o Pedro, antes de virar PR; só a versão aprovada passa pelo ciclo
+  de PR e release. No Chrome do celular, uma vez: flag `unsafely-treat-insecure-origin-as-secure` com o endereço.
 
 ## Estrutura
 

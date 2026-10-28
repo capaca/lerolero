@@ -47,6 +47,32 @@ pnpm build      # site estático em packages/app/build
 | `prototipos/` | Pesquisas e medições feitas antes das decisões |
 | `docs/` | Especificação e ADRs |
 
+### Testar no celular durante o desenvolvimento
+
+Mudança de tela se revisa no celular antes de abrir o PR: cada ajuste aparece na hora, sem esperar CI, homologação
+e release a cada tentativa. Só a versão aprovada segue o fluxo normal.
+
+```bash
+scripts/celular.sh   # o app em dev na rede Wi-Fi, porta 5180; mostra o endereço e um QR
+```
+
+1. Celular e computador no mesmo Wi-Fi.
+2. Na primeira vez, no Chrome do celular: abra `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, cole o
+   endereço que o script mostrou (ex.: `http://192.168.0.10:5180`), escolha **Enabled** e toque em **Relaunch**.
+   Sem isso o Chrome não trata o endereço como seguro e o cofre da identidade (Web Worker e criptografia) não
+   funciona.
+3. Abra o endereço (ou leia o QR). Ao salvar um arquivo, a tela do celular atualiza sozinha.
+
+Bom saber:
+
+- O app em dev fica numa origem própria: a conta criada ali é separada da conta da produção e da homologação.
+- Em dev não há service worker, então não há cache antigo; o que depende dele (instalar, versão nova, uso
+  sem internet) se confere na homologação.
+- Se o IP do computador mudar, troque o endereço na flag. O script sempre mostra o atual.
+- A porta 5180 não colide com a do e2e (4190), então dá para rodar os dois ao mesmo tempo.
+- O script é para macOS (pega o IP com `ipconfig getifaddr`). Em outro sistema, rode
+  `pnpm --filter @lerolero/app exec vite dev --host 0.0.0.0 --port 5180` e use o IP da máquina.
+
 Tudo entra na `main` por pull request, com testes unitários a cada commit e testes com a rede real pedidos por rótulo.
 O app vai para o GitHub Pages só numa release ([ADR-0006](docs/adr/0006-fluxo-de-trabalho-e-releases.md)).
 
