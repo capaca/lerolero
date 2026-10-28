@@ -20,6 +20,10 @@ export {
 	InvalidWrapError,
 	LockedError,
 	MAX_TEXT_LENGTH,
+	MAX_RECEIPT_IDS,
+	RECEIPT_KIND,
+	REACTION_KIND,
+	type MessageKind,
 	PhraseMismatchError,
 	SESSION_IDLE_MS,
 	sessionIsOpen,
@@ -77,6 +81,19 @@ export {
 	storePendingMessage,
 	type StoredMessage
 } from './conversations/messaging.ts';
+export {
+	deliveryOf,
+	markAcknowledged,
+	QUICK_REACTIONS,
+	reactionTags,
+	receiptsDue,
+	removeReactions,
+	replyOf,
+	replyTags,
+	storeReaction,
+	storeReceipt,
+	type Delivery
+} from './conversations/interactions.ts';
 export {
 	addMembers,
 	canDo,

@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Um balão da conversa. first/last marcam o começo e o fim de uma sequência da mesma pessoa:
 	// só o último ganha a pontinha; nos grupos, o nome vai no primeiro.
-	import { splitLinks, type MessageRecord } from '@lerolero/core';
+	import { splitLinks, type Delivery, type MessageRecord } from '@lerolero/core';
 	import AudioPlayer from './AudioPlayer.svelte';
 	import PhotoView from './PhotoView.svelte';
 	import { hue } from './Avatar.svelte';
@@ -18,7 +18,12 @@
 		day,
 		senderName,
 		links = 'texto',
+		delivery = 'enviada',
+		quote,
+		reactions = [],
 		onlink,
+		onquote,
+		onreact,
 		onmenu
 	}: {
 		message: MessageRecord;
@@ -32,6 +37,14 @@
 		/** endereços no texto (T18): 'aberto' abre direto, 'aviso' pede confirmação (`onlink`), 'texto' não vira link */
 		links?: 'aberto' | 'aviso' | 'texto';
 		onlink?: (href: string, host: string) => void;
+		/** minhas mensagens: pendente, enviada, entregue ou lida (RF-50) */
+		delivery?: Delivery;
+		/** a mensagem a que esta responde (RF-22): quem escreveu e o que, ou `missing` se não está mais aqui */
+		quote?: { name: string; message?: MessageRecord };
+		/** reações somadas por emoji (RF-23); `mine` marca a que eu dei */
+		reactions?: Array<{ emoji: string; count: number; mine: boolean }>;
+		onquote?: () => void;
+		onreact?: (emoji: string) => void;
 		/** toque longo (celular) ou botão direito (computador) */
 		onmenu: () => void;
 	} = $props();
@@ -57,7 +70,7 @@
 	const isPhoto = $derived(!msg.deleted && !!msg.media?.type.startsWith('image/') && links !== 'texto');
 </script>
 
-<div class="row" class:mine class:first class:last data-day={day}>
+<div class="row" class:mine class:first class:last data-day={day} data-id={msg.id}>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="bubble"
@@ -77,6 +90,26 @@
 		{/if}
 		{#if senderName}
 			<span class="sender" style:--h={hue(msg.sender)}>{senderName}</span>
+		{/if}
+		{#if quote && !msg.deleted}
+			<button type="button" class="quote" onclick={onquote} aria-label={m.citada_ir()}>
+				<span class="quote-name">{quote.name}</span>
+				<span class="quote-text">
+					{#if !quote.message}
+						{m.citada_indisponivel()}
+					{:else if quote.message.deleted}
+						{m.citada_apagada()}
+					{:else if quote.message.media?.type.startsWith('audio/')}
+						<Icon name="mic" size={13} /> {m.previa_audio()}
+					{:else if quote.message.media?.type.startsWith('image/')}
+						<Icon name="image" size={13} /> {m.previa_foto()}
+					{:else if quote.message.media}
+						<Icon name="paperclip" size={13} />
+					{:else}
+						{quote.message.text}
+					{/if}
+				</span>
+			</button>
 		{/if}
 		{#if msg.deleted}
 			<p class="deleted-text">
@@ -128,11 +161,28 @@
 				{/each}
 			</p>
 		{/if}
+		{#if reactions.length && !msg.deleted}
+			<div class="reactions">
+				{#each reactions as reaction (reaction.emoji)}
+					<button
+						type="button"
+						class="chip"
+						class:mine={reaction.mine}
+						aria-pressed={reaction.mine}
+						aria-label={m.reacao_chip({ emoji: reaction.emoji, count: reaction.count })}
+						onclick={() => onreact?.(reaction.emoji)}
+					>
+						{reaction.emoji}{#if reaction.count > 1}<span class="count">{reaction.count}</span>{/if}
+					</button>
+				{/each}
+			</div>
+		{/if}
 		<span class="meta">
 			{formatTime(msg.createdAt)}
 			{#if mine && !msg.upload?.failed}
-				<span class="status" title={msg.status === 'pendente' ? m.bolha_enviando() : m.bolha_enviada()}>
-					<Icon name={msg.status === 'pendente' ? 'clock' : 'check'} size={13} label={msg.status === 'pendente' ? m.bolha_enviando() : m.bolha_enviada()} />
+				{@const label = { pendente: m.bolha_enviando(), enviada: m.bolha_enviada(), entregue: m.bolha_entregue(), lida: m.bolha_lida() }[delivery]}
+				<span class="status" class:read={delivery === 'lida'} title={label}>
+					<Icon name={delivery === 'pendente' ? 'clock' : delivery === 'enviada' ? 'check' : 'check-check'} size={13} {label} />
 				</span>
 			{/if}
 		</span>
@@ -282,6 +332,66 @@
 	.status {
 		display: inline-block;
 		vertical-align: -2px;
+	}
+	.status.read {
+		color: var(--accent);
+	}
+	/* a mensagem citada: faixa colorida à esquerda, como nos outros apps */
+	.quote {
+		display: block;
+		width: 100%;
+		margin: 0 0 0.25rem;
+		padding: 0.2rem 0.5rem;
+		border: 0;
+		border-left: 3px solid var(--accent);
+		border-radius: 6px;
+		background: color-mix(in srgb, var(--fg) 7%, transparent);
+		color: inherit;
+		font: inherit;
+		font-size: 0.85rem;
+		text-align: left;
+	}
+	.quote-name {
+		display: block;
+		font-weight: 700;
+		color: var(--accent);
+	}
+	.quote-text {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		color: var(--muted);
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+	.reactions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		margin-top: 0.25rem;
+	}
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2rem;
+		min-height: 1.75rem;
+		padding: 0 0.45rem;
+		border-radius: 999px;
+		border: 1px solid var(--line);
+		background: var(--surface);
+		color: inherit;
+		font: inherit;
+		font-size: 0.85rem;
+	}
+	.chip.mine {
+		border-color: var(--accent);
+		background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+	}
+	.count {
+		font-size: 0.75rem;
+		font-weight: 600;
 	}
 	.file {
 		display: flex;

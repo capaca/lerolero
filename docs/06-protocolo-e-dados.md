@@ -44,12 +44,12 @@ kind 1059  Gift wrap — assinado por chave descartável; tag ["p", <destinatár
 
 | Uso | Kind | Padrão | Observações |
 |---|---|---|---|
-| Mensagem de texto | `14` | NIP-17 | Resposta: tag `["e", <id do rumor citado>]`. Tags próprias: `seq`, `g` (ver abaixo) e `["nome", <nome>]` na primeira mensagem de cada conversa: como o nome é privado, ele chega ao contato só dentro da mensagem cifrada |
+| Mensagem de texto | `14` | NIP-17 | Resposta: tag `["e", <id do rumor citado>, "", "reply"]` (marcador do NIP-10). Tags próprias: `seq`, `g` (ver abaixo) e `["nome", <nome>]` na primeira mensagem de cada conversa: como o nome é privado, ele chega ao contato só dentro da mensagem cifrada |
 | Mídia (foto, áudio) | `15` | NIP-17 | Tags do NIP-17 para arquivos: `file-type`, `encryption-algorithm` (`aes-gcm`), `decryption-key`, `decryption-nonce`, `x` (hash do arquivo cifrado), `ox` (hash do original), `size`, `dim`, `thumb` (prévia), URLs do Blossom. Foto: `dim` é `LARGURAxALTURA` em pixels e `thumb` é um JPEG de até ~5 KB em base64, no próprio texto da tag; quem recebe descarta `thumb` com mais de 8000 caracteres ou fora do base64 e `dim` que não seja dois números (decidido em 2026-10-27: sem `blurhash`, a prévia já é uma imagem de verdade, e o balão reserva o espaço antes de baixar). Encaminhar manda a mesma referência (URLs, chave, nonce e hashes) numa mensagem nova, sem baixar nem subir de novo (RF-70). Áudio: `duration` (segundos) e `start` (segundos de silêncio no começo, que o player pula; só vale se for maior que 0 e menor que `duration`; cliente que não conhece a tag toca o áudio inteiro, então não muda `SYNC_GENERATION`) |
-| Reação | `7` | NIP-25 | Tag `["e", <id do rumor>]`; conteúdo = emoji |
+| Reação | `7` | NIP-25 | Tag `["e", <id do rumor>]` e `["k", <kind>]`; conteúdo = emoji (até 16 caracteres). Uma por pessoa e mensagem: a mais recente vale. Desfazer = pedido de apagar (kind `5`) citando o id da reação, só de quem a escreveu |
 | Apagar para todos | `5` | NIP-09 | Pedido de apagamento; outros apps podem ignorar (RF-25) |
 | Edição | próprio | — | Kind a definir; tag `["e", <id original>]` + novo texto + `alt` |
-| Confirmação (entregue / lida / retida) | próprio | — | Kind a definir (seção 3.4) |
+| Confirmação (entregue / lida) | `4441` | próprio | Uma tag `["e", <id>]` por mensagem (até 200), `["status", "entregue" ou "lida"]` e `alt`. Vai só a quem escreveu as mensagens (nos grupos também), sem cópia para mim. Seção 3.4 |
 | Controle de grupo | `4440` | próprio | Seção 3.3; tag `alt` "aviso de grupo do Lero-lero" |
 | Pedido de reenvio | próprio | — | Kind a definir (seção 3.5) |
 
@@ -104,7 +104,7 @@ O NIP-17 define uma conversa pelo **conjunto de participantes** (tags `p`), com 
 | Lida | Destinatário | Ao exibir a mensagem, se a confirmação de leitura estiver ligada (RF-51) |
 | Possivelmente perdida | Remetente (local) | Sem confirmação em 7 dias, ou pedido de reenvio recebido (seção 3.5) |
 
-Confirmações são **agrupadas**: um único evento pode confirmar várias mensagens de uma vez (lista de tags `e`), para economizar dados. Quem desliga a confirmação de leitura também não processa as dos outros.
+Só vale a confirmação de quem está na conversa e só para mensagem minha. Sem a leitura ligada, a "lida" dos outros conta como "entregue". Quem recebe um pedido de mensagem (ainda não é contato) não confirma nada. Confirmações são **agrupadas**: um único evento pode confirmar várias mensagens de uma vez (lista de tags `e`), para economizar dados. Quem desliga a confirmação de leitura também não processa as dos outros.
 
 ### 3.5 Detecção de perdas (Q10 da Visão)
 

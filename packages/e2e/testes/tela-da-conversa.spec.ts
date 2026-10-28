@@ -233,7 +233,7 @@ test('"Copiar" no menu da mensagem, por botão direito e toque longo, com vibra�
 	const menu = page.getByRole('dialog', { name: 'Opções da mensagem' });
 
 	await balao.click({ button: 'right' });
-	await expect(menu.locator('.item').first()).toHaveText('Copiar');
+	await expect(menu.getByRole('button', { name: 'Copiar' })).toBeVisible();
 	expect(await vibracoes()).toBe(1);
 	await menu.getByRole('button', { name: 'Copiar' }).click();
 	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(texto);

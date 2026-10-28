@@ -127,8 +127,8 @@ Critério escolhido pelo Pedro: **uso no dia a dia**, o que faz um grupo de amig
 Antes "Grupos e recursos de conversa"; os grupos foram adiantados para o M2 e o marco foi reorganizado em 2026-10-22.
 
 - ~~Grupos de até 20 com tag `g` e eventos de controle; administrador; remover membro (RF-30..33).~~ Adiantado para o M2 (2026-10-22).
-- Responder e reagir (RF-22, 23).
-- Status de entrega com confirmações agrupadas; confirmação de leitura desativável (RF-50, 51).
+- ✅ Responder e reagir (RF-22, 23), feito em 2026-10-28 (testes `interactions.test.ts` e e2e `responder-reagir`). Responder: item "Responder" no menu da mensagem; o campo mostra a citação e o balão sai com ela (toque leva à original, se está na tela). Vale só para texto; áudio e foto seguem como mensagem nova. Reagir: seis emojis no topo do menu (👍 ❤️ 😂 😮 😢 🙏); uma reação por pessoa e mensagem, a mais recente vale; chips sob o balão, e tocar no chip dá a mesma reação ou desfaz a minha.
+- ✅ Status de entrega com confirmações agrupadas; confirmação de leitura desativável (RF-50, 51), feito em 2026-10-28 (e2e `entrega-leitura`). Um tique = enviada, dois = entregue, dois coloridos = lida; no grupo vale o do membro mais atrasado. Só confirmo a quem já é contato (ou grupo aceito): pedido de mensagem não ganha sinal de que estou aqui (RF-12); ao aceitar e abrir a conversa, sai a "lida". Ajustes › Privacidade liga e desliga a leitura. Não feito ainda: o estado "possivelmente perdida" (RF-53, item 12 da ordem).
 - Etapa 3 de UX/UI (veio do M2): ✅ aviso de "sem conexão" (2026-10-26: pílula acima do campo de mensagem quando o aparelho fica sem internet, na hora, ou sem nenhum relay conectado por 6 s; some sozinha quando volta; teste e2e `sem-conexao`); tamanho da letra em Ajustes (Normal, Grande, Muito grande; RNF-65); nível do microfone durante a gravação.
 - Cartão de perfil privado com nome e foto (Q-P5, RF-02; veio do M2).
 - Editar mensagem (RF-24). ~~Apagar para todos (RF-25)~~ feito no M2.

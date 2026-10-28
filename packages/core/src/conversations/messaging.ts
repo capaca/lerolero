@@ -9,6 +9,7 @@ import { validThumb } from '../media/photo.ts';
 import type { ConversationRecord, MessageMedia, MessageRecord } from '../storage/records.ts';
 import { summaryOf } from '../storage/summary.ts';
 import { groupConversationId, groupIdOf, GROUP_TAG } from './groups.ts';
+import { replyOf } from './interactions.ts';
 
 /**
  * Tag própria com o nome de quem envia, só na primeira mensagem de cada conversa:
@@ -169,7 +170,8 @@ function incomingRecord(rumor: Rumor, conversationId: string, media: MessageMedi
 		text: media ? '' : rumor.content,
 		createdAt: rumor.created_at,
 		status: mine ? 'enviada' : 'recebida',
-		...(media ? { media } : {})
+		...(media ? { media } : {}),
+		...(replyOf(rumor) ? { replyTo: replyOf(rumor) } : {})
 	};
 }
 
@@ -239,7 +241,8 @@ async function storeOutgoingNow(storage: Storage, rumor: Rumor, recipient?: stri
 		text: media ? '' : rumor.content,
 		createdAt: rumor.created_at,
 		status: 'pendente',
-		...(media ? { media } : {})
+		...(media ? { media } : {}),
+		...(replyOf(rumor) ? { replyTo: replyOf(rumor) } : {})
 	};
 	await storage.messages.put(message);
 	const nameSent = rumor.tags.some((t) => t[0] === NAME_TAG);
@@ -305,8 +308,9 @@ async function dropMediaIfUnused(storage: Storage, ox: string | undefined) {
 
 /** Troca a mensagem pelo aviso "apagada": some o texto e o arquivo, fica o lugar na conversa. */
 export async function markDeleted(storage: Storage, message: MessageRecord): Promise<MessageRecord> {
-	const deleted: MessageRecord = { ...message, text: '', media: undefined, deleted: true };
+	const deleted: MessageRecord = { ...message, text: '', media: undefined, replyTo: undefined, deleted: true };
 	await storage.messages.put(deleted);
+	await storage.reactions.deleteByMessage(message.id);
 	await dropMediaIfUnused(storage, message.media?.ox);
 	// a prévia só muda se a apagada era a mais recente (sem depender da ordem de empates no mesmo segundo)
 	const conversation = await storage.conversations.get(message.conversationId);
@@ -321,6 +325,7 @@ async function deleteForMeNow(storage: Storage, messageId: string) {
 	const message = await storage.messages.get(messageId);
 	if (!message) return;
 	await storage.messages.delete(messageId);
+	await storage.reactions.deleteByMessage(messageId);
 	await dropMediaIfUnused(storage, message.media?.ox);
 	await refreshConversation(storage, message.conversationId);
 }
@@ -344,6 +349,7 @@ export async function clearConversation(storage: Storage, conversationId: string
 	await exclusive(storage, async () => {
 		for (const message of await storage.messages.listByConversation(conversationId, EVERY_MESSAGE)) {
 			await storage.messages.delete(message.id);
+			await storage.reactions.deleteByMessage(message.id);
 			await dropMediaIfUnused(storage, message.media?.ox);
 		}
 		if (drop) await storage.conversations.delete(conversationId);

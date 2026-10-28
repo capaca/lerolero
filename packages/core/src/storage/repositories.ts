@@ -11,6 +11,7 @@ import type {
 	MediaRecord,
 	MessageRecord,
 	OutboxRecord,
+	ReactionRecord,
 	SeenWrapRecord
 } from './records.ts';
 
@@ -83,6 +84,17 @@ export interface GroupEventRepository {
 	listByGroup(groupId: string): Promise<GroupEventRecord[]>;
 }
 
+export interface ReactionRepository {
+	get(id: string): Promise<ReactionRecord | undefined>;
+	put(reaction: ReactionRecord): Promise<void>;
+	delete(id: string): Promise<void>;
+	/** as reações de uma pessoa a uma mensagem (em geral uma só) */
+	listBySender(messageId: string, sender: string): Promise<ReactionRecord[]>;
+	listByConversation(conversationId: string): Promise<ReactionRecord[]>;
+	/** some com as reações a mensagens que deixaram de existir aqui */
+	deleteByMessage(messageId: string): Promise<void>;
+}
+
 export type Storage = {
 	identity: IdentityRepository;
 	settings: SettingsRepository;
@@ -94,6 +106,7 @@ export type Storage = {
 	seenWraps: SeenWrapRepository;
 	media: MediaRepository;
 	groupEvents: GroupEventRepository;
+	reactions: ReactionRepository;
 	close(): void;
 };
 
@@ -160,6 +173,14 @@ export function openStorage(name?: string): Storage {
 			get: (id) => db.group_events.get(id),
 			put: async (event) => void (await db.group_events.put(event)),
 			listByGroup: (groupId) => db.group_events.where('groupId').equals(groupId).toArray()
+		},
+		reactions: {
+			get: (id) => db.reactions.get(id),
+			put: async (reaction) => void (await db.reactions.put(reaction)),
+			delete: (id) => db.reactions.delete(id),
+			listBySender: (messageId, sender) => db.reactions.where('messageId').equals(messageId).and((r) => r.sender === sender).toArray(),
+			listByConversation: (conversationId) => db.reactions.where('conversationId').equals(conversationId).toArray(),
+			deleteByMessage: async (messageId) => void (await db.reactions.where('messageId').equals(messageId).delete())
 		},
 		close: () => db.close()
 	};

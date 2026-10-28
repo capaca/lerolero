@@ -107,6 +107,15 @@ export async function abrirConversa(page: Page, com: string) {
 	await page.locator('.conversations a', { hasText: com }).click();
 }
 
+/** Abre a conversa com quem acabou de escrever: espera ela aparecer na lista (conversa vazia não aparece). */
+export async function abrirConversaQuandoChegar(page: Page, com: string) {
+	await expect(async () => {
+		await page.goto('./');
+		await expect(page.locator('.conversations a', { hasText: com })).toBeVisible({ timeout: 2_000 });
+	}).toPass({ timeout: 30_000 });
+	await page.locator('.conversations a', { hasText: com }).click();
+}
+
 /** Apaga uma configuração guardada no aparelho, como se o prazo dela tivesse passado. */
 export const esquecerAjuste = (page: Page, chave: string) =>
 	page.evaluate(

@@ -168,11 +168,26 @@ test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum
 	await semTextoFixo(ana.page, nomes);
 	await ana.page.locator('.row', { hasText: 'oi' }).locator('.bubble').click({ button: 'right' });
 	await semTextoFixo(ana.page, nomes);
-	// "Encaminhar" é o segundo item (depois de Copiar): abre a escolha do destino
-	await ana.page.locator('.sheet .item').nth(1).click();
+	// "Encaminhar" é o terceiro item (depois de Responder e Copiar): abre a escolha do destino
+	await ana.page.locator('.sheet .item').nth(2).click();
 	await expect(ana.page.locator('.sheet .targets button')).not.toHaveCount(0);
 	await semTextoFixo(ana.page, nomes);
 	await ana.page.keyboard.press('Escape');
+
+	// responder e reagir: a faixa de resposta, o balão com a citação e o chip da reação
+	await ana.page.locator('.row', { hasText: 'oi' }).first().locator('.bubble').click({ button: 'right' });
+	await ana.page.locator('.sheet .item').first().click();
+	await expect(ana.page.locator('.composer .reply')).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.locator('.composer textarea').fill('oi');
+	await ana.page.locator('.composer button.round.primary').click();
+	await expect(ana.page.locator('.row.mine .quote')).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.locator('.row', { hasText: 'oi' }).first().locator('.bubble').click({ button: 'right' });
+	await ana.page.locator('.sheet .emoji').first().click();
+	await expect(ana.page.locator('.row .chip')).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
+
 	await ana.page.locator('.composer button.round.primary').click();
 	await expect(ana.page.locator('.composer .recording')).toBeVisible();
 	await semTextoFixo(ana.page, nomes);
