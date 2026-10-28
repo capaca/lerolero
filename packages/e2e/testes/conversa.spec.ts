@@ -12,8 +12,8 @@ test('Maria convida, João adiciona e os dois conversam', async ({ novaPessoa })
 	await expect(joao.page.locator('.row.mine').getByLabel('enviada')).toBeVisible();
 
 	// Maria ainda não tem o João: chega como pedido de mensagem, com o nome que veio na mensagem
-	await maria.page.goto('./contatos');
-	await expect(maria.page.getByRole('heading', { name: 'Pedidos de mensagem (1)' })).toBeVisible({ timeout: 20_000 });
+	await maria.page.goto('./contatos?aba=pedidos');
+	await expect(maria.page.getByRole('tab', { name: 'Pedidos (1)' })).toBeVisible({ timeout: 20_000 });
 	await expect(maria.page.getByRole('link', { name: /João/ })).toContainText('Oi Maria! Aqui é o João.');
 	await abrirPedido(maria.page, 'João');
 	await expect(maria.page.getByText('Pedido de mensagem: esta pessoa não está nos seus contatos.')).toBeVisible();

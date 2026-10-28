@@ -255,17 +255,20 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await adicionarPeloConvite(ana, caio);
 	await enviarTexto(caio.page, 'oi');
 	await page.goto(PSEUDO_URL + 'contatos');
-	await expect(page.locator('section .list a')).toHaveCount(1, { timeout: 20_000 });
+	await expect(page.locator('#painel-contatos .list a').first()).toBeVisible();
+	await semTextoFixo(page, nomes); // aba Contatos
+	await page.getByRole('tab').last().click();
+	await expect(page.locator('#painel-pedidos .list a')).toHaveCount(1, { timeout: 20_000 });
 	await semTextoFixo(page, nomes);
-	await page.locator('section .list a').click();
+	await page.locator('#painel-pedidos .list a').click();
 	await expect(page).toHaveURL(/\/conversa\//);
 	await page.goto(page.url().replace('/conversa/', '/contatos/'));
 	await page.locator('main button.danger').click();
 	await page.getByRole('dialog').locator('button.danger').click();
 	await expect(page.locator('main > .actions button')).toBeVisible(); // desbloquear
 	await semTextoFixo(page, [...nomes, ...(await dados(page, '.key'))]);
-	await page.goto(PSEUDO_URL + 'contatos');
-	await expect(page.locator('section h2')).toHaveCount(1);
+	await page.goto(PSEUDO_URL + 'contatos?aba=pedidos');
+	await expect(page.locator('#painel-pedidos section h2')).toHaveCount(1);
 	await semTextoFixo(page, nomes);
 
 	// grupo novo: os dois erros, depois criado com a Bia
