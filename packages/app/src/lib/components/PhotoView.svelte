@@ -60,11 +60,12 @@
 	.photo {
 		display: block;
 		position: relative;
-		width: min(16rem, 100%);
-		max-height: 20rem;
+		width: 100%;
+		/* foto em pé muito alta é cortada (cover), para não ocupar a tela inteira */
+		max-height: min(30rem, 60dvh);
 		padding: 0;
 		border: 0;
-		border-radius: 8px;
+		border-radius: 9px;
 		overflow: hidden;
 		background: var(--line);
 	}
