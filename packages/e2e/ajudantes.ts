@@ -101,6 +101,12 @@ export async function enviarAudio(page: Page, segundos = 2) {
 	await expect(page.locator('.row.mine:has(.player)').nth(antes).getByLabel('enviada')).toBeVisible({ timeout: 20_000 });
 }
 
+/** Ajustes ficam no menu ⋮ da tela inicial. */
+export async function abrirAjustes(page: Page) {
+	await page.getByRole('button', { name: 'Mais opções' }).click();
+	await page.getByRole('dialog', { name: 'Mais opções' }).getByRole('link', { name: 'Ajustes' }).click();
+}
+
 /** Abre a primeira conversa da lista do início. */
 export async function abrirConversa(page: Page, com: string) {
 	await page.goto('./');

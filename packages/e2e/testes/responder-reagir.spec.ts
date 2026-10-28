@@ -36,13 +36,22 @@ test('Maria responde a João citando a mensagem, e os dois reagem', async ({ nov
 	const daMaria = joao.page.locator('.row.mine', { hasText: 'vamos jantar?' });
 	await expect(daMaria.getByRole('button', { name: 'Reação 👍: 1' })).toBeVisible({ timeout: 30_000 });
 
+	// o "+" abre o seletor completo, com muito mais emojis que os seis principais
+	await doJoao.locator('.bubble').click({ button: 'right' });
+	await menu(maria).getByRole('button', { name: 'Mais reações' }).click();
+	expect(await menu(maria).locator('.emoji').count()).toBeGreaterThan(40);
+	await menu(maria).getByRole('button', { name: 'Reagir com 🎉' }).click();
+	await expect(doJoao.getByRole('button', { name: 'Reação 🎉: 1' })).toBeVisible();
+	await expect(doJoao.getByRole('button', { name: /Reação 👍/ })).toHaveCount(0);
+	await expect(daMaria.getByRole('button', { name: 'Reação 🎉: 1' })).toBeVisible({ timeout: 30_000 });
+
 	// trocar de emoji substitui a anterior
 	await doJoao.locator('.bubble').click({ button: 'right' });
 	await menu(maria).getByRole('button', { name: 'Reagir com ❤️' }).click();
 	await expect(doJoao.getByRole('button', { name: 'Reação ❤️: 1' })).toBeVisible();
-	await expect(doJoao.getByRole('button', { name: /Reação 👍/ })).toHaveCount(0);
+	await expect(doJoao.getByRole('button', { name: /Reação 🎉/ })).toHaveCount(0);
 	await expect(daMaria.getByRole('button', { name: 'Reação ❤️: 1' })).toBeVisible({ timeout: 30_000 });
-	await expect(daMaria.getByRole('button', { name: /Reação 👍/ })).toHaveCount(0);
+	await expect(daMaria.getByRole('button', { name: /Reação 🎉/ })).toHaveCount(0);
 
 	// João reage com o mesmo ❤️ (toque no chip): soma 2; tocar de novo desfaz só a dele
 	await daMaria.getByRole('button', { name: 'Reação ❤️: 1' }).click();

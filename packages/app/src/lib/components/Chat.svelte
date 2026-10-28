@@ -2,6 +2,7 @@
 	// Conversa (1:1 ou grupo): mensagens, avisos de grupo, menu da mensagem e campo de envio.
 	// O topo e os avisos de cima ficam com a tela que usa o componente.
 	import { contactName, deliveryOf, forwardOf, type MessageRecord, type ReactionRecord } from '@lerolero/core';
+	import { page } from '$app/state';
 	import { onDestroy, tick, type Snippet } from 'svelte';
 	import Composer from './Composer.svelte';
 	import Icon from './Icon.svelte';
@@ -366,7 +367,10 @@
 			if (original) found.set(id, original);
 		}
 		quoted = found;
-		const stick = firstLoad || nearBottom() || list.at(-1)?.sender === me;
+		// só chegada ou envio de mensagem leva ao fim: estrela, reação e confirmação também recarregam a lista e não
+		// podem arrancar quem lê lá em cima
+		const grew = list.at(-1)?.id !== messages.at(-1)?.id;
+		const stick = firstLoad || nearBottom() || (grew && list.at(-1)?.sender === me);
 		const fromOthers = (m: MessageRecord) => m.sender !== me && !m.notice;
 		if (firstLoad) {
 			const unread = list.filter(fromOthers).slice(-(conversation?.unread ?? 0));
@@ -392,9 +396,23 @@
 			scroller.scrollTop = scroller.scrollHeight;
 			pending = 0;
 		}
+		const wasFirst = firstLoad;
 		firstLoad = false;
+		if (wasFirst) await focusRequested();
 		if (conversation?.unread) await session.markRead(conversationId);
 		acknowledgeVisible();
+	}
+
+	// Abriu por uma favorita (?msg=): rola até a mensagem e a destaca um instante
+	async function focusRequested() {
+		const id = page.url.searchParams.get('msg');
+		if (!id) return;
+		await tick();
+		const row = scroller?.querySelector<HTMLElement>(`[data-id="${CSS.escape(id)}"]`);
+		if (!row) return;
+		row.scrollIntoView({ block: 'center' });
+		row.classList.add('flash');
+		setTimeout(() => row.classList.remove('flash'), 1800);
 	}
 
 	// "Lida" (RF-50): o que está na tela e veio dos outros; só com o app à vista, não com a aba escondida
@@ -606,6 +624,10 @@
 		flex-direction: column;
 		max-width: 720px;
 		margin: 0 auto;
+	}
+	.messages :global(.row.flash) {
+		background: color-mix(in srgb, var(--accent) 25%, transparent);
+		transition: background 0.4s;
 	}
 	.selection {
 		display: flex;

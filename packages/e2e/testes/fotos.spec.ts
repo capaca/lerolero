@@ -46,8 +46,15 @@ test('João envia uma foto grande; Maria vê a prévia na lista e abre em tela c
 	expect(previa.lado).toBe(96);
 	expect(previa.bytes).toBeLessThanOrEqual(5_000);
 
-	await foto.click();
+	// o primeiro toque só baixa: a foto fica nítida no balão e nada abre em tela cheia
 	const aberta = maria.page.getByTestId('foto-aberta');
+	await foto.click();
+	await expect(foto.locator('img')).toHaveAttribute('src', /^blob:/);
+	await expect(aberta).toHaveCount(0);
+	expect(await foto.locator('img').evaluate((img) => getComputedStyle(img).filter)).toBe('none');
+
+	// o segundo toque abre a foto inteira
+	await foto.click();
 	await expect(aberta).toBeVisible();
 	// a foto inteira cabe na tela (antes vazava para baixo e só aparecia o topo)
 	const caixaAberta = (await aberta.boundingBox())!;
@@ -75,6 +82,12 @@ test('João envia uma foto grande; Maria vê a prévia na lista e abre em tela c
 	const depois = maria.page.locator('.photo img');
 	await expect(depois).toHaveAttribute('src', /^blob:/);
 	expect(await depois.evaluate((img) => getComputedStyle(img).filter)).toBe('none');
+
+	// recarregar o app também não traz o borrão: o arquivo ficou no aparelho
+	await maria.page.reload();
+	const recarregada = maria.page.locator('.photo img');
+	await expect(recarregada).toHaveAttribute('src', /^blob:/);
+	expect(await recarregada.evaluate((img) => getComputedStyle(img).filter)).toBe('none');
 });
 
 test('João escolhe duas fotos de uma vez e as duas chegam para Maria', async ({ novaPessoa }) => {

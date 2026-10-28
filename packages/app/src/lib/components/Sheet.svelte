@@ -32,6 +32,10 @@
 		border-radius: 16px 16px 0 0;
 		padding: 0.6rem 1rem calc(1rem + env(safe-area-inset-bottom));
 		box-shadow: 0 -4px 24px rgb(0 0 0 / 0.2);
+		/* menu comprido em tela baixa (celular deitado): rola em vez de sair da tela */
+		max-height: 90dvh;
+		overflow-y: auto;
+		overflow-x: hidden;
 	}
 	.sheet :global(.item) {
 		display: flex;

@@ -1,12 +1,14 @@
 <script module lang="ts">
-	// Fotos já abertas, por hash: sair da conversa e voltar recria o balão, que não pode voltar ao borrão nem baixar
-	// de novo. Ficam até fechar o app (são poucas, de até 200 KB cada).
+	// Endereços das fotos já baixadas, por hash: sair da conversa e voltar recria o balão, que não pode voltar ao
+	// borrão nem ler o banco de novo. O arquivo em si fica no aparelho (tabela `media`), então depois de recarregar o
+	// app o balão também já abre nítido; aqui só se guarda o endereço da sessão.
 	const opened = new Map<string, string>();
 </script>
 
 <script lang="ts">
-	// Foto no balão (RF-41): a prévia da mensagem aparece na hora, com o espaço já reservado pelo tamanho;
-	// o arquivo só é baixado ao tocar e abre em tela cheia.
+	// Foto no balão (RF-41): a prévia da mensagem aparece na hora, com o espaço já reservado pelo tamanho.
+	// Desfocada, o primeiro toque baixa a foto (que fica no aparelho) e ela fica nítida no balão; só o toque seguinte
+	// a abre em tela cheia.
 	import type { MessageMedia } from '@lerolero/core';
 
 	// Os blocos da conversa usam content-visibility (contain: layout), que faz o position: fixed valer em relação ao
@@ -22,6 +24,18 @@
 	let { media }: { media: MessageMedia } = $props();
 
 	let src = $state<string | undefined>(opened.get(media.x));
+
+	// já baixada em outra ocasião (ou enviada por mim): nítida desde o início, sem rede
+	$effect(() => {
+		if (src) return;
+		let gone = false;
+		void session.downloadedMedia(media.ox).then((file) => {
+			if (gone || !file || src) return;
+			src = URL.createObjectURL(file);
+			opened.set(media.x, src);
+		});
+		return () => (gone = true);
+	});
 	let open = $state(false);
 	let loading = $state(false);
 	let error = $state('');
@@ -29,33 +43,34 @@
 	const ratio = $derived(media.width && media.height ? `${media.width} / ${media.height}` : '4 / 3');
 	const thumb = $derived(media.thumb ? `data:image/jpeg;base64,${media.thumb}` : undefined);
 
-	async function show() {
+	async function tap() {
 		error = '';
-		if (!src) {
-			loading = true;
-			try {
-				src = URL.createObjectURL(await session.openMedia(media));
-				opened.set(media.x, src);
-			} catch {
-				error = m.bolha_foto_erro();
-				return;
-			} finally {
-				loading = false;
-			}
+		if (src) {
+			open = true;
+			return;
 		}
-		open = true;
+		if (loading) return;
+		loading = true;
+		try {
+			src = URL.createObjectURL(await session.openMedia(media));
+			opened.set(media.x, src);
+		} catch {
+			error = m.bolha_foto_erro();
+		} finally {
+			loading = false;
+		}
 	}
 
 </script>
 
-<button type="button" class="photo" style:aspect-ratio={ratio} onclick={show} aria-label={m.bolha_foto_abrir()}>
+<button type="button" class="photo" style:aspect-ratio={ratio} onclick={tap} aria-label={src ? m.bolha_foto_abrir() : m.bolha_foto_baixar()}>
 	{#if src}
 		<!-- já baixada: o balão mostra a foto de verdade, nítida, e não mais a prévia -->
 		<img {src} alt="" class="sharp" />
 	{:else}
 		{#if thumb}<img src={thumb} alt="" />{/if}
 		<span class="spin">
-			{#if loading}<Icon name="loader" />{:else}<span class="badge"><Icon name="image" /></span>{/if}
+			{#if loading}<Icon name="loader" />{:else}<span class="badge"><Icon name="download" /></span>{/if}
 		</span>
 	{/if}
 </button>

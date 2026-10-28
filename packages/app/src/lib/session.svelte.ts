@@ -89,6 +89,8 @@ import {
 } from '@lerolero/core';
 import { NoRelaysError, NotInGroupError, PinLockedError } from './errors.ts';
 import { prepareFromFile } from './photo-encoder.ts';
+import { m } from '#lib/paraglide/messages.js';
+import { memberName } from './notices.ts';
 import { relayList } from './relays.ts';
 
 export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
@@ -631,18 +633,29 @@ class Session {
 		this.version++;
 	}
 
-	/** As mensagens favoritas de todas as conversas, com o nome da conversa e o endereço da tela dela. */
-	async listStarred(): Promise<Array<{ message: MessageRecord; title: string; direct: boolean; key: string }>> {
+	/**
+	 * As favoritas, mais recentes primeiro: de todas as conversas ou só de `conversationId`. Cada uma vem com o nome
+	 * da conversa, de quem escreveu e o endereço da tela dela.
+	 */
+	async listStarred(conversationId?: string): Promise<Array<{ message: MessageRecord; title: string; author: string; direct: boolean; key: string }>> {
 		const out = [];
+		const names = new Map<string, (publicKey: string) => string>();
 		for (const message of await storage.messages.listStarred()) {
+			if (conversationId && message.conversationId !== conversationId) continue;
 			const conversation = await storage.conversations.get(message.conversationId);
 			if (!conversation) continue;
 			if (conversation.group) {
-				out.push({ message, title: conversation.group.state.name, direct: false, key: conversation.id.slice('grupo:'.length) });
+				if (!names.has(conversation.id)) {
+					const nameOf = await this.groupNames(conversation);
+					names.set(conversation.id, (key) => memberName(nameOf(key)));
+				}
+				const author = names.get(conversation.id)!(message.sender);
+				out.push({ message, title: conversation.group.state.name, author, direct: false, key: conversation.id.slice('grupo:'.length) });
 			} else {
 				const key = conversation.members[0];
 				const contact = await storage.contacts.get(key);
-				out.push({ message, title: contact ? contactName(contact) : `${toNpub(key).slice(0, 12)}…`, direct: true, key });
+				const title = contact ? contactName(contact) : `${toNpub(key).slice(0, 12)}…`;
+				out.push({ message, title, author: message.sender === this.current.publicKey ? m.citada_voce() : title, direct: true, key });
 			}
 		}
 		return out;
@@ -788,6 +801,11 @@ class Session {
 		if (media && !(await storage.media.get(media.ox))) {
 			void removeFromBlossom(media.urls, media.x, (template) => vault.sign(template)).catch(() => {});
 		}
+	}
+
+	/** O arquivo, se já está no aparelho (foto baixada antes, ou que eu mesmo enviei); sem rede e sem baixar. */
+	async downloadedMedia(ox: string): Promise<Blob | undefined> {
+		return (await storage.media.get(ox))?.file;
 	}
 
 	/** Arquivo de uma mensagem: do aparelho, ou baixado, conferido e decifrado na hora. */

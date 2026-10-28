@@ -68,12 +68,6 @@
 	</section>
 
 	<section class="card">
-		<div class="actions stack">
-			<a href={resolve('/ajustes/favoritas')}>{m.ajustes_favoritas()}</a>
-		</div>
-	</section>
-
-	<section class="card">
 		<h2>{m.ajustes_privacidade()}</h2>
 		<label class="check">
 			<input type="checkbox" bind:checked={readReceipts} onchange={toggleReceipts} />

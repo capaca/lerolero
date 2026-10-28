@@ -212,7 +212,7 @@
 			{formatTime(msg.createdAt)}
 			{#if mine && !msg.upload?.failed}
 				{@const label = { pendente: m.bolha_enviando(), enviada: m.bolha_enviada(), entregue: m.bolha_entregue(), lida: m.bolha_lida() }[delivery]}
-				<span class="status" class:read={delivery === 'lida'} title={label}>
+				<span class="status" class:delivered={delivery === 'entregue'} class:read={delivery === 'lida'} title={label}>
 					<Icon name={delivery === 'pendente' ? 'clock' : delivery === 'enviada' ? 'check' : 'check-check'} size={13} {label} />
 				</span>
 			{/if}
@@ -398,8 +398,12 @@
 	.row.mine .pick {
 		margin-right: auto;
 	}
+	/* entregue: tom do texto, bem mais escuro que o cinza do horário, que sumia no verde do balão */
+	.status.delivered {
+		color: var(--fg);
+	}
 	.status.read {
-		color: var(--accent);
+		color: var(--read);
 	}
 	/* a mensagem citada: faixa colorida à esquerda, como nos outros apps */
 	.quote {

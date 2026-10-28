@@ -1,9 +1,10 @@
 <script lang="ts">
 	import BackLink from '#lib/components/BackLink.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
+	import StarredList from '#lib/components/StarredList.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { contactName, toNpub, type ContactRecord } from '@lerolero/core';
+	import { contactName, directConversationId, toNpub, type ContactRecord } from '@lerolero/core';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
@@ -72,6 +73,11 @@
 			</div>
 		{/if}
 
+		<section class="favorites">
+			<h2>{m.favoritas_titulo()}</h2>
+			<StarredList conversationId={directConversationId(contact.publicKey)} />
+		</section>
+
 		{#if confirmingBlock}
 			<Sheet label={m.contato_bloquear()} onclose={() => (confirmingBlock = false)}>
 				<p><strong>{m.contato_bloquear_pergunta({ nome: contactName(contact) })}</strong></p>
@@ -99,6 +105,9 @@
 		border-radius: 10px;
 		background: var(--accent);
 		color: var(--accent-fg);
+	}
+	.favorites {
+		margin-top: 1.5rem;
 	}
 	.key {
 		font-family: ui-monospace, monospace;
