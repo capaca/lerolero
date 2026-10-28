@@ -44,10 +44,15 @@
 </script>
 
 <button type="button" class="photo" style:aspect-ratio={ratio} onclick={show} aria-label={m.bolha_foto_abrir()}>
-	{#if thumb}<img src={thumb} alt="" />{/if}
-	<span class="spin">
-		{#if loading}<Icon name="loader" />{:else}<span class="badge"><Icon name="image" /></span>{/if}
-	</span>
+	{#if src}
+		<!-- já baixada: o balão mostra a foto de verdade, nítida, e não mais a prévia -->
+		<img {src} alt="" class="sharp" />
+	{:else}
+		{#if thumb}<img src={thumb} alt="" />{/if}
+		<span class="spin">
+			{#if loading}<Icon name="loader" />{:else}<span class="badge"><Icon name="image" /></span>{/if}
+		</span>
+	{/if}
 </button>
 {#if error}<p class="hint" role="alert">{error}</p>{/if}
 
@@ -80,6 +85,10 @@
 		display: block;
 		filter: blur(12px) saturate(1.15);
 		transform: scale(1.12);
+	}
+	.photo img.sharp {
+		filter: none;
+		transform: none;
 	}
 	.spin {
 		position: absolute;

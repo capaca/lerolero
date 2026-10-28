@@ -63,6 +63,11 @@ test('João envia uma foto grande; Maria vê a prévia na lista e abre em tela c
 	expect(tamanho.w / tamanho.h).toBeCloseTo(1.5, 1);
 	await maria.page.getByRole('button', { name: 'Fechar foto' }).click();
 	await expect(aberta).toHaveCount(0);
+
+	// depois de aberta, o balão mostra a foto de verdade e nítida, não mais a prévia desfocada
+	const noBalao = foto.locator('img');
+	await expect(noBalao).toHaveAttribute('src', /^blob:/);
+	expect(await noBalao.evaluate((img) => getComputedStyle(img).filter)).toBe('none');
 });
 
 test('João escolhe duas fotos de uma vez e as duas chegam para Maria', async ({ novaPessoa }) => {
