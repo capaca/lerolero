@@ -1,8 +1,13 @@
+<script module lang="ts">
+	// Fotos já abertas, por hash: sair da conversa e voltar recria o balão, que não pode voltar ao borrão nem baixar
+	// de novo. Ficam até fechar o app (são poucas, de até 200 KB cada).
+	const opened = new Map<string, string>();
+</script>
+
 <script lang="ts">
 	// Foto no balão (RF-41): a prévia da mensagem aparece na hora, com o espaço já reservado pelo tamanho;
 	// o arquivo só é baixado ao tocar e abre em tela cheia.
 	import type { MessageMedia } from '@lerolero/core';
-	import { onDestroy } from 'svelte';
 
 	// Os blocos da conversa usam content-visibility (contain: layout), que faz o position: fixed valer em relação ao
 	// bloco e não à tela: a foto aberta vazava para baixo. Levar para o body resolve.
@@ -16,7 +21,7 @@
 
 	let { media }: { media: MessageMedia } = $props();
 
-	let src = $state<string>();
+	let src = $state<string | undefined>(opened.get(media.x));
 	let open = $state(false);
 	let loading = $state(false);
 	let error = $state('');
@@ -30,6 +35,7 @@
 			loading = true;
 			try {
 				src = URL.createObjectURL(await session.openMedia(media));
+				opened.set(media.x, src);
 			} catch {
 				error = m.bolha_foto_erro();
 				return;
@@ -40,7 +46,6 @@
 		open = true;
 	}
 
-	onDestroy(() => src && URL.revokeObjectURL(src));
 </script>
 
 <button type="button" class="photo" style:aspect-ratio={ratio} onclick={show} aria-label={m.bolha_foto_abrir()}>
