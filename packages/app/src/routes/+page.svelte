@@ -63,11 +63,12 @@
 	let hasRequests = $state(false);
 
 	async function loadConversations() {
-		hasRequests = (await session.listRequests()).length > 0;
+		hasRequests = (await session.listRequests()).length + (await session.listGroupRequests()).length > 0;
 		const list = await session.listConversations();
 		const shown: ConversationRecord[] = [];
 		for (const conversation of list) {
 			// pedido e bloqueado não entram na lista: ficam em Contatos
+			if (conversation.group?.request) continue; // pedido de grupo (ou grupo bloqueado) também fica em Contatos
 			const state = conversation.group ? 'aceito' : (await session.getContact(conversation.members[0]))?.state;
 			if (state !== 'pedido' && state !== 'bloqueado') shown.push(conversation);
 		}

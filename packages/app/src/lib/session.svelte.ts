@@ -3,7 +3,10 @@
 
 import {
 	acceptRequest,
+	acceptGroupRequest,
 	blockContact,
+	blockGroupRequest,
+	listGroupRequests,
 	listBlocked,
 	listRequests,
 	unblockContact,
@@ -351,7 +354,8 @@ class Session {
 	}
 
 	private async afterGroupChange({ conversation, joined, newMembers }: StoredGroupChange) {
-		if (!conversation.group?.amMember) return;
+		// grupo que ainda é pedido (RF-12): não me apresento nem repasso nada até aceitar, para não confirmar que estou aqui (T7)
+		if (!conversation.group?.amMember || conversation.group.request) return;
 		const myName = this.current.displayName;
 		if (joined) await this.sendGroupChange(introduce(conversation, myName));
 		else if (newMembers.length) await this.sendGroupChange(introduce(conversation, myName, newMembers));
@@ -745,6 +749,24 @@ class Session {
 
 	listBlocked() {
 		return listBlocked(storage);
+	}
+
+	/** Grupos em que alguém que não é contato me pôs (RF-12). */
+	listGroupRequests() {
+		return listGroupRequests(storage);
+	}
+
+	/** Aceitar o grupo: passa à lista e só agora me apresento aos membros. */
+	async acceptGroupRequest(conversationId: string) {
+		const accepted = await acceptGroupRequest(storage, conversationId);
+		if (accepted) await this.afterGroupChange({ conversation: accepted, isNew: true, joined: true, newMembers: [] });
+		this.version++;
+	}
+
+	/** Bloquear o grupo (RF-13): bloqueia quem me adicionou e descarta o grupo daqui, sem aviso a ninguém. */
+	async blockGroupRequest(conversationId: string) {
+		await blockGroupRequest(storage, conversationId, (id) => this.discardUpload(id));
+		this.version++;
 	}
 
 	async acceptRequest(publicKey: string) {
