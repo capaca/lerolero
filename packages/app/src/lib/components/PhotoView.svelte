@@ -45,7 +45,9 @@
 
 <button type="button" class="photo" style:aspect-ratio={ratio} onclick={show} aria-label={m.bolha_foto_abrir()}>
 	{#if thumb}<img src={thumb} alt="" />{/if}
-	{#if loading}<span class="spin"><Icon name="loader" /></span>{/if}
+	<span class="spin">
+		{#if loading}<Icon name="loader" />{:else}<span class="badge"><Icon name="image" /></span>{/if}
+	</span>
 </button>
 {#if error}<p class="hint" role="alert">{error}</p>{/if}
 
@@ -69,11 +71,15 @@
 		overflow: hidden;
 		background: var(--line);
 	}
+	/* a prévia tem só 96 px: esticada fica serrilhada, então o desfoque é proposital (como no WhatsApp e no Telegram).
+	   A escala maior esconde a borda clara que o blur faz nas pontas. */
 	.photo img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
 		display: block;
+		filter: blur(12px) saturate(1.15);
+		transform: scale(1.12);
 	}
 	.spin {
 		position: absolute;
@@ -81,6 +87,15 @@
 		display: grid;
 		place-items: center;
 		color: #fff;
+	}
+	/* avisa que a foto de verdade abre ao tocar */
+	.badge {
+		display: grid;
+		place-items: center;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 50%;
+		background: #0006;
 	}
 	.full {
 		position: fixed;
