@@ -42,6 +42,7 @@ Levantamentos que embasam decisões, com a data em que foram feitos.
 | Estudo | Data |
 |---|---|
 | [Apps de mensagens brasileiros](estudos/apps-brasileiros.md) | 2026-10-22 |
+| [Escala do WhatsApp × Lero-lero](estudos/escala-whatsapp.md) | 2026-10-28 |
 
 ## Processo
 
