@@ -43,6 +43,16 @@ test('desconhecido vira pedido em Contatos, com ponto no ícone; aceitar abre a 
 	await expect(maria.page.getByRole('link', { name: 'Contatos', exact: true })).toBeVisible(); // sem ponto
 });
 
+test('pedido que chega com Contatos aberto aparece sem recarregar', async ({ novaPessoa }) => {
+	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
+	await adicionarPeloConvite(maria, joao);
+	await maria.page.goto('./contatos');
+	await expect(maria.page.getByRole('tab', { name: 'Pedidos', exact: true })).toBeVisible(); // ainda sem pedido
+
+	await enviarTexto(joao.page, 'oi, sou eu');
+	await expect(maria.page.getByRole('tab', { name: 'Pedidos (1)' })).toBeVisible({ timeout: 20_000 });
+});
+
 test('bloquear apaga a conversa e descarta o que vier; desbloquear volta como pedido', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
 	await adicionarPeloConvite(maria, joao);

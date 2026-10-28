@@ -5,7 +5,6 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { contactName, type ContactRecord, type GroupRequest, type MessageRequest } from '@lerolero/core';
-	import { onMount } from 'svelte';
 	import { previewText } from '#lib/notices.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
@@ -36,14 +35,20 @@
 		document.getElementById(`aba-${next}`)?.focus();
 	}
 
-	onMount(async () => {
+	// recarrega quando chega pedido, ou quando algo muda com a página aberta (aceitar, bloquear, convite)
+	$effect(() => {
+		void session.version;
+		void load();
+	});
+
+	async function load() {
 		[contacts, requests, groupRequests, blocked] = await Promise.all([
 			session.listContacts(),
 			session.listRequests(),
 			session.listGroupRequests(),
 			session.listBlocked()
 		]);
-	});
+	}
 </script>
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.contatos_titulo() })}</title></svelte:head>
