@@ -11,6 +11,9 @@
 	import { applyTextSize, readTextSize } from '#lib/text-size.ts';
 	import type { LayoutProps } from './$types';
 
+	// app em dev: a barra do celular na cor do "Lero local" (o manifest já sai com ela, vite.config.ts)
+	if (__APP_LOCAL__) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', __APP_LOCAL_COLOR__);
+
 	let { children }: LayoutProps = $props();
 
 	// versão nova do app ativada pelo service worker: avisa em vez de recarregar sozinho,
@@ -122,6 +125,9 @@
 {#if __APP_HOMOLOG__}
 	<!-- moldura laranja: esta é a homologação, com outra conta, e não o app de verdade (ADR-0007) -->
 	<p class="homolog" aria-hidden="true"><span>{m.layout_homologacao()}</span></p>
+{:else if __APP_LOCAL__}
+	<!-- moldura roxa: o app em dev (scripts/celular.sh), com outra conta -->
+	<p class="homolog local" aria-hidden="true" style:--frame={__APP_LOCAL_COLOR__}><span>{m.layout_local()}</span></p>
 {/if}
 
 <style>
@@ -169,7 +175,7 @@
 		position: fixed;
 		inset: 0;
 		margin: 0;
-		border: 3px solid #c2410c;
+		border: 3px solid var(--frame, #c2410c);
 		pointer-events: none;
 		z-index: 100;
 	}
@@ -180,7 +186,7 @@
 		transform: translateX(-50%);
 		padding: 0 0.5rem 0.1rem;
 		border-radius: 0 0 6px 6px;
-		background: #c2410c;
+		background: var(--frame, #c2410c);
 		color: #fff;
 		font-size: 0.65rem;
 		font-weight: 600;

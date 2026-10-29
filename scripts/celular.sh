@@ -7,6 +7,8 @@
 # celular, uma vez só: chrome://flags/#unsafely-treat-insecure-origin-as-secure, colar o endereço que este
 # script mostra, Enabled e Relaunch. Se o IP do Mac mudar, o endereço da flag precisa mudar junto.
 # A origem é outra que a da produção e a da homologação: os dados de lá não são tocados.
+# Instalado (menu do Chrome → Instalar app ou Adicionar à tela inicial), aparece como "Lero local", com a barra e a
+# moldura roxas (vite.config.ts), para não confundir com o da produção nem com o da homologação.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."

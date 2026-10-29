@@ -3,6 +3,8 @@
 declare global {
 	const __APP_RELEASE__: string;
 	const __APP_HOMOLOG__: boolean;
+	const __APP_LOCAL__: boolean;
+	const __APP_LOCAL_COLOR__: string;
 
 	namespace App {
 		// interface Error {}
