@@ -49,6 +49,10 @@ Escolhas do Pedro em 2026-10-22:
   aprovado para o GitHub. Um commit novo deixa o status pendente outra vez; o rótulo sai depois de cada rodada.
 - **Mudança só de documentação** (`docs/` ou arquivos `.md`) dispensa os testes de integração e pula os passos do
   `verificar`. O job roda e termina verde, porque uma checagem obrigatória que não roda deixa o PR esperando para sempre.
+  Desde 2026-10-28, mudança só de **bastidores** (`scripts/` e `.claude/` da raiz: scripts e skills do assistente, que
+  não entram no app, no build nem nos testes) também dispensa os testes de integração e e2e e não vai para a
+  homologação; o `verificar` continua rodando inteiro para ela. Antes, um PR só com um script novo rodava as duas suítes
+  lentas e publicava a homologação sem mudar nada no app.
 - **Deploy só na release** (`release.yml`, disparo manual na `main` escolhendo `patch`, `minor` ou `major`): calcula a
   versão a partir da última tag, verifica, monta o site, publica no Pages e só então cria a tag `vX.Y.Z` e a GitHub
   Release com as notas geradas dos PRs. Uma release por vez. Desde a [ADR-0007](0007-homologacao.md) (2026-10-22), cada

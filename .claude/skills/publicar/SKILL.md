@@ -58,7 +58,8 @@ Passe ao Pedro, logo em seguida, o link do PR e os das execuções que o script 
 ## 4. Testes sob demanda e merge
 
 - O merge exige `verificar` (tipos, testes unitários e build, a cada commit), `testes de integração` (relays reais) e
-  `testes e2e`. PR só de documentação (`docs/` ou `.md`) dispensa os dois últimos; o script reconhece.
+  `testes e2e`. PR só de documentação (`docs/` ou `.md`) ou de bastidores (`scripts/` e `.claude/` da raiz) dispensa os
+  dois últimos; o script reconhece.
 - Espere em segundo plano com `scripts/pr.sh esperar` (uma linha por check; se falhar, o passo e as linhas de erro)
   e diga o resultado.
 - Commit novo no PR, ou falha por instabilidade de relay público: `scripts/pr.sh rotular`. Os rótulos só disparam
@@ -70,7 +71,7 @@ Passe ao Pedro, logo em seguida, o link do PR e os das execuções que o script 
 O merge dispara `homologacao.yml`, que publica o app em https://lerolero-app.github.io/lerolero/ (ADR-0007): outra
 origem, com moldura laranja "Homologação" e outra conta, sem tocar nos dados da produção. Rode
 `scripts/pr.sh homologacao` (link da execução, espera e confere se o `commit.txt` é a ponta da `main`), passe o link
-e diga o que conferir no celular nesse endereço. Mudança só de docs não vai para a homologação.
+e diga o que conferir no celular nesse endereço. Mudança só de docs ou bastidores não vai para a homologação.
 
 ## 6. Release
 

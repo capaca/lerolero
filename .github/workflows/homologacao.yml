@@ -9,7 +9,8 @@ name: Homologação
 on:
   push:
     branches: [main]
-    paths-ignore: ['docs/**', '**.md']
+    # docs e bastidores da raiz (scripts/, .claude/) não mudam o app
+    paths-ignore: ['docs/**', '**.md', 'scripts/**', '.claude/**']
   workflow_dispatch:
 
 permissions:

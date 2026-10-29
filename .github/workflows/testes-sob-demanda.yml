@@ -27,13 +27,14 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       SHA: ${{ github.event.pull_request.head.sha }}
     steps:
-      # PR só de documentação (docs/ ou arquivos .md) não precisa dos testes lentos
+      # PR só de documentação ou de bastidores (docs/, arquivos .md, scripts/ e .claude/ da raiz, que não entram no
+      # app nem nos testes) não precisa dos testes lentos
       # com a fila do Actions lenta, este job pode rodar depois da rodada pedida pelo rótulo; não
       # sobrescreve o resultado dela
       - name: Marca o status do commit
         run: |
           if gh pr diff ${{ github.event.pull_request.number }} -R "$GITHUB_REPOSITORY" --name-only \
-              | grep -qvE '^docs/|\.md$'; then
+              | grep -qvE '^docs/|^scripts/|^\.claude/|\.md$'; then
             state=pending; docs=false
           else
             state=success; docs=true
@@ -44,7 +45,7 @@ jobs:
               echo "o commit já tem status de $context"; continue
             fi
             label=$([ "$context" = "testes e2e" ] && echo e2e-tests || echo integration-tests)
-            desc=$([ $docs = true ] && echo "Só documentação: dispensado" || echo "Ponha o rótulo $label para rodar")
+            desc=$([ $docs = true ] && echo "Só documentação ou bastidores: dispensado" || echo "Ponha o rótulo $label para rodar")
             gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=$state -f context="$context" -f description="$desc"
           done
 
