@@ -8,9 +8,9 @@ caminho) está no [histórico de entregas](historico.md).
 
 ## Onde estamos
 
-- **Feito:** M0 (menos duas esperas), M1 e M2 inteiros; do M3 só faltam o cartão de perfil, editar e mencionar; do M4,
+- **Feito:** M0 (menos duas esperas), M1 e M2 inteiros; do M3 só faltam editar e mencionar; do M4,
   pedidos de mensagem e bloqueio.
-- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 8).
+- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 9).
 - **Em produção:** https://capaca.github.io/lerolero/; homologação em https://lerolero-app.github.io/lerolero/.
 
 ## Premissas
@@ -28,7 +28,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M0 Fundação | 3 sem | ✅ 2026-10-16 a 22; faltam medir no aparelho de 2 GB e confirmar a retenção dos relays |
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
-| M3 Conversa do dia a dia | 6 sem | Em andamento desde 2026-10-26: itens 8 e 9 da ordem |
+| M3 Conversa do dia a dia | 6 sem | Em andamento desde 2026-10-26: falta o item 9 da ordem |
 | M4 Segurança e confiança | 4 sem | Pedidos e bloqueio feitos; itens 10 a 15 da ordem |
 | M5 Polimento | 4 sem | A fazer: item 16 |
 | Revisão de prontidão | — | A fazer, antes do beta |
@@ -53,7 +53,7 @@ do WhatsApp.
 5. Status de entrega e de leitura (M3). ✅ Feita em 2026-10-28.
 6. Seleção de várias mensagens: favoritar, excluir, copiar e encaminhar (M3). ✅ Feita em 2026-10-28.
 7. Etapa 3 de UX/UI: aviso de sem conexão, tamanho da letra, nível do microfone (M3). ✅ Feita em 2026-10-28.
-8. Cartão de perfil privado com nome e foto (M3; Q-P5, RF-02).
+8. Cartão de perfil privado com nome e foto (M3; Q-P5, RF-02). ✅ Feita em 2026-10-29.
 9. Editar mensagem e mencionar com `@` (M3; RF-24, 35).
 10. Backup cifrado de contatos, grupos e configurações (M4; RF-06). Decide se as favoritas entram.
 11. Prova de trabalho (M4; RF-90, T8). Pedidos de mensagem e bloqueio já feitos em 2026-10-26.
@@ -115,7 +115,7 @@ uma foto em até 200 KB.
 - ✅ Etapa 3 de UX/UI: sem conexão, tamanho da letra (RNF-65), nível do microfone.
 - ✅ Endereços de páginas viram links, com cuidado com desconhecidos (T9, T18).
 - ✅ Excluir conversa.
-- ⬜ Cartão de perfil privado com nome e foto (Q-P5, RF-02). Item 8.
+- ✅ Cartão de perfil privado com nome e foto (Q-P5, RF-02).
 - ⬜ Editar mensagem (RF-24). Item 9.
 - ⬜ Mencionar alguém no grupo com `@` (RF-35). Item 9.
 - ⬜ Arquivos além de fotos e "Salvar" no aparelho (RF-44, 45). **Ainda fora da ordem**; ver "Pedidos e ideias".
@@ -193,6 +193,8 @@ Registrados a pedido do Pedro; entram na ordem quando ele decidir.
   é baixar a foto sem toque, como o WhatsApp, mas isso gasta dados e mostra o IP a quem não é contato (T7). Proposta:
   só de contatos aceitos e talvez só no Wi-Fi.
 - **Câmera na hora** para fotos (hoje só a galeria).
+- **Ajustar o recorte da foto de perfil** (RF-02; 2026-10-29). Hoje o app usa o quadrado do meio da foto escolhida.
+  Tela para arrastar e aproximar antes de salvar, como no WhatsApp.
 - **Qualidade do som do áudio** (2026-10-22 e 26). Opus a 28 kbps com supressão de ruído e cancelamento de eco do
   navegador: sem cortes, mas ainda "um pouco feio" em lugar barulhento. Testar, comparando gravações no Motorola do
   Pedro: subir a taxa (36 a 48 kbps); desligar o cancelamento de eco; modo de voz do Opus; RNNoise em WebAssembly

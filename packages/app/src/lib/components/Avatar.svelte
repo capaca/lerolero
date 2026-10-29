@@ -16,19 +16,32 @@
 </script>
 
 <script lang="ts">
-	// Círculo com as iniciais do contato; sem nome conhecido, mostra o boneco.
-	// A foto entra aqui quando houver o cartão de perfil (Q-P5).
+	// Círculo com a foto do cartão de perfil (Q-P5, RF-02) ou as iniciais do contato; sem nome conhecido, o boneco.
+	// A sessão decide de quem a foto pode aparecer (de pedido de mensagem não, T9).
+	import { session } from '#lib/session.svelte.ts';
 	import Icon from './Icon.svelte';
 
 	// grupo: ícone de pessoas, para não confundir com um contato que tenha as mesmas iniciais
-	let { name, publicKey, size = 44, group = false }: { name?: string; publicKey: string; size?: number; group?: boolean } = $props();
+	// showPhoto={false}: só as iniciais (a tela do perfil, ao tirar a foto antes de salvar)
+	let {
+		name,
+		publicKey,
+		size = 44,
+		group = false,
+		showPhoto = true
+	}: { name?: string; publicKey: string; size?: number; group?: boolean; showPhoto?: boolean } = $props();
 
 	const letters = $derived(name && !group ? initials(name) : '');
+	const photo = $derived(group || !showPhoto ? undefined : session.photos[publicKey]);
 </script>
 
-<span class="avatar" style:--h={hue(publicKey)} style:--size="{size}px" aria-hidden="true">
-	{#if letters}{letters}{:else}<Icon name={group ? 'users' : 'user'} size={Math.round(size * 0.5)} />{/if}
-</span>
+{#if photo}
+	<img class="avatar" src={photo} alt="" style:--size="{size}px" aria-hidden="true" />
+{:else}
+	<span class="avatar" style:--h={hue(publicKey)} style:--size="{size}px" aria-hidden="true">
+		{#if letters}{letters}{:else}<Icon name={group ? 'users' : 'user'} size={Math.round(size * 0.5)} />{/if}
+	</span>
+{/if}
 
 <style>
 	.avatar {
@@ -44,6 +57,10 @@
 		font-size: calc(var(--size) * 0.38);
 		line-height: 1;
 		user-select: none;
+	}
+	img.avatar {
+		object-fit: cover;
+		background: var(--surface);
 	}
 	@media (prefers-color-scheme: dark) {
 		.avatar {

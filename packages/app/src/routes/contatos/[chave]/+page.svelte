@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Avatar from '#lib/components/Avatar.svelte';
 	import BackLink from '#lib/components/BackLink.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
 	import StarredList from '#lib/components/StarredList.svelte';
@@ -46,6 +47,7 @@
 	{#if contact === null}
 		<p>{m.contato_nao_encontrado()}</p>
 	{:else if contact}
+		<div class="photo"><Avatar name={contactName(contact)} publicKey={contact.publicKey} size={96} /></div>
 		<h1>{contactName(contact)}</h1>
 		{#if contact.chosenName}
 			<p class="hint">{m.contato_se_apresenta({ nome: contact.chosenName })}</p>
@@ -92,6 +94,9 @@
 </main>
 
 <style>
+	.photo {
+		margin-top: 0.5rem;
+	}
 	.danger {
 		background: var(--danger);
 		border-color: var(--danger);

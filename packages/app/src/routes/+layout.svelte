@@ -27,6 +27,7 @@
 			'/ajustes',
 			'/ajustes/frase',
 			'/ajustes/comentario',
+			'/ajustes/perfil',
 			'/favoritas',
 			'/contatos',
 			'/contatos/meu-convite',

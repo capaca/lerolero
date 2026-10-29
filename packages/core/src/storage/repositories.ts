@@ -11,6 +11,7 @@ import type {
 	MediaRecord,
 	MessageRecord,
 	OutboxRecord,
+	ProfileRecord,
 	ReactionRecord,
 	SeenWrapRecord
 } from './records.ts';
@@ -97,6 +98,12 @@ export interface ReactionRepository {
 	deleteByMessage(messageId: string): Promise<void>;
 }
 
+export interface ProfileRepository {
+	get(publicKey: string): Promise<ProfileRecord | undefined>;
+	put(profile: ProfileRecord): Promise<void>;
+	list(): Promise<ProfileRecord[]>;
+}
+
 export type Storage = {
 	identity: IdentityRepository;
 	settings: SettingsRepository;
@@ -109,6 +116,7 @@ export type Storage = {
 	media: MediaRepository;
 	groupEvents: GroupEventRepository;
 	reactions: ReactionRepository;
+	profiles: ProfileRepository;
 	close(): void;
 };
 
@@ -184,6 +192,11 @@ export function openStorage(name?: string): Storage {
 			listBySender: (messageId, sender) => db.reactions.where('messageId').equals(messageId).and((r) => r.sender === sender).toArray(),
 			listByConversation: (conversationId) => db.reactions.where('conversationId').equals(conversationId).toArray(),
 			deleteByMessage: async (messageId) => void (await db.reactions.where('messageId').equals(messageId).delete())
+		},
+		profiles: {
+			get: (publicKey) => db.profiles.get(publicKey),
+			put: async (profile) => void (await db.profiles.put(profile)),
+			list: () => db.profiles.toArray()
 		},
 		close: () => db.close()
 	};

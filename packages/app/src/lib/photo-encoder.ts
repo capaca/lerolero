@@ -1,6 +1,6 @@
-// Codificador de foto do app: desenha no canvas e gera JPEG (o core decide os limites, RNF-23/24).
+// Codificador de foto do app: desenha no canvas e gera JPEG (o core decide os limites, RNF-23/24 e RF-02).
 // JPEG porque o Safari não codifica WebP no canvas; a orientação EXIF vale na hora de desenhar.
-import { preparePhoto, type PhotoEncoder } from '@lerolero/core';
+import { preparePhoto, prepareProfilePhoto, type PhotoEncoder } from '@lerolero/core';
 
 function canvasBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
 	return new Promise((resolve, reject) =>
@@ -27,6 +27,30 @@ export async function prepareFromFile(file: Blob) {
 			return { blob: await canvasBlob(canvas, quality), width, height };
 		};
 		return await preparePhoto(encode);
+	} finally {
+		bitmap.close();
+	}
+}
+
+/** Foto de perfil (RF-02): o quadrado do meio da foto escolhida, pequeno, com a prévia para o cartão. */
+export async function prepareProfileFromFile(file: Blob) {
+	const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+	try {
+		const crop = Math.min(bitmap.width, bitmap.height);
+		const sx = (bitmap.width - crop) / 2;
+		const sy = (bitmap.height - crop) / 2;
+		const encode: PhotoEncoder = async (maxSide, quality) => {
+			const side = Math.max(1, Math.min(maxSide, crop));
+			const canvas = document.createElement('canvas');
+			canvas.width = side;
+			canvas.height = side;
+			const context = canvas.getContext('2d')!;
+			context.fillStyle = '#fff';
+			context.fillRect(0, 0, side, side);
+			context.drawImage(bitmap, sx, sy, crop, crop, 0, 0, side, side);
+			return { blob: await canvasBlob(canvas, quality), width: side, height: side };
+		};
+		return await prepareProfilePhoto(encode);
 	} finally {
 		bitmap.close();
 	}

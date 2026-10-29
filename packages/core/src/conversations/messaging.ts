@@ -14,7 +14,8 @@ import { replyOf } from './interactions.ts';
 /**
  * Tag própria com o nome de quem envia, só na primeira mensagem de cada conversa:
  * o nome é privado (não há perfil público), então viaja dentro da mensagem cifrada.
- * Outros apps Nostr ignoram tags que não conhecem.
+ * Outros apps Nostr ignoram tags que não conhecem. O cartão de perfil (contacts/profile.ts)
+ * leva o nome também; a tag continua para quem tem uma versão sem o cartão.
  */
 export const NAME_TAG = 'nome';
 

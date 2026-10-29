@@ -75,12 +75,14 @@ export const MAX_TEXT_LENGTH = 4000;
 /** Reação (NIP-25) e confirmação de entrega/leitura (kind próprio, docs/06 §3.4); o 4441 sai da faixa 4440–4449 reservada. */
 export const REACTION_KIND = 7;
 export const RECEIPT_KIND = 4441;
+/** Cartão de perfil (contacts/profile.ts, Q-P5). */
+export const PROFILE_KIND = 4442;
 /** Confirmações agrupadas: um evento cobre várias mensagens, mas não um número sem fim. */
 export const MAX_RECEIPT_IDS = 200;
 export const MAX_REACTION_LENGTH = 16;
 
 /** Tipos de rumor que o app escreve. */
-export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND;
+export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND | typeof PROFILE_KIND;
 
 /** Membros de grupo além de mim que recebem um embrulho; 20 cobre os 19 outros membros e alguém que acabou de sair (RF-30). */
 const MAX_GROUP_RECIPIENTS = 20;
@@ -101,6 +103,7 @@ function checkMessage(kind: number, content: string, tags: string[][]) {
 		if (ids === 0 || ids > MAX_RECEIPT_IDS) throw new Error('confirmação sem mensagens ou com mensagens demais');
 		if (!tags.some((t) => t[0] === 'status' && (t[1] === 'entregue' || t[1] === 'lida'))) throw new Error('confirmação sem o estado');
 	}
+	if (kind === PROFILE_KIND && !tags.some((t) => t[0] === 'nome' && t[1]?.trim())) throw new Error('cartão de perfil sem nome');
 }
 
 /**

@@ -442,6 +442,7 @@
 	"comum_sim": "sim",
 	"comum_nao": "não",
 	"ajustes_conta": "Sua conta",
+	"ajustes_editar_perfil": "Editar nome e foto",
 	"ajustes_nome": "Nome: **{nome}**",
 	"ajustes_chave_dica": "Sua chave pública (identifica você na rede):",
 	"ajustes_chave_copiada": "Copiada!",
@@ -511,6 +512,15 @@
 		}
 	],
 	"ajustes_versao": "Lero-lero {versao}",
+	"perfil_titulo": "Seu perfil",
+	"perfil_escolher_foto": "Escolher foto",
+	"perfil_trocar_foto": "Trocar foto",
+	"perfil_tirar_foto": "Tirar foto",
+	"perfil_foto_nova": "Foto nova, ainda não salva",
+	"perfil_foto_dica": "Aparece o quadrado do meio da foto.",
+	"perfil_privado_dica": "Seu nome e sua foto vão cifrados só para quem conversa com você. Não há perfil público, e quem só mandou um pedido de mensagem não vê sua foto.",
+	"perfil_salvando": "Salvando…",
+	"perfil_salvo": "Salvo. Seus contatos recebem o perfil novo.",
 	"ajustes_versao_homologacao": "Lero-lero {versao} · homologação",
 	"comentario_titulo": "Enviar comentário",
 	"comentario_contato": "Lero-lero (comentários)",
@@ -698,5 +708,7 @@
 	"roteiro_passo_20": "Extra: B manda uma foto para A",
 	"roteiro_esperado_20": "A vê a prévia desfocada; o primeiro toque baixa e deixa a foto nítida no balão, o segundo abre em tela cheia; fechando e abrindo o app, ela continua nítida",
 	"roteiro_passo_21": "Extra: A escolhe Ajustes → Tamanho da letra → Muito grande e grava um áudio falando",
-	"roteiro_esperado_21": "As telas ficam com a letra maior e sem rolar para os lados; durante a gravação, a barra ao lado do tempo sobe e desce com a voz"
+	"roteiro_esperado_21": "As telas ficam com a letra maior e sem rolar para os lados; durante a gravação, a barra ao lado do tempo sobe e desce com a voz",
+	"roteiro_passo_22": "Extra: A escolhe Ajustes → Editar nome e foto, põe uma foto, muda o nome e salva",
+	"roteiro_esperado_22": "Sem A mandar mensagem nova, a foto de A aparece para B na lista de conversas e no contato; em B, o nome que B deu a A continua, e o nome novo aparece em “Se apresenta como”"
 }

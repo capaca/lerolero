@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Avatar from '#lib/components/Avatar.svelte';
 	import BackLink from '#lib/components/BackLink.svelte';
 	import Rich from '#lib/components/Rich.svelte';
 	import { goto } from '$app/navigation';
@@ -60,7 +61,13 @@
 
 	<section class="card">
 		<h2>{m.ajustes_conta()}</h2>
-		<p><Rich text={m.ajustes_nome({ nome: session.identity?.displayName ?? '' })} /></p>
+		<div class="me">
+			<Avatar name={session.identity?.displayName} publicKey={session.identity?.publicKey ?? ''} size={56} />
+			<div>
+				<p><Rich text={m.ajustes_nome({ nome: session.identity?.displayName ?? '' })} /></p>
+				<a href={resolve('/ajustes/perfil')}>{m.ajustes_editar_perfil()}</a>
+			</div>
+		</div>
 		<p class="hint">{m.ajustes_chave_dica()}</p>
 		<p class="key">{npub}</p>
 		<button onclick={copy}>{copied ? m.ajustes_chave_copiada() : m.ajustes_copiar_chave()}</button>
@@ -140,6 +147,15 @@
 </main>
 
 <style>
+	.me {
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
+		margin-bottom: 0.75rem;
+	}
+	.me p {
+		margin: 0 0 0.25rem;
+	}
 	.check {
 		display: flex;
 		gap: 0.6rem;

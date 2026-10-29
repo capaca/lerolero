@@ -21,6 +21,7 @@ export {
 	LockedError,
 	MAX_TEXT_LENGTH,
 	MAX_RECEIPT_IDS,
+	PROFILE_KIND,
 	RECEIPT_KIND,
 	REACTION_KIND,
 	type MessageKind,
@@ -38,6 +39,16 @@ export { toNpub } from './identity/npub.ts';
 export { DELAYS_MS, FREE_ATTEMPTS, NO_FAILURES, recordFailure, waitTime, type AttemptState } from './identity/attempts.ts';
 export { cleanName, InvalidInviteError, inviteLink, parseInvite, type Invite, type InviteProblem } from './contacts/invite.ts';
 export { addContact, contactName, listContacts, renameContact, SelfInviteError } from './contacts/contacts.ts';
+export {
+	markProfileSent,
+	photoAllowed,
+	PROFILE_FEATURES,
+	profileAudience,
+	profileDue,
+	profileEvent,
+	profileFromRumor,
+	storeProfile
+} from './contacts/profile.ts';
 export { RelayConnection, RelayError, type PublishResult, type Signer, type SocketFactory } from './net/connection.ts';
 export { IDLE_CLOSE_MS, RECONNECT_DELAYS_MS, RelayPool, type PoolOptions } from './net/pool.ts';
 export {
@@ -135,7 +146,7 @@ export {
 	UPLOAD_GIVE_UP_MS,
 	type UploadAttempt
 } from './media/pending-upload.ts';
-export { PHOTO_MAX_BYTES, PHOTO_MAX_SIDE, preparePhoto, THUMB_MAX_BYTES, THUMB_SIDE, type PhotoEncoder, type PreparedPhoto } from './media/photo.ts';
+export { PHOTO_MAX_BYTES, PHOTO_MAX_SIDE, preparePhoto, prepareProfilePhoto, PROFILE_PHOTO_SIDE, THUMB_MAX_BYTES, THUMB_SIDE, type PhotoEncoder, type PreparedPhoto } from './media/photo.ts';
 export { rms, VoiceStartDetector } from './media/voice-start.ts';
 export { decryptFile, encryptFile, MediaIntegrityError, sha256 } from './media/crypto.ts';
 export { openMedia, prepareMedia, type MediaRef } from './media/media.ts';
