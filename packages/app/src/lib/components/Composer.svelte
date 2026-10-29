@@ -31,6 +31,7 @@
 	// gravação de áudio: um toque começa, outro envia (RF-40)
 	let recording = $state<Recording>();
 	let elapsed = $state(0);
+	let level = $state(0);
 	let ticker: ReturnType<typeof setInterval> | undefined;
 
 	async function startAudio() {
@@ -38,10 +39,12 @@
 		try {
 			recording = await startRecording();
 			elapsed = 0;
+			level = 0;
 			ticker = setInterval(() => {
+				level = recording!.level();
 				elapsed = Math.floor((performance.now() - recording!.startedAt) / 1000);
 				if (elapsed >= MAX_SECONDS) void finishAudio();
-			}, 250);
+			}, 100);
 		} catch (err) {
 			error = friendlyError(err);
 		}
@@ -135,6 +138,7 @@
 			</button>
 			<span class="dot" aria-hidden="true"></span>
 			<span class="elapsed">{m.envio_gravando({ tempo: clock(elapsed) })}</span>
+			<span class="meter" aria-hidden="true"><span style:width="{Math.round(level * 100)}%"></span></span>
 			<button type="button" class="round primary" onclick={finishAudio} aria-label={m.envio_enviar_audio()}>
 				<Icon name="send" />
 			</button>
@@ -225,6 +229,19 @@
 		flex: 1;
 		white-space: nowrap;
 		font-variant-numeric: tabular-nums;
+	}
+	.meter {
+		flex: 0 0 4.5rem;
+		height: 0.5rem;
+		border-radius: 0.25rem;
+		background: var(--line);
+		overflow: hidden;
+	}
+	.meter > span {
+		display: block;
+		height: 100%;
+		background: var(--accent);
+		transition: width 0.1s linear;
 	}
 	.dot {
 		width: 0.7rem;
