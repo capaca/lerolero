@@ -138,7 +138,7 @@
 			<p><strong>{m.inicio_frase_titulo()}</strong></p>
 			<p>{m.inicio_frase_texto()}</p>
 			<div class="actions">
-				<a href={resolve('/ajustes/frase')}>{m.inicio_frase_guardar()}</a>
+				<a href={resolve('/ajustes/protecao')}>{m.inicio_frase_guardar()}</a>
 				<button class="link" onclick={snooze}>{m.inicio_frase_depois()}</button>
 			</div>
 		</div>

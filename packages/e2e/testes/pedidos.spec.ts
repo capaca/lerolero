@@ -29,7 +29,7 @@ test('desconhecido vira pedido em Contatos, com ponto no ícone; aceitar abre a 
 
 	// o primeiro contato da Maria vem de um pedido: é aqui que a frase é oferecida (Q-U1)
 	await maria.page.getByRole('button', { name: 'Aceitar' }).click();
-	await expect(maria.page.getByRole('heading', { name: 'Guarde sua frase de recuperação' })).toBeVisible();
+	await expect(maria.page.getByRole('heading', { name: 'Guarde seu código de recuperação' })).toBeVisible();
 	await maria.page.getByRole('button', { name: 'Depois' }).click();
 	await expect(maria.page.getByRole('heading', { name: 'João' })).toBeVisible();
 	await maria.page.goto('./');

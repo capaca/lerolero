@@ -47,11 +47,11 @@ export async function verFrase(page: Page, pin = PIN): Promise<string[]> {
 
 /**
  * Adiciona o contato aberto em /convite. O primeiro contato de cada pessoa passa antes por
- * "Guarde sua frase" (Q-U1), que aqui fica para depois.
+ * "Guarde seu código" (Q-U1), que aqui fica para depois.
  */
 export async function confirmarConvite(page: Page) {
 	await page.getByRole('button', { name: 'Adicionar' }).click();
-	const aviso = page.getByRole('heading', { name: 'Guarde sua frase de recuperação' });
+	const aviso = page.getByRole('heading', { name: 'Guarde seu código de recuperação' });
 	const contato = page.getByRole('button', { name: 'Salvar nome' });
 	await expect(aviso.or(contato)).toBeVisible({ timeout: 20_000 });
 	if (await aviso.isVisible()) await page.getByRole('button', { name: 'Depois' }).click();

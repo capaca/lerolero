@@ -91,3 +91,41 @@ export function pickCheckPositions(count = 2): number[] {
 	}
 	return [...positions].sort((a, b) => a - b);
 }
+
+// Arquivo e link de recuperação (RF-09 a, ADR-0009 D2). O texto do arquivo é traduzido (ADR-0008); daqui saem só
+// as partes que a leitura precisa achar em qualquer idioma: o fragmento do link e a lista "1. palavra".
+
+/** Fragmento do link de restauração: as palavras no `#`, que o navegador não manda ao servidor (T21). */
+export const recoveryFragment = (words: string[]) => '#' + words.join('-');
+
+/** As palavras de um fragmento `#palavra-palavra-…`, ou nada se não for uma frase válida. */
+export function phraseFromFragment(hash: string): string[] | undefined {
+	try {
+		return parsePhrase(decodeURIComponent(hash.replace(/^#/, '')).split('-'));
+	} catch {
+		return undefined;
+	}
+}
+
+/** Lista numerada das palavras, do jeito que o arquivo e o cartão a mostram. */
+export const numberedWords = (words: string[]) => words.map((w, i) => `${i + 1}. ${w}`).join('\n');
+
+/**
+ * As palavras de um arquivo de recuperação: pelo link, se estiver inteiro, ou pela lista numerada, que
+ * sobrevive à mudança de domínio e a quem editou o arquivo à mão.
+ */
+export function phraseFromRecoveryText(text: string): string[] | undefined {
+	for (const [, fragment] of text.matchAll(/\/restaurar(#[\p{L}-]+)/gu)) {
+		const words = phraseFromFragment(fragment!);
+		if (words) return words;
+	}
+	const numbered: string[] = [];
+	for (const [, position, word] of text.matchAll(/^\s*(\d{1,2})[.)º]?\s+(\p{L}+)\s*$/gmu)) {
+		numbered[Number(position) - 1] = word!;
+	}
+	try {
+		return parsePhrase(numbered.slice(0, PHRASE_LENGTH).filter(Boolean));
+	} catch {
+		return undefined;
+	}
+}

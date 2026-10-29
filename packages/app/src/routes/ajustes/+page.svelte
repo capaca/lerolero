@@ -113,8 +113,11 @@
 	<section class="card">
 		<h2>{m.ajustes_seguranca()}</h2>
 		<div class="actions stack">
-			<a href={resolve('/ajustes/frase')}>
-				{session.identity?.phraseConfirmed ? m.ajustes_ver_frase() : m.ajustes_conferir_frase()}
+			<a href={resolve('/ajustes/protecao')}>
+				{m.ajustes_protecao()} ·
+				<span class:warn={!session.identity?.phraseConfirmed}>
+					{session.identity?.phraseConfirmed ? m.ajustes_protecao_ok() : m.ajustes_protecao_falta()}
+				</span>
 			</a>
 			<button onclick={lock}>{m.ajustes_bloquear_agora()}</button>
 		</div>
@@ -176,6 +179,10 @@
 </main>
 
 <style>
+	.warn {
+		color: var(--danger);
+		font-weight: 600;
+	}
 	.me {
 		display: flex;
 		align-items: center;

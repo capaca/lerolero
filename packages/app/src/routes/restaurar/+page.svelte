@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { phraseFromFragment, phraseFromRecoveryText } from '@lerolero/core';
+	import { onMount, tick } from 'svelte';
 	import PhraseInput from '#lib/components/PhraseInput.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
@@ -15,6 +17,34 @@
 	let error = $state('');
 	/** frase aceita sem backup com o nome (RF-06): falta só o nome; o motivo muda o aviso */
 	let missingName = $state<'sem-backup' | 'sem-rede'>();
+
+	// restaurar pelo link ou pelo arquivo de recuperação (RF-09 a): as palavras chegam prontas, falta o PIN
+	let fromFile = $state(false);
+	let fileError = $state(false);
+	let fileInput = $state<HTMLInputElement>();
+	function fill(words: string[] | undefined) {
+		fileError = !words;
+		if (!words) return;
+		phrase = words.join(' ');
+		fromFile = true;
+		void tick().then(() => document.getElementById('pin')?.focus());
+	}
+
+	onMount(() => {
+		if (!location.hash) return;
+		const words = phraseFromFragment(location.hash);
+		// as palavras saem do endereço na hora, para não ficarem no histórico do navegador (T21)
+		replaceState(location.pathname + location.search, {});
+		if (words) fill(words);
+	});
+
+	async function openFile(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		input.value = '';
+		// um arquivo de recuperação tem menos de 2 KB; não lê nada muito maior
+		if (file) fill(file.size < 64_000 ? phraseFromRecoveryText(await file.text()) : undefined);
+	}
 
 	// PIN em dois campos: completar o 1º pula para o 2º; se não bater, treme e apaga o 2º
 	let pinAgainInput = $state<PinInput>();
@@ -75,7 +105,16 @@
 			</div>
 		</form>
 	{:else}
-		<p class="hint">{m.restaurar_dica()}</p>
+		{#if fromFile}
+			<p role="status">{m.restaurar_do_arquivo()}</p>
+		{:else}
+			<p class="hint">{m.restaurar_dica()}</p>
+		{/if}
+		<div class="actions file">
+			<button type="button" onclick={() => fileInput?.click()}>{m.restaurar_abrir_arquivo()}</button>
+			<input bind:this={fileInput} type="file" accept=".txt,text/plain" hidden onchange={openFile} />
+		</div>
+		{#if fileError}<p class="error" role="alert">{m.restaurar_arquivo_invalido()}</p>{/if}
 		<form onsubmit={submit}>
 			<PhraseInput id="frase" bind:value={phrase} />
 			<PinInput id="pin" label={m.restaurar_pin_rotulo()} bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
@@ -96,3 +135,9 @@
 		</form>
 	{/if}
 </main>
+
+<style>
+	.file {
+		margin-bottom: 1rem;
+	}
+</style>

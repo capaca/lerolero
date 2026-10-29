@@ -21,17 +21,19 @@ test('cadastro: PINs diferentes avisam, iguais criam a conta sem tocar em botão
 	await page.keyboard.type(PIN);
 	// a frase fica para o primeiro contato (Q-U1): sem ele, nem o aviso aparece
 	await noInicio(page);
-	await expect(page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+	await expect(page.getByText('Você ainda não guardou seu código de recuperação.')).toHaveCount(0);
 });
 
-test('a frase vem com o primeiro contato: guardar agora confere e some; depois adia', async ({ novaPessoa }) => {
+test('o código vem com o primeiro contato: anotar as palavras confere e some; depois adia', async ({ novaPessoa }) => {
 	const [maria, joao, ana] = await Promise.all([novaPessoa('Maria'), novaPessoa('João'), novaPessoa('Ana')]);
 
 	await joao.page.goto(await meuConvite(maria.page));
 	await joao.page.getByRole('button', { name: 'Adicionar' }).click();
-	await expect(joao.page.getByRole('heading', { name: 'Guarde sua frase de recuperação' })).toBeVisible();
+	await expect(joao.page.getByRole('heading', { name: 'Guarde seu código de recuperação' })).toBeVisible();
 	await joao.page.getByRole('button', { name: 'Guardar agora' }).click();
 	await digitarPin(joao.page, 'pin', PIN);
+	// o jeito principal é o arquivo (protecao.spec.ts); anotar à mão continua possível
+	await joao.page.getByRole('button', { name: 'Prefiro anotar as palavras' }).click();
 	await expect(joao.page.locator('ol li')).toHaveCount(12, { timeout: 20_000 });
 	const frase = (await joao.page.locator('ol li').allTextContents()).map((t) => t.replace(/^\d+/, '').trim());
 	await joao.page.getByLabel('Guardei as 12 palavras').check();
@@ -45,7 +47,7 @@ test('a frase vem com o primeiro contato: guardar agora confere e some; depois a
 	await expect(joao.page.getByRole('heading', { name: 'Maria' })).toBeVisible();
 	await joao.page.goto('./');
 	await noInicio(joao.page);
-	await expect(joao.page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+	await expect(joao.page.getByText('Você ainda não guardou seu código de recuperação.')).toHaveCount(0);
 
 	// "Depois" segue para o contato; a tela não aparece de novo e o aviso fica adiado
 	await maria.page.goto(await meuConvite(joao.page));
@@ -54,7 +56,7 @@ test('a frase vem com o primeiro contato: guardar agora confere e some; depois a
 	await expect(maria.page.getByRole('heading', { name: 'João' })).toBeVisible();
 	await maria.page.goto('./');
 	await noInicio(maria.page);
-	await expect(maria.page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+	await expect(maria.page.getByText('Você ainda não guardou seu código de recuperação.')).toHaveCount(0);
 	await maria.page.goto(await meuConvite(ana.page));
 	await maria.page.getByRole('button', { name: 'Adicionar' }).click();
 	await expect(maria.page.getByRole('heading', { name: 'Ana' })).toBeVisible();
@@ -62,7 +64,7 @@ test('a frase vem com o primeiro contato: guardar agora confere e some; depois a
 	// passado o adiamento, o aviso aparece na tela inicial
 	await esquecerAjuste(maria.page, 'lembreteFraseAdiadoAte');
 	await maria.page.goto('./');
-	await expect(maria.page.getByText('Você ainda não guardou sua frase de recuperação.')).toBeVisible({ timeout: 20_000 });
+	await expect(maria.page.getByText('Você ainda não guardou seu código de recuperação.')).toBeVisible({ timeout: 20_000 });
 });
 
 test('PIN: a sessão vencida pede o PIN; errado avisa, certo abre', async ({ novaPessoa }) => {
