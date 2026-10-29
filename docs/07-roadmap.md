@@ -8,7 +8,7 @@ caminho) está no [histórico de entregas](historico.md).
 
 ## Onde estamos
 
-- **Feito:** M0 (menos duas esperas), M1, M2 e M3 inteiros; do M4,
+- **Feito:** M0 (menos uma espera: o aparelho de 2 GB), M1, M2 e M3 inteiros; do M4,
   pedidos de mensagem e bloqueio, o backup cifrado e a prova de trabalho.
 - **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 12).
 - **Em produção:** https://capaca.github.io/lerolero/; homologação em https://lerolero-app.github.io/lerolero/.
@@ -25,7 +25,7 @@ caminho) está no [histórico de entregas](historico.md).
 
 | Marco | Estimativa | Situação |
 |---|---|---|
-| M0 Fundação | 3 sem | ✅ 2026-10-16 a 22; faltam medir no aparelho de 2 GB e confirmar a retenção dos relays |
+| M0 Fundação | 3 sem | ✅ 2026-10-16 a 22; falta medir no aparelho de 2 GB (retenção dos relays confirmada em 2026-10-29) |
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29 |
@@ -71,8 +71,8 @@ do WhatsApp.
 
 - ✅ Monorepo (`packages/core`, `packages/app`), TypeScript, Svelte, Vite, testes, CI, licença AGPL-3.0.
 - ✅ PWA publicado no GitHub Pages.
-- ⬜ Lista padrão de relays e Blossom (Q-R1): lista provisória com 7 relays aptos; falta confirmar a retenção a partir
-  de 2026-10-29.
+- ✅ Lista padrão de relays e Blossom (Q-R1): retenção de 7 dias confirmada em 2026-10-29 para toda a lista, menos o
+  Blossom cdn.hzrd149.com, trocado pelo blossom.jumble.social. Fica em aberto: relays no Brasil (Q-D2).
 - ⬜ Protótipo de medição (Q-N4): pronto e rodado num celular intermediário; falta rodar no aparelho de referência
   (Android 2 GB), que decide o [ADR-0002](adr/0002-stack-do-cliente.md).
 
