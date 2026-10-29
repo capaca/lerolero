@@ -54,4 +54,5 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
 - Comentários curtos explicando o porquê, com o requisito ou a ameaça quando houver (ex.: `RF-80`, `T15`).
 - Commits sem nenhuma linha de atribuição a IA.
 - Bug encontrado vem antes de qualquer outra coisa, com teste de regressão.
-- Para publicar, use a skill `publicar`; para conferir no navegador, `testar-no-navegador`.
+- Para começar o próximo trabalho, use a skill `proximo-item`; para publicar, `publicar`; depois do merge,
+  `fechar-ciclo`; para conferir no navegador, `testar-no-navegador`.
