@@ -136,6 +136,8 @@ export type MessageRecord = {
 	ack?: Receipt;
 	/** favoritada por mim (RF-28): marca só deste aparelho, sem aviso a ninguém */
 	starred?: boolean;
+	/** editada por quem escreveu (RF-24): horário da edição que vale, em segundos */
+	editedAt?: number;
 	/** apagada para todos (RF-25): fica o aviso no lugar, sem conteúdo */
 	deleted?: boolean;
 	/** aviso de grupo ("Ana adicionou Bruno"); a tela monta o texto, com os nomes atuais e na língua da pessoa */

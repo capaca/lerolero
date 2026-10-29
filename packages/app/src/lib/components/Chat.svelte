@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Conversa (1:1 ou grupo): mensagens, avisos de grupo, menu da mensagem e campo de envio.
 	// O topo e os avisos de cima ficam com a tela que usa o componente.
-	import { contactName, deliveryOf, forwardOf, type MessageRecord, type ReactionRecord } from '@lerolero/core';
+	import { canEdit, contactName, deliveryOf, forwardOf, withMentionLabels, type MessageRecord, type ReactionRecord } from '@lerolero/core';
 	import { page } from '$app/state';
 	import { onDestroy, tick, type Snippet } from 'svelte';
 	import Composer from './Composer.svelte';
@@ -108,8 +108,8 @@
 		// uma só: o texto como está; várias: com hora e nome, para o texto colado fazer sentido
 		const text =
 			copyable.length === 1
-				? copyable[0].text
-				: copyable.map((x) => `[${formatTime(x.createdAt)}] ${nameFor(x.sender)}: ${x.text}`).join('\n');
+				? withMentionLabels(copyable[0].text, mentionLabel)
+				: copyable.map((x) => `[${formatTime(x.createdAt)}] ${nameFor(x.sender)}: ${withMentionLabels(x.text, mentionLabel)}`).join('\n');
 		try {
 			await navigator.clipboard.writeText(text);
 			stopSelecting();
@@ -140,13 +140,26 @@
 	function previewOf(message: MessageRecord): string {
 		if (message.deleted) return m.citada_apagada();
 		if (message.media) return message.media.type.startsWith('audio/') ? m.previa_audio() : message.media.type.startsWith('image/') ? m.previa_foto() : '';
-		return message.text.replace(/\s+/g, ' ').trim().slice(0, 120);
+		return withMentionLabels(message.text, mentionLabel).replace(/\s+/g, ' ').trim().slice(0, 120);
 	}
 
 	function startReply() {
+		editing = undefined;
 		replying = menuFor;
 		menuFor = undefined;
 	}
+
+	// editar (RF-24): o campo recebe o texto da mensagem; enviar troca o texto em vez de mandar uma nova
+	let editing = $state.raw<MessageRecord>();
+	function startEdit() {
+		replying = undefined;
+		editing = menuFor;
+		menuFor = undefined;
+	}
+
+	// mencionar (RF-35): só nos grupos, entre os outros membros de agora
+	const mentionLabel = (publicKey: string) => `@${publicKey === me ? memberName({ me: true }) : nameOf ? memberName(nameOf(publicKey)) : otherName}`;
+	const members = $derived(nameOf ? recipients.map((publicKey) => ({ publicKey, name: memberName(nameOf(publicKey)) })) : undefined);
 
 	async function react(message: MessageRecord, emoji: string) {
 		menuFor = undefined;
@@ -191,7 +204,7 @@
 		menuFor = undefined;
 		if (!message) return;
 		try {
-			await navigator.clipboard.writeText(message.text);
+			await navigator.clipboard.writeText(withMentionLabels(message.text, mentionLabel));
 			copied = true;
 			clearTimeout(copiedTimer);
 			copiedTimer = setTimeout(() => (copied = false), 2000);
@@ -535,6 +548,7 @@
 								onquote={() => goToQuoted(msg.replyTo!)}
 								onreact={(emoji) => react(msg, emoji)}
 								onlink={(href, host) => (pendingLink = { href, host })}
+								{mentionLabel}
 								onmenu={() => openMenu(msg)}
 							/>
 						{/if}
@@ -563,6 +577,7 @@
 			myReaction={myReactionTo(menuFor.id)}
 			onreact={menuFor.upload ? undefined : (emoji) => react(menuFor!, emoji)}
 			onreply={menuFor.upload || closed ? undefined : startReply}
+			onedit={!closed && me && canEdit(menuFor, me) ? startEdit : undefined}
 			oncopy={menuFor.media ? undefined : copyMessage}
 			onforward={forwardOf(menuFor)
 				? () => {
@@ -613,6 +628,10 @@
 		{closed}
 		reply={replying ? { id: replying.id, name: nameFor(replying.sender), preview: previewOf(replying) } : undefined}
 		onclearReply={() => (replying = undefined)}
+		editing={editing ? { id: editing.id, text: editing.text } : undefined}
+		oncancelEdit={() => (editing = undefined)}
+		{members}
+		{mentionLabel}
 		bind:error
 	/>
 </div>

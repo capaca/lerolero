@@ -74,6 +74,10 @@ import {
 	sendTime,
 	storeOutgoing,
 	cleanName,
+	EDIT_KIND,
+	editMine,
+	editTags,
+	storeEdit,
 	markProfileSent,
 	photoAllowed,
 	prepareMedia,
@@ -380,6 +384,10 @@ class Session {
 		const rumor = await vault.unwrap(wrap);
 		if (rumor.kind === GROUP_CONTROL_KIND) return this.receiveGroupControl(rumor);
 		const me = this.current.publicKey;
+		if (rumor.kind === EDIT_KIND) {
+			if (await storeEdit(storage, me, rumor)) this.version++;
+			return;
+		}
 		if (rumor.kind === PROFILE_KIND) {
 			const card = await storeProfile(storage, me, rumor);
 			if (card) {
@@ -571,16 +579,17 @@ class Session {
 	 * A mensagem aparece na hora como "enviando" (RNF-12) e segue pela fila; sem internet,
 	 * sai quando a conexão voltar. `store: false` para o que não vira mensagem (pedido de apagar).
 	 */
-	private sendTo(conversationId: string, content: string, tags: string[][], kind: MessageKind, store = true) {
+	private sendTo(conversationId: string, content: string, tags: string[][], kind: MessageKind, store = true, at?: number) {
 		// Em fila: o horário de cada mensagem sai depois da anterior (sendTime), e a primeira para
 		// alguém espera a busca dos relays dele; sem a fila, a segunda pegava o mesmo segundo e
 		// chegava trocada (2026-10-22).
-		const run = this.sending.then(() => this.sendNow(conversationId, content, tags, kind, store));
+		const run = this.sending.then(() => this.sendNow(conversationId, content, tags, kind, store, at));
 		this.sending = run.catch(() => {});
 		return run;
 	}
 
-	private async sendNow(conversationId: string, content: string, tags: string[][], kind: MessageKind, store: boolean) {
+	/** `at`: horário fixo do rumor (a edição leva o da edição, não o da próxima mensagem) */
+	private async sendNow(conversationId: string, content: string, tags: string[][], kind: MessageKind, store: boolean, at?: number) {
 		const network = this.requireNetwork();
 		if (conversationId.startsWith('grupo:')) {
 			const conversation = await storage.conversations.get(conversationId);
@@ -592,7 +601,7 @@ class Session {
 				content,
 				[...nameTags, ...tags, groupTag],
 				kind,
-				sendTime(conversation)
+				at ?? sendTime(conversation)
 			);
 			if (store) {
 				await storeOutgoing(storage, wrapped.rumor);
@@ -610,7 +619,7 @@ class Session {
 			content,
 			[...nameTags, ...tags],
 			kind,
-			sendTime(await storage.conversations.get(conversationId))
+			at ?? sendTime(await storage.conversations.get(conversationId))
 		);
 		// guarda antes de buscar onde o contato recebe: com relays fora do ar a busca leva até ~10 s e, sem isto, a
 		// mensagem não aparecia nem ficava na fila (RNF-12)
@@ -634,6 +643,18 @@ class Session {
 		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
 		if (store) void this.sendProfile([recipient]);
 		return wrapped.rumor;
+	}
+
+	/**
+	 * Edita uma mensagem minha de texto (RF-24, até 15 minutos): muda aqui na hora e manda a edição a quem está na
+	 * conversa e aos meus outros aparelhos.
+	 */
+	async editMessage(conversationId: string, messageId: string, text: string) {
+		const before = await storage.messages.get(messageId);
+		const edited = await editMine(storage, this.current.publicKey, messageId, text);
+		if (!edited.editedAt || edited.editedAt === before?.editedAt) return;
+		this.version++;
+		await this.sendTo(conversationId, edited.text, editTags(edited), EDIT_KIND, false, edited.editedAt);
 	}
 
 	/** Envia texto para uma conversa (1:1 ou grupo), respondendo a uma mensagem dela se `replyTo` vier (RF-22). */

@@ -50,7 +50,7 @@
 | RF-21 | Lista de conversas ordenada pela mais recente, com contador de não lidas | Must | MVP |
 | RF-22 | Responder/citar uma mensagem específica | Should | MVP |
 | RF-23 | Reagir com emoji | Should | MVP |
-| RF-24 | Editar mensagem enviada | Should | MVP |
+| RF-24 | Editar mensagem de texto enviada, até 15 minutos depois; quem recebe vê "editada", sem o texto antigo (decidido em 2026-10-29; rejeitados: 1 hora, sem prazo, e mostrar o histórico) | Should | MVP |
 | RF-25 | Apagar mensagem para todos. Num sistema descentralizado isso é um **pedido**, não uma garantia: apps de terceiros podem ignorá-lo, e o app deve deixar isso claro | Should | MVP |
 | RF-26 | Busca local nas conversas | Could | MVP |
 | RF-27 | Mensagens temporárias (somem após 24 h, 7 dias etc.) | — | v1 |

@@ -12,6 +12,7 @@
 		myReaction,
 		onreact,
 		onreply,
+		onedit,
 		starred = false,
 		onstar,
 		onselect,
@@ -28,6 +29,8 @@
 		/** só no que já saiu e não foi apagado */
 		onreact?: (emoji: string) => void;
 		onreply?: () => void;
+		/** só nas minhas de texto, até 15 minutos depois (RF-24) */
+		onedit?: () => void;
 		/** favorita agora; `onstar` alterna (RF-28) */
 		starred?: boolean;
 		onstar?: () => void;
@@ -68,6 +71,9 @@
 		{/if}
 		{#if onreply}
 			<button class="item" onclick={onreply}><Icon name="reply" /> {m.menu_responder()}</button>
+		{/if}
+		{#if onedit}
+			<button class="item" onclick={onedit}><Icon name="pencil" /> {m.menu_editar()}</button>
 		{/if}
 		{#if onstar}
 			<button class="item" onclick={onstar}><Icon name="star" /> {starred ? m.menu_desfavoritar() : m.menu_favoritar()}</button>

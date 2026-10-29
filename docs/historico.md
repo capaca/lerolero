@@ -7,6 +7,16 @@ conhecidos".
 
 ## 2026-10-29
 
+- **Editar mensagem e mencionar com `@`** (item 9, RF-24 e 35; testes `edits.test.ts` e e2e `editar-mencionar`).
+  Escolhas do Pedro: editar até 15 minutos (rejeitados: 1 hora e sem prazo), com a marca "editada" e sem guardar o
+  texto antigo (rejeitado: mostrar o histórico), e tudo num PR só. A edição é o kind `4443`, com o texto novo inteiro;
+  só vale de quem escreveu e só para texto. Como a ordem dos embrulhos varia, uma edição que chega antes da mensagem
+  fica esperando por ela. "Editar" fica no menu das minhas mensagens; o campo mostra "Editando mensagem" e o botão de
+  salvar. A menção vai como `nostr:npub1…` no texto (NIP-27), a lista aparece ao digitar `@` nos grupos e cada um vê o
+  nome que conhece ("@~Bia" para quem não é contato, "@Você" destacado para quem foi mencionado), também na prévia
+  da lista, na citação e ao copiar. *Achado no caminho:* a prévia da lista cortava no meio de uma menção; agora a
+  menção conta como um nome curto. *Ficou de fora:* avisar quem foi mencionado (notificação ainda não existe) e
+  mencionar no 1:1.
 - **Cartão de perfil privado com nome e foto** (item 8, Q-P5, RF-02; testes `profile.test.ts` e e2e `perfil`). Escolhas
   do Pedro: o cartão leva nome, foto, versão/recursos do app e relays de DM (rejeitados: só nome e foto, ou sem os
   relays, que teriam de ganhar outro formato depois); vai a todos com quem já falei, no 1:1 e nos grupos (rejeitado: só
