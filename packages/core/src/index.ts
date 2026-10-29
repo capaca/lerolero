@@ -85,6 +85,8 @@ export {
 	listBlocked,
 	listGroupRequests,
 	listRequests,
+	MAX_SUSPECTS,
+	trimSuspects,
 	unblockContact,
 	type GroupRequest,
 	type MessageRequest

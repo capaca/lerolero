@@ -63,7 +63,8 @@
 	let hasRequests = $state(false);
 
 	async function loadConversations() {
-		hasRequests = (await session.listRequests()).length + (await session.listGroupRequests()).length > 0;
+		// "Possível spam" (sem prova de trabalho, RF-90) não acende o ponto
+		hasRequests = [...(await session.listRequests()), ...(await session.listGroupRequests())].some((r) => !r.suspect);
 		const list = await session.listConversations();
 		const shown: ConversationRecord[] = [];
 		for (const conversation of list) {

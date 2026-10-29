@@ -2,6 +2,9 @@
 // Erro de JavaScript na página faz o teste falhar no fim, mesmo que os passos tenham passado.
 import { get } from 'node:http';
 import { test as base, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { parseInvite } from '../core/src/contacts/invite.ts';
+import { createVault } from '../core/src/identity/vault.ts';
+import { APP_URL } from './servidores.ts';
 
 export { expect };
 
@@ -162,6 +165,26 @@ export async function recuperarConta(page: Page, frase: string[], pin = '246810'
 	await digitarPin(page, 'pin', pin);
 	await page.keyboard.type(pin);
 	await page.getByRole('button', { name: 'Recuperar conta' }).click();
+}
+
+/** Um "app antigo" (ou outro app Nostr): manda o embrulho direto ao relay, sem prova de trabalho. */
+export async function mandarSemProva(page: Page, texto: string) {
+	const { publicKey } = parseInvite(await meuConvite(page));
+	// o relay de mensagens local, da lista que o app usa na suíte (pela página: o fetch do Node recusa a porta 4190)
+	const url = new URL('relays.json', APP_URL).href;
+	const { dm } = await page.evaluate(async (url) => (await (await fetch(url)).json()) as { dm: string[] }, url);
+	const vault = createVault({ kdf: { memoryKiB: 64, iterations: 1, parallelism: 1 } });
+	await vault.create('123456');
+	const wrap = vault.wrapDirectMessage(publicKey, texto, [['nome', 'Loja']]).toRecipient;
+	const socket = new WebSocket(dm[0]!);
+	await new Promise<void>((ok, falha) => {
+		socket.onopen = () => socket.send(JSON.stringify(['EVENT', wrap]));
+		socket.onmessage = (e) => {
+			const [tipo, id, aceito] = JSON.parse(String(e.data)) as [string, string, boolean];
+			if (tipo === 'OK' && id === wrap.id) (aceito ? ok() : falha(new Error('relay recusou')), socket.close());
+		};
+		socket.onerror = () => falha(new Error('sem conexão com o relay'));
+	});
 }
 
 /** Esquece a sessão aberta (vale 5 min): a próxima abertura do app pede o PIN. */

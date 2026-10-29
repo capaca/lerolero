@@ -7,6 +7,7 @@ import {
 	adicionarPeloConvite,
 	adicionarUmAoOutro,
 	digitarPin,
+	mandarSemProva,
 	enviarAudio,
 	enviarTexto,
 	expect,
@@ -310,6 +311,13 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.goto(PSEUDO_URL + 'contatos?aba=pedidos');
 	await expect(page.locator('#painel-pedidos section h2')).toHaveCount(1);
 	await semTextoFixo(page, nomes);
+
+	// "Possível spam" (RF-90): pedido sem a prova de trabalho, com a seção aberta
+	await mandarSemProva(page, 'Promoção imperdível');
+	await page.goto(PSEUDO_URL + 'contatos?aba=pedidos');
+	await page.locator('details.spam summary').click({ timeout: 20_000 });
+	await expect(page.locator('details.spam .list a')).toHaveCount(1);
+	await semTextoFixo(page, [...nomes, 'Loja', 'Promoção imperdível']);
 
 	// grupo novo: os dois erros, depois criado com a Bia
 	await page.goto(PSEUDO_URL + 'grupo/novo');

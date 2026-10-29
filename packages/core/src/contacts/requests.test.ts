@@ -4,7 +4,7 @@ import type { KdfParams } from '../crypto/seal.ts';
 import { directConversationId, storeIncoming } from '../conversations/messaging.ts';
 import { createVault } from '../identity/vault.ts';
 import { openStorage } from '../storage/repositories.ts';
-import { acceptRequest, blockContact, listBlocked, listRequests, unblockContact } from './requests.ts';
+import { acceptRequest, blockContact, listBlocked, listRequests, MAX_SUSPECTS, trimSuspects, unblockContact } from './requests.ts';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 const closers: Array<() => void> = [];
@@ -18,8 +18,16 @@ async function setup() {
 	const b = await bob.create('123456');
 	const storage = openStorage(`pedidos-${n++}`);
 	closers.push(() => storage.close());
-	const send = async (text: string) => storeIncoming(storage, b.publicKey, bob.unwrap(alice.wrapDirectMessage(b.publicKey, text).toRecipient));
-	return { storage, alice: a.publicKey, send };
+	const send = async (text: string, options: { proven?: boolean } = {}) =>
+		storeIncoming(storage, b.publicKey, bob.unwrap(alice.wrapDirectMessage(b.publicKey, text).toRecipient), options);
+	/** Uma mensagem sem prova de alguém novo, a cada vez (horários crescentes). */
+	const stranger = async (createdAt: number) => {
+		const vault = createVault({ kdf: FAST });
+		await vault.create('123456');
+		const wrap = vault.wrapDirectMessage(b.publicKey, 'promoção imperdível', [], 14, createdAt).toRecipient;
+		return storeIncoming(storage, b.publicKey, bob.unwrap(wrap), { proven: false });
+	};
+	return { storage, alice: a.publicKey, send, stranger };
 }
 
 describe('pedidos de mensagem e bloqueio (RF-12, RF-13)', () => {
@@ -68,5 +76,42 @@ describe('pedidos de mensagem e bloqueio (RF-12, RF-13)', () => {
 		await blockContact(storage, alice, async () => {});
 		expect((await storage.contacts.get(alice))?.state).toBe('bloqueado');
 		expect(await send('oi')).toBeUndefined();
+	});
+});
+
+describe('possível spam (RF-90)', () => {
+	it('sem a prova, o pedido fica à parte; uma mensagem seguinte com a prova o põe nos pedidos normais', async () => {
+		const { storage, alice, send } = await setup();
+		await send('oi', { proven: false });
+		expect((await listRequests(storage)).map((r) => r.suspect)).toEqual([true]);
+		await send('atualizei o app');
+		expect((await listRequests(storage)).map((r) => r.suspect)).toEqual([false]);
+		expect((await storage.contacts.get(alice))?.unproven).toBeUndefined();
+	});
+
+	it('a falta de prova não mexe em quem já é contato, e aceitar tira a marca', async () => {
+		const { storage, alice, send } = await setup();
+		await storage.contacts.put({ publicKey: alice, state: 'aceito', dmRelays: [], addedAt: 1 });
+		await send('oi', { proven: false });
+		expect(await storage.contacts.get(alice)).toMatchObject({ state: 'aceito' });
+		expect((await storage.contacts.get(alice))?.unproven).toBeUndefined();
+
+		const other = await setup();
+		await other.send('oi', { proven: false });
+		await acceptRequest(other.storage, other.alice);
+		expect(await other.storage.contacts.get(other.alice)).toMatchObject({ state: 'aceito' });
+		expect((await other.storage.contacts.get(other.alice))?.unproven).toBeUndefined();
+	});
+
+	it(`guarda no máximo ${MAX_SUSPECTS} conversas de possível spam; as mais antigas saem`, async () => {
+		const { storage, send, stranger } = await setup();
+		await send('pedido de verdade');
+		for (let i = 0; i < MAX_SUSPECTS + 2; i++) await stranger(1_000 + i);
+		await trimSuspects(storage, async () => {});
+		const requests = await listRequests(storage);
+		expect(requests.filter((r) => r.suspect)).toHaveLength(MAX_SUSPECTS);
+		expect(requests.filter((r) => !r.suspect)).toHaveLength(1);
+		const times = requests.filter((r) => r.suspect).map((r) => r.conversation.lastMessageAt);
+		expect(Math.min(...times)).toBe(1_002);
 	});
 });

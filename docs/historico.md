@@ -7,6 +7,20 @@ conhecidos".
 
 ## 2026-10-29
 
+- **Prova de trabalho e "Possível spam"** (item 11, RF-90, T8; testes `pow.test.ts`, `requests.test.ts`,
+  `groups.test.ts` e e2e `spam`), em dois PRs. Quem envia põe a prova (NIP-13) no gift wrap do que vai para alguém
+  que ainda não lhe escreveu no 1:1, e do aviso que põe alguém num grupo; a mensagem aparece na tela na hora e a prova
+  é feita no worker. A mineração é do cofre (`proveWrap`, SHA-256 em WASM do hash-wasm), e não o `minePow` do
+  nostr-tools, que trocaria o horário sorteado do embrulho (NIP-59) pela hora atual. Dificuldade de **14 bits**, pela
+  medição no Motorola do Pedro (média 196 ms; 16 bits deu média de 870 ms e uma de 4,9 s). Quem recebe confere a
+  prova; o pedido de quem não é contato sem ela fica em **"Possível spam"**, no fim dos Pedidos, sem ponto nem
+  contagem, com no máximo 50 conversas. Escolhas do Pedro: mandar para Pedidos sem aviso em vez de descartar (quem
+  está numa versão antiga ou em outro app Nostr continua conseguindo escrever) e calibrar no celular dele.
+  *Corrigido na especificação:* "descartar sem decifrar" não é possível (o remetente só aparece ao abrir) e "só a
+  primeira mensagem" não fecha (quem envia não sabe se já foi aceito). *Limite:* 14 bits custam milissegundos num
+  servidor; a prova encarece o spam barato, e a defesa principal segue sendo a caixa de Pedidos. *Ficou de fora:*
+  medir no aparelho de 2 GB (a medição continua em Ajustes no app em dev) e limite de mensagens por conversa suspeita.
+
 - **Backup cifrado** (item 10, RF-06; testes `backup.test.ts` e e2e `backup`). Um evento kind `30078` (NIP-78) com a
   tag `d` `lerolero/backup`, cifrado com NIP-44 para a própria chave pelo cofre (método próprio: o `sign` continua sem
   assinar esse kind). Leva o nome e a foto (a referência no Blossom), os contatos aceitos e bloqueados com o nome dado a
