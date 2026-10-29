@@ -30,6 +30,9 @@ import {
 	removeMember,
 	renameGroup,
 	GROUP_CONTROL_KIND,
+	joinersOf,
+	needsProof,
+	POW_DIFFICULTY,
 	groupNames,
 	introduce,
 	storeGroupControl,
@@ -629,6 +632,10 @@ class Session {
 	private async sendGroupChange(change: GroupChange) {
 		const network = this.requireNetwork();
 		const wrapped = await vault.wrapGroupMessage(change.recipients, '', change.tags, GROUP_CONTROL_KIND, change.createdAt);
+		// quem entra e nunca me escreveu recebe o aviso com prova de trabalho (RF-90); decidido antes de guardar o aviso
+		const joiners = joinersOf(change);
+		const proofFor = new Set<string>();
+		for (const k of joiners) if (await needsProof(storage, k)) proofFor.add(k);
 		await storeGroupControl(storage, this.current.publicKey, wrapped.rumor);
 		this.version++;
 		this.backupSoon();
@@ -636,7 +643,10 @@ class Session {
 		// recarregasse no meio da busca solta, o aviso sumia e o membro nunca era adicionado ao grupo
 		const relays = await Promise.all(wrapped.toRecipients.map(({ recipient }) => this.relaysOrDefault(recipient)));
 		const mine = await this.myDmRelays();
-		wrapped.toRecipients.forEach(({ wrap }, i) => void network.engine.enqueue(wrap, relays[i]));
+		const wraps = await Promise.all(
+			wrapped.toRecipients.map(({ recipient, wrap }) => (proofFor.has(recipient) ? vault.proveWrap(wrapped.rumor, recipient, POW_DIFFICULTY) : wrap))
+		);
+		wraps.forEach((wrap, i) => void network.engine.enqueue(wrap, relays[i]));
 		void network.engine.enqueue(wrapped.toSelf, mine);
 	}
 
@@ -760,8 +770,10 @@ class Session {
 			}
 			throw err;
 		}
+		// quem nunca me escreveu recebe com prova de trabalho (RF-90); a mensagem já está na tela enquanto ela é feita
+		const toRecipient = (await needsProof(storage, recipient)) ? await vault.proveWrap(wrapped.rumor, recipient, POW_DIFFICULTY) : wrapped.toRecipient;
 		// a fila guarda e tenta de novo sozinha: a tela não espera a rede
-		void network.engine.enqueue(wrapped.toRecipient, relays, store ? wrapped.rumor.id : undefined);
+		void network.engine.enqueue(toRecipient, relays, store ? wrapped.rumor.id : undefined);
 		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
 		if (store) void this.sendProfile([recipient]);
 		return wrapped.rumor;
@@ -1282,6 +1294,11 @@ class Session {
 		for (const url of this.photoUrls.values()) URL.revokeObjectURL(url);
 		this.photoUrls.clear();
 		this.photos = {};
+	}
+
+	/** Medição da prova de trabalho no worker (RNF-18); só a tela do app em dev usa. */
+	measurePow(difficulty: number, runs: number): Promise<number[]> {
+		return vault.measurePow(difficulty, runs);
 	}
 
 	getSetting<T>(key: string) {

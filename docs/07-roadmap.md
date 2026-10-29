@@ -56,7 +56,7 @@ do WhatsApp.
 8. Cartão de perfil privado com nome e foto (M3; Q-P5, RF-02). ✅ Feita em 2026-10-29.
 9. Editar mensagem e mencionar com `@` (M3; RF-24, 35). ✅ Feita em 2026-10-29.
 10. Backup cifrado de contatos, grupos, configurações e do perfil, sem as favoritas (M4; RF-06). ✅ Feita em 2026-10-29.
-11. Prova de trabalho (M4; RF-90, T8). Pedidos de mensagem e bloqueio já feitos em 2026-10-26.
+11. Prova de trabalho (M4; RF-90, T8), em duas etapas: (1) envio com a prova e medição no Motorola do Pedro; (2) "Possível spam" em Pedidos para o que chega sem ela. Etapa 1 feita em 2026-10-29 (14 bits); falta a 2.
 12. Detecção de perdas (M4; RF-53): numeração por conversa, pedido de reenvio e prazo de 7 dias.
 13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): compartilhar um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), imprimir o cartão, restaurar pelo arquivo ou pelo link, e a tela "Proteção da conta". Sem dependências; entra com e2e.
 14. Frase no gerenciador de senhas (M4; D1, RF-09 b). **Começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra.

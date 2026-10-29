@@ -138,8 +138,8 @@ A numeração funciona mesmo com confirmações desligadas e detecta perdas no m
 
 ### 3.8 Antispam (RF-90)
 
-- A **primeira mensagem** para quem não é contato leva prova de trabalho (NIP-13) no gift wrap, com dificuldade calibrada para < 1 s no aparelho de referência (RNF-18).
-- O destinatário descarta, sem decifrar, mensagens de não contatos sem a dificuldade mínima, e manda as demais para "Pedidos de mensagem" (RF-12).
+- **Quem envia:** o gift wrap leva prova de trabalho (NIP-13, tag `nonce` no kind 1059) em tudo que vai para alguém de quem ainda não recebi nenhuma mensagem, e nos avisos de grupo que põem essa pessoa num grupo. Só "a primeira mensagem" não bastava: quem envia não sabe se o outro já o aceitou, e a segunda sairia sem prova. Calculada no worker, com dificuldade calibrada para < 1 s no aparelho de referência (RNF-18); **14 bits**, pela medição no Motorola Edge 60 do Pedro em 2026-10-29 (10 provas de cada: 12 bits, média 61 ms e pior 178 ms; 14 bits, 196 ms e 806 ms; 16 bits, 870 ms e 4,9 s; rejeitado 16, fora da meta). A medição fica em Ajustes no app em dev, para repetir no aparelho de 2 GB.
+- **Quem recebe:** não dá para descartar sem decifrar, como estava escrito: o remetente só aparece depois de abrir o embrulho (abrir custa bem menos que a prova). Aberto, se quem escreveu não é contato nem está num grupo comigo e o embrulho não tem a dificuldade mínima, a mensagem vai para "Pedidos de mensagem" (RF-12) numa seção **"Possível spam"**, sem ponto nem contagem (decidido em 2026-10-29). Rejeitado: descartar, porque quem estiver numa versão antiga ou em outro app Nostr não conseguiria mais começar conversa; e descartar depois de uma transição. Com prova, segue para Pedidos como hoje.
 
 ### 3.9 Sincronização
 
