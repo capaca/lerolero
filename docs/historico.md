@@ -7,6 +7,15 @@ conhecidos".
 
 ## 2026-10-29
 
+- **Medição da frase no gerenciador de senhas** (item 14, primeira etapa; D1 do ADR-0009; #72). Protótipo
+  `prototipos/senha` (HTML puro), publicado só na homologação em `/lerolero/senha/` para medir sem release, com três
+  jeitos de salvar: A, formulário enviado por `fetch` que some; B, formulário seguido de troca de página; C,
+  `PasswordCredential`. No Chrome do Mac, os três ofereceram salvar. No Motorola, no PWA instalado, o B ofereceu
+  salvar, o C salvou (a restauração achou a conta dele) e o A ficou sem resposta; a frase voltou inteira, com as 12
+  palavras, pelo preenchimento automático e pelo `credentials.get`, que também trouxe uma frase que o aparelho não
+  tinha criado, provavelmente a salva no Mac pela conta Google (não confirmado). Escolha do Pedro: a D1 entra no
+  Android, com o C e o A de reserva. iPhone pendente, por não haver um aparelho.
+
 - **Arquivo ou cartão de recuperação** (item 13, RF-09 a, D2 do ADR-0009; testes `identity.test.ts` e e2e
   `protecao`), num PR só (escolha do Pedro). Nova tela "Proteção da conta" (Ajustes › Proteção da conta, com o
   estado), que pede o PIN e oferece "Salvar no celular" (baixa o arquivo), "Mandar para o Drive ou outro app" (o menu de

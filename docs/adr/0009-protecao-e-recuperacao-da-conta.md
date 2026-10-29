@@ -86,6 +86,11 @@ Regras do desenho:
 5. **Na C**, o backup cifrado com a chave da passkey (PRF) vai para os relays, e a identidade (npub) viaja junto com a
    passkey, para o aparelho novo saber qual backup buscar. A C só começa **depois da decisão do domínio (Q-N1)**.
 6. **Passkey nunca no lugar da frase** (mantém a decisão de Q-A6).
+7. **Na D1**, o app pede para salvar por `navigator.credentials.store(new PasswordCredential(...))`, que não depende de
+   o navegador reconhecer o envio de um formulário; onde ele não existe (Safari, Firefox), usa um formulário de nome e
+   código que é enviado e some da página. Medido em 2026-10-29 no protótipo `prototipos/senha`: no Chrome do Mac e no
+   PWA instalado do Motorola Edge 60, o aviso de salvar aparece e a frase volta inteira, pelo preenchimento automático e
+   pelo `credentials.get`. Falta medir no iPhone.
 
 Rejeitadas por enquanto: cifrar o backup dos relays com o PIN (inseguro, ver Contexto), Pix/gov.br (Q-A7) e recuperação
 social (já descartada no [02](../02-modelo-de-ameacas.md)).

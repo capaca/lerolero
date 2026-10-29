@@ -59,7 +59,7 @@ do WhatsApp.
 11. Prova de trabalho com "Possível spam" em Pedidos (M4; RF-90, T8). ✅ Feita em 2026-10-29.
 12. Detecção de perdas (M4; RF-53): numeração por conversa, pedido de reenvio e prazo de 7 dias. ✅ Feita em 2026-10-29.
 13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): compartilhar um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), imprimir o cartão, restaurar pelo arquivo ou pelo link, e a tela "Proteção da conta". Sem dependências; entra com e2e. ✅ Feita em 2026-10-29.
-14. Frase no gerenciador de senhas (M4; D1, RF-09 b). **Começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra. Em andamento: o protótipo ([prototipos/senha](../prototipos/senha/README.md)) está na homologação em `/lerolero/senha/` (decidido em 2026-10-29, para medir sem release); falta a medição no Motorola. O iPhone fica pendente (o Pedro não tem um agora): a decisão da D1 vale por ora só para o Android.
+14. Frase no gerenciador de senhas (M4; D1, RF-09 b). **Começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra. Protótipo ([prototipos/senha](../prototipos/senha/README.md)) medido em 2026-10-29: no Motorola, no PWA instalado, o Chrome oferece salvar e a frase volta inteira; **a D1 entra no Android**, salvando por `PasswordCredential` e, onde ele não existir, pelo formulário que some. Falta: a implementação no app; o iPhone, quando houver um aparelho.
 15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).**
 16. Polimento (M5), com a velocidade da suíte e2e, revisão de prontidão e beta.
 
@@ -296,7 +296,7 @@ a Q-N7 (custo zero × servidor de referência) e a Q-N8 (teto de usuários); as 
 | # | Questão | Responsável |
 |---|---|---|
 | Q-M1 | Refazer as estimativas e a projeção de datas com base no ritmo real | Pedro |
-| Q-U2 | Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): ✅ o arquivo de recuperação fica em **texto aberto**, num `.txt` (decidido em 2026-10-29; ver a regra 4 do ADR). Falta: a D1 vale a pena se o aviso de salvar senha não aparecer no PWA instalado? Medição pelo protótipo `prototipos/senha` (2026-10-29): só no Android por enquanto; o iPhone fica para quando houver um aparelho. | Pedro (ao implementar o item 14) |
+| Q-U2 | Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): ✅ o arquivo de recuperação fica em **texto aberto**, num `.txt` (decidido em 2026-10-29; ver a regra 4 do ADR). ✅ A D1 entra no Android (decidido em 2026-10-29, com a medição do protótipo `prototipos/senha` no Motorola: o aviso aparece no PWA instalado e a frase volta inteira), salvando por `PasswordCredential` e com o formulário que some de reserva (rejeitado: só o formulário, que depende de o navegador adivinhar o envio). Falta: medir no iPhone, quando houver um aparelho. | Pedro (ao implementar o item 14) |
 
 Resolvidas: Q-I1 (internacionalização, 2026-10-27, [ADR-0008](adr/0008-internacionalizacao.md)) e Q-U1 (cadastro sem a
 frase, 2026-10-26); detalhes no [histórico](historico.md).
