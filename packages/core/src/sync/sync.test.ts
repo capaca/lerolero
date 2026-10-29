@@ -185,13 +185,37 @@ describe('motor de sincronização', () => {
 		await engine.start([r.url]);
 		await until(() => bob.pool.connectedUrls().length === 1);
 
+		// a reconexão leva ~50 ms: esperar ver "0 conectados" perde a janela sob carga; o contador do relay não perde
+		const antes = r.accepted;
 		r.dropConnections();
-		await until(() => bob.pool.connectedUrls().length === 0);
-		await until(() => bob.pool.connectedUrls().length === 1);
+		await until(() => r.accepted > antes && bob.pool.connectedUrls().length === 1);
 
 		const wrap = wrapFor(bob.publicKey, 'depois da queda');
 		await (await person()).pool.publish([r.url], wrap);
 		await until(() => received.includes(wrap.id), 15_000);
+	});
+
+	it('volta a receber mesmo se a conexão cair no meio da autenticação', async () => {
+		const r = await relay();
+		const bob = await person();
+		const received: string[] = [];
+		const engine = new SyncEngine({ storage: bob.storage, pool: bob.pool, myPublicKey: bob.publicKey, events: { onWrap: async (w) => void received.push(w.id) } });
+		cleanup.push(() => engine.stop());
+		// o relay nunca responde ao AUTH da primeira conexão: ela fica no meio da autenticação quando cai
+		r.ignoreAuth = true;
+		await engine.start([r.url]);
+		await until(() => bob.pool.connectedUrls().length === 1);
+		await until(() => r.pendingAuth > 0);
+
+		r.ignoreAuth = false;
+		const antes = r.accepted;
+		r.dropConnections();
+		await until(() => r.accepted > antes && bob.pool.connectedUrls().length === 1);
+
+		const wrap = wrapFor(bob.publicKey, 'depois da queda na autenticação');
+		await (await person()).pool.publish([r.url], wrap);
+		// bem antes dos 2 s de espera da autenticação perdida: a nova conexão não pode herdá-la
+		await until(() => received.includes(wrap.id), 1500);
 	});
 
 	it('guarda na fila sem conexão e envia quando o relay volta (RNF-33)', async () => {
