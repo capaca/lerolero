@@ -29,13 +29,14 @@ links_desde() {
 
 agora() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
-# PR só de documentação dispensa os testes sob demanda (o workflow já marca os dois status como dispensados).
-so_docs() { ! gh pr diff "$1" -R $repo --name-only | grep -qvE '^docs/|\.md$'; }
+# PR só de documentação ou bastidores dispensa os testes sob demanda (o workflow já marca os dois status como
+# dispensados; mesma lista do testes-sob-demanda.yml).
+so_docs() { ! gh pr diff "$1" -R $repo --name-only | grep -qvE '^docs/|^scripts/|^\.claude/|\.md$'; }
 
 # Os rótulos só disparam a rodada num evento novo: se já estiverem no PR, tira e põe de novo.
 rotular() {
 	local pr=$1 desde
-	if so_docs "$pr"; then echo "Só documentação: testes de integração e e2e dispensados"; return; fi
+	if so_docs "$pr"; then echo "Só documentação ou bastidores: testes de integração e e2e dispensados"; return; fi
 	gh pr edit "$pr" -R $repo --remove-label integration-tests,e2e-tests >/dev/null 2>&1
 	sleep 3
 	desde=$(agora)

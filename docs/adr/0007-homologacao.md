@@ -47,7 +47,7 @@ Escolhas do Pedro em 2026-10-22:
 - **Opção B:** a homologação fica no GitHub Pages da organização **`lerolero-app`** (criada pelo Pedro em 2026-10-22), no
   repositório `lerolero-app/lerolero`: https://lerolero-app.github.io/lerolero/, com origem própria e o mesmo caminho
   `/lerolero` da produção (o build é o mesmo). A opção A foi rejeitada pelo risco de misturar os dados; a C, por trazer mais um serviço.
-- **Atualizada a cada merge na `main`** (`homologacao.yml`, que pula mudança só de docs): monta o app e publica no
+- **Atualizada a cada merge na `main`** (`homologacao.yml`, que pula mudança só de docs ou de bastidores, `scripts/` e `.claude/`): monta o app e publica no
   branch `gh-pages` de `lerolero-app/lerolero` com o secret `HOMOLOG_TOKEN` (token fine-grained, só Contents: write
   naquele repositório, validade de 1 ano). Grava o commit em `commit.txt`.
 - **A release promove o commit validado:** lê o `commit.txt` da homologação, confere que ele está na `main` e publica
