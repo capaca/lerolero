@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#6d28d9" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="estilo.css" />
+    <title>Lero-lero · senha</title>
+  </head>
+  <body>
+    <main>
+      <h1>Restaurar com a frase salva</h1>
+
+      <section>
+        <h2>1 · Preenchimento automático</h2>
+        <p class="hint">
+          Toque no campo do nome ou do código e escolha uma conta "Lero teste" se o navegador sugerir. O Chrome só
+          entrega o valor à página depois de um toque.
+        </p>
+        <form id="form" class="account">
+          <label>Nome <input name="username" autocomplete="username" /></label>
+          <label>Código de recuperação <input name="password" type="password" autocomplete="current-password" /></label>
+          <button class="primary">Conferir</button>
+        </form>
+        <div id="out-form" class="out"></div>
+        <button id="none-btn">O navegador não sugeriu nada</button>
+      </section>
+
+      <section>
+        <h2>2 · credentials.get (só Chrome)</h2>
+        <p class="hint">O app pede a senha salva por código, sem formulário.</p>
+        <button id="get-btn" class="primary">Buscar a senha salva</button>
+        <div id="out-get" class="out"></div>
+      </section>
+
+      <a class="button" href="./">Voltar aos testes</a>
+    </main>
+    <script type="module" src="restaurar.js"></script>
+  </body>
+</html>

@@ -41,7 +41,7 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
   nunca sai dele), armazenamento Dexie atrás de repositórios (`storage/`), rede (`net/`), sincronização (`sync/`),
   mídia/Blossom (`media/`), conversas (`conversations/`).
 - `packages/app`: SvelteKit 3 estático (SPA). Imports via `#lib/...`; estado da sessão em `src/lib/session.svelte.ts`.
-- `prototipos/`: pesquisas fora do workspace (usam npm). `prototipos/e2e-rascunho` tem os rascunhos em Puppeteer
+- `prototipos/`: pesquisas fora do workspace (usam npm; `prototipos/senha` é HTML puro, publicado na homologação em `/senha/`). `prototipos/e2e-rascunho` tem os rascunhos em Puppeteer
   ainda não migrados para `packages/e2e`.
 - Fluxo (ADR-0006 e 0007): push direto na `main` é bloqueado; tudo entra por PR com squash. `ci.yml` (tipos, testes,
   build) roda a cada commit; `testes-sob-demanda.yml` roda pelos rótulos `integration-tests` e `e2e-tests`; cada merge

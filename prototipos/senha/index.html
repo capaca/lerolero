@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#6d28d9" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="../icon-192.png" />
+    <link rel="stylesheet" href="estilo.css" />
+    <title>Lero-lero · senha</title>
+  </head>
+  <body>
+    <main>
+      <h1>Lero-lero · salvar a frase como senha</h1>
+      <p class="hint">
+        Mede se o navegador oferece "Salvar senha?" para a frase de recuperação (ADR-0009, D1), na aba do navegador e
+        no app instalado. As frases são de teste e não abrem conta nenhuma. Faça os três testes aqui, depois instale
+        esta página (menu do navegador → Instalar app, ou Adicionar à Tela de Início) e repita no app instalado.
+      </p>
+
+      <section>
+        <h2>Aparelho</h2>
+        <table id="env"></table>
+      </section>
+
+      <section>
+        <h2>A · Formulário, com o envio por fetch</h2>
+        <p class="hint">Como o app faria sem trocar de página: envia, e o formulário some.</p>
+        <form id="form-a" class="account">
+          <label>Nome <input name="username" autocomplete="username" /></label>
+          <label>Código de recuperação <input name="password" type="password" autocomplete="new-password" /></label>
+          <button class="primary">Guardar no gerenciador de senhas</button>
+        </form>
+        <div id="out-a" class="out"></div>
+      </section>
+
+      <section>
+        <h2>B · Formulário, indo para outra página</h2>
+        <p class="hint">Envia e abre outra página, como um login comum.</p>
+        <form id="form-b" class="account">
+          <label>Nome <input name="username" autocomplete="username" /></label>
+          <label>Código de recuperação <input name="password" type="password" autocomplete="new-password" /></label>
+          <button class="primary">Guardar no gerenciador de senhas</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>C · PasswordCredential (só Chrome)</h2>
+        <p class="hint">O app pede por código para o navegador salvar, sem depender de adivinhar o envio.</p>
+        <button id="btn-c" class="primary">Guardar no gerenciador de senhas</button>
+        <div id="out-c" class="out"></div>
+      </section>
+
+      <section>
+        <h2>Restaurar</h2>
+        <p class="hint">
+          Depois de salvar, confira se a frase volta inteira. Para ser como num aparelho novo, abra também em outro
+          aparelho ou navegador logado na mesma conta Google.
+        </p>
+        <a class="button" href="restaurar.html">Abrir a restauração</a>
+      </section>
+
+      <section>
+        <h2>Resultados</h2>
+        <div class="actions">
+          <button id="copy-btn">Copiar resultados (JSON)</button>
+          <button id="clear-btn">Apagar e recomeçar</button>
+          <span id="copy-status" class="hint"></span>
+        </div>
+        <textarea id="json" rows="10" readonly></textarea>
+      </section>
+    </main>
+    <script type="module" src="index.js"></script>
+  </body>
+</html>

@@ -89,6 +89,8 @@ jobs:
           find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -rL anteriores/. site/
           cp -rL packages/app/build/. site/
+          # protótipo do item 14 (frase no gerenciador de senhas): HTML puro, sem build
+          cp -r prototipos/senha site/senha
           echo "arquivos da versão anterior mantidos: $(find anteriores -type f | wc -l)"
           # sem isto o Pages (Jekyll) ignora a pasta _app
           touch site/.nojekyll
