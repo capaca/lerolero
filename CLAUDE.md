@@ -13,6 +13,10 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
 
 ## Comandos (na raiz)
 
+- `scripts/situacao.sh`: rode no começo de cada sessão. Mostra produção, homologação, o que espera release, os PRs
+  abertos com os checks, o branch local, as portas ocupadas por outra sessão e o próximo item do roadmap (o primeiro
+  sem "✅ Feita em" na ordem do MVP de `docs/07-roadmap.md`; marque o item ao concluí-lo).
+
 - `scripts/verificar.sh [check] [test] [build] [e2e]`: roda como a CI e mostra só uma linha por etapa e os erros (log
   completo em `$TMPDIR/lerolero-verificar/`). Prefira este aos comandos abaixo, que imprimem muito.
 - `pnpm check`: tsc + svelte-check (inclui o service worker). Um aviso no service worker é esperado.
