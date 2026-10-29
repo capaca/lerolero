@@ -57,4 +57,4 @@ done
 
 # Item concluído termina com "✅ Feita em": o primeiro sem a marca é o próximo.
 echo "Próximos itens do roadmap (docs/07-roadmap.md):"
-sed -n '/^### Ordem do restante do MVP/,/^\*\*/p' docs/07-roadmap.md | grep -E '^[0-9]+\. ' | grep -v '✅ Feit' | head -3 | cut -c1-140 | sed 's/^/  /'
+sed -n '/^#* *Ordem do restante do MVP/,/^## /p' docs/07-roadmap.md | grep -E '^[0-9]+\. ' | grep -v '✅ Feit' | head -3 | cut -c1-140 | sed 's/^/  /'
