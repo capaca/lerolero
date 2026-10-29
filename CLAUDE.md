@@ -16,6 +16,7 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
 - `scripts/situacao.sh`: rode no começo de cada sessão. Mostra produção, homologação, o que espera release, os PRs
   abertos com os checks, o branch local, as portas ocupadas por outra sessão e o próximo item do roadmap (o primeiro
   sem "✅ Feita em" na ordem do MVP de `docs/07-roadmap.md`; marque o item ao concluí-lo).
+- `scripts/pr.sh abrir|rotular|esperar|homologacao`: o ciclo do PR com os links da CI (detalhes na skill `publicar`).
 
 - `scripts/verificar.sh [check] [test] [build] [e2e]`: roda como a CI e mostra só uma linha por etapa e os erros (log
   completo em `$TMPDIR/lerolero-verificar/`). Prefira este aos comandos abaixo, que imprimem muito.
