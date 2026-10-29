@@ -29,7 +29,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29 |
-| M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup e prova de trabalho feitos; itens 12 a 15 da ordem |
+| M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho e detecção de perdas feitos; itens 13 a 15 da ordem |
 | M5 Polimento | 4 sem | A fazer: item 16 |
 | Revisão de prontidão | — | A fazer, antes do beta |
 | Beta fechado | 6 sem de uso | A fazer |
