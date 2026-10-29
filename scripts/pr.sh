@@ -91,7 +91,15 @@ case "${1:-}" in
 	homologacao)
 		id=$(gh run list -R $repo --workflow homologacao.yml --limit 1 --json databaseId --jq '.[0].databaseId')
 		echo "Homologação: $runs/$id"
-		gh run watch "$id" -R $repo --exit-status --interval 15 >/dev/null 2>&1 && echo "✓ publicada" || echo "✗ falhou"
+		# o watch às vezes falha logo depois de a execução nascer (erro da API) e dizia "falhou" com a publicação certa
+		# (visto em 2026-10-29): sem ele, quem decide é a conclusão da execução
+		if gh run watch "$id" -R $repo --exit-status --interval 15 >/dev/null 2>&1; then echo "✓ publicada"
+		else
+			sleep 15
+			gh run watch "$id" -R $repo --interval 15 >/dev/null 2>&1
+			conclusao=$(gh run view "$id" -R $repo --json conclusion --jq .conclusion)
+			[ "$conclusao" = success ] && echo "✓ publicada" || echo "✗ falhou ($conclusao)"
+		fi
 		homolog=$(gh api 'repos/lerolero-app/lerolero/contents/commit.txt?ref=gh-pages' --jq .content | base64 -d | tr -d '[:space:]')
 		git fetch -q origin
 		echo "commit.txt: $(git log -1 --format='%h %s' "$homolog" | cut -c1-110)"
