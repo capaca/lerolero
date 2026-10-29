@@ -51,6 +51,14 @@ import {
 	REACTION_KIND,
 	reactionTags,
 	RECEIPT_KIND,
+	RESEND_KIND,
+	lostRecipients,
+	markAsked,
+	markResent,
+	nextSeqTag,
+	resendRequestsDue,
+	resendsFor,
+	resendTags,
 	receiptsDue,
 	removeReactions,
 	replyTags,
@@ -130,6 +138,10 @@ const OPEN_SESSION_KEY = 'sessaoAberta';
 export const READ_RECEIPTS_KEY = 'confirmacaoLeitura';
 /** Espera para juntar as confirmações que chegam em sequência num evento só. */
 const ACK_DELAY_MS = 1500;
+/** De quanto em quanto tempo confere se falta alguma mensagem para pedir (a janela em si é GAP_WAIT_S, no core). */
+const GAP_CHECK_MS = 15_000;
+/** Reenvio a mesma mensagem à mesma pessoa no máximo uma vez por hora, por mais que ela peça. */
+const RESEND_COOLDOWN_MS = 60 * 60_000;
 
 const storage = openStorage();
 const vault = connect<Vault>(new Worker(new URL('./core.worker.ts', import.meta.url), { type: 'module' }));
@@ -182,6 +194,7 @@ class Session {
 	offline = $state(false);
 	private noRelaysSince?: number;
 	private connectionTimer?: ReturnType<typeof setInterval>;
+	private gapTimer?: ReturnType<typeof setInterval>;
 	/** áudios subindo agora e o aviso da próxima tentativa de cada um que falhou */
 	private uploading = new Set<string>();
 	private uploadTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -368,6 +381,8 @@ class Session {
 		void this.resumeUploads();
 		void this.refreshPhotos();
 		this.watchConnection();
+		clearInterval(this.gapTimer);
+		this.gapTimer = setInterval(() => void this.requestResends(), GAP_CHECK_MS);
 		await this.publishDmRelays();
 		await this.checkBackup();
 	}
@@ -406,6 +421,7 @@ class Session {
 
 	private stopNetwork() {
 		this.stopWatchingConnection();
+		clearInterval(this.gapTimer);
 		clearTimeout(this.backupTimer);
 		this.uploadTimers.forEach(clearTimeout);
 		this.uploadTimers.clear();
@@ -526,6 +542,7 @@ class Session {
 			if (await storeReaction(storage, me, rumor)) this.version++;
 			return;
 		}
+		if (rumor.kind === RESEND_KIND) return this.answerResend(rumor);
 		if (rumor.kind === RECEIPT_KIND) {
 			const readReceipts = await this.readReceiptsOn();
 			if (await storeReceipt(storage, me, rumor, { readReceipts })) this.version++;
@@ -607,6 +624,65 @@ class Session {
 		return this.acknowledge(messageIds, 'lida');
 	}
 
+	// ---------- detecção de perdas (RF-53, docs/06 §3.5) ----------
+
+	/** Falta um número de alguém há mais que a janela: pede o reenvio, só a quem escreveu (sem aviso na tela). */
+	private async requestResends() {
+		if (!this.network || this.offline) return;
+		const now = Math.floor(Date.now() / 1000);
+		for (const request of await resendRequestsDue(storage, now)) {
+			try {
+				const wrapped = await vault.wrapDirectMessage(request.sender, '', resendTags(request), RESEND_KIND);
+				await this.requireNetwork().engine.enqueue(wrapped.toRecipient, await this.relaysOrDefault(request.sender));
+				await markAsked(storage, request, now);
+			} catch {
+				// sem rede ou sem relays: a próxima volta tenta de novo
+			}
+		}
+	}
+
+	/** Quando reenviei cada mensagem a cada pessoa (ms): um contato que repete o pedido não me faz publicar sem parar. */
+	private resentTo = new Map<string, number>();
+
+	/** Pedido de reenvio: reenvio sozinho, da cópia local, o mesmo rumor (decidido em 2026-10-29). */
+	private async answerResend(rumor: Awaited<ReturnType<Vault['unwrap']>>) {
+		const requester = rumor.pubkey;
+		const fresh = (await resendsFor(storage, this.current.publicKey, rumor)).filter(
+			(r) => Date.now() - (this.resentTo.get(`${r.id}:${requester}`) ?? 0) >= RESEND_COOLDOWN_MS
+		);
+		for (const original of fresh) {
+			this.resentTo.set(`${original.id}:${requester}`, Date.now());
+			await this.resendTo(original, [requester]);
+		}
+	}
+
+	/** O mesmo rumor num embrulho novo para cada um; com prova de trabalho para quem ainda não me escreveu (RF-90). */
+	private async resendTo(original: Awaited<ReturnType<Vault['unwrap']>>, recipients: string[]) {
+		const direct = !original.tags.some((t) => t[0] === 'g');
+		for (const recipient of recipients) {
+			const wrap =
+				direct && (await needsProof(storage, recipient))
+					? await vault.proveWrap(original, recipient, POW_DIFFICULTY)
+					: (await vault.rewrap(original, [recipient]))[0].wrap;
+			await this.enqueueTo(recipient, wrap);
+		}
+	}
+
+	/**
+	 * "Reenviar" numa mensagem possivelmente perdida: vai só para quem não confirmou (nos grupos também, decidido em
+	 * 2026-10-29), e o prazo de 7 dias recomeça.
+	 */
+	async resend(messageId: string) {
+		const message = await storage.messages.get(messageId);
+		const conversation = message && (await storage.conversations.get(message.conversationId));
+		if (!message?.rumor || !conversation) return;
+		const missing = lostRecipients(message, conversation.members);
+		if (!missing.length) return;
+		await markResent(storage, messageId, Date.now() / 1000);
+		this.version++;
+		await this.resendTo(message.rumor, missing);
+	}
+
 	/** Aviso de grupo: atualiza o grupo, me apresento a quem entrou e repasso o que faltou (docs/06 §3.3). */
 	private async receiveGroupControl(rumor: Awaited<ReturnType<Vault['unwrap']>>, proven: boolean) {
 		const me = this.current.publicKey;
@@ -629,7 +705,7 @@ class Session {
 		// o cartão vai junto da apresentação (Q-P5)
 		void this.sendProfile(joined ? conversation.members : newMembers);
 		for (const { rumor, to } of await takeForwards(storage, conversation, this.current.publicKey)) {
-			for (const { recipient, wrap } of await vault.rewrapGroupControl(rumor, to)) void this.enqueueTo(recipient, wrap);
+			for (const { recipient, wrap } of await vault.rewrap(rumor, to)) void this.enqueueTo(recipient, wrap);
 		}
 	}
 
@@ -733,10 +809,11 @@ class Session {
 			if (!conversation?.group?.amMember) throw new NotInGroupError();
 			const groupTag = ['g', conversationId.slice('grupo:'.length)];
 			const nameTags = kind !== 14 && kind !== 15 ? [] : await nameTagFor(storage, conversationId, this.current.displayName);
+			const seqTags = store && (kind === 14 || kind === 15) ? nextSeqTag(conversation) : [];
 			const wrapped = await vault.wrapGroupMessage(
 				conversation.members,
 				content,
-				[...nameTags, ...tags, groupTag],
+				[...nameTags, ...tags, ...seqTags, groupTag],
 				kind,
 				at ?? sendTime(conversation)
 			);
@@ -751,13 +828,10 @@ class Session {
 		}
 		const recipient = conversationId.slice('direta:'.length);
 		const nameTags = kind !== 14 && kind !== 15 ? [] : await nameTagFor(storage, recipient, this.current.displayName);
-		const wrapped = await vault.wrapDirectMessage(
-			recipient,
-			content,
-			[...nameTags, ...tags],
-			kind,
-			at ?? sendTime(await storage.conversations.get(conversationId))
-		);
+		const conversation = await storage.conversations.get(conversationId);
+		// numerada (RF-53): quem recebe nota se faltar alguma; edição e pedido de apagar não contam
+		const seqTags = store && (kind === 14 || kind === 15) ? nextSeqTag(conversation) : [];
+		const wrapped = await vault.wrapDirectMessage(recipient, content, [...nameTags, ...tags, ...seqTags], kind, at ?? sendTime(conversation));
 		// guarda antes de buscar onde o contato recebe: com relays fora do ar a busca leva até ~10 s e, sem isto, a
 		// mensagem não aparecia nem ficava na fila (RNF-12)
 		if (store) {

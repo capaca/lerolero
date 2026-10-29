@@ -57,7 +57,7 @@ do WhatsApp.
 9. Editar mensagem e mencionar com `@` (M3; RF-24, 35). ✅ Feita em 2026-10-29.
 10. Backup cifrado de contatos, grupos, configurações e do perfil, sem as favoritas (M4; RF-06). ✅ Feita em 2026-10-29.
 11. Prova de trabalho com "Possível spam" em Pedidos (M4; RF-90, T8). ✅ Feita em 2026-10-29.
-12. Detecção de perdas (M4; RF-53): numeração por conversa, pedido de reenvio e prazo de 7 dias.
+12. Detecção de perdas (M4; RF-53): numeração por conversa, pedido de reenvio e prazo de 7 dias. ✅ Feita em 2026-10-29.
 13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): compartilhar um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), imprimir o cartão, restaurar pelo arquivo ou pelo link, e a tela "Proteção da conta". Sem dependências; entra com e2e.
 14. Frase no gerenciador de senhas (M4; D1, RF-09 b). **Começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra.
 15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).**
@@ -129,7 +129,7 @@ como língua-base.
 - ✅ Pedidos de mensagem e bloqueio, inclusive vindos de grupo, com Contatos em abas (RF-12, 13).
 - ✅ Backup cifrado de perfil, contatos, grupos e ajustes (RF-06).
 - ✅ Prova de trabalho (14 bits) e "Possível spam" em Pedidos (RF-90).
-- ⬜ Detecção de perdas (RF-53). Item 12.
+- ✅ Detecção de perdas: numeração, pedido de reenvio automático e prazo de 7 dias com "Reenviar" (RF-53).
 - ⬜ Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): arquivo ou cartão,
   gerenciador de senhas, passkey (RF-08, 09). Itens 13 a 15.
 - ➡️ Modo foco (RF-52, 60..62) e entrega em lotes (RF-63): v1.
@@ -226,6 +226,7 @@ Aceitos por ora; cada um tem a origem no [histórico](historico.md).
   marcado como visto mesmo quando o processamento lança.
 - `markDeleted` grava a conversa sem esperar a vez (`conversations/lock.ts`), por ser chamada de dentro de
   `storeIncoming`.
+- A edição de uma mensagem não é reenviada: quem a recebe por um pedido de reenvio vê o texto original.
 - Se um áudio tocava quando o envio dele terminou, o balão é recriado e a reprodução recomeça.
 
 ## v1 — Android e desktop nativos (~26 semanas)

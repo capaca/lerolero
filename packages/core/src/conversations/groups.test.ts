@@ -395,7 +395,7 @@ describe('dois administradores ao mesmo tempo', () => {
 		const forwards = await takeForwards(bob.storage, await conversationOf(bob, groupId), bob.publicKey);
 		expect(forwards.map((f) => f.to)).toEqual([[dave.publicKey]]);
 		for (const { rumor, to } of forwards) {
-			for (const { wrap: w } of bob.vault.rewrapGroupControl(rumor, to)) {
+			for (const { wrap: w } of bob.vault.rewrap(rumor, to)) {
 				await storeGroupControl(dave.storage, dave.publicKey, dave.vault.unwrap(w), clock);
 			}
 		}

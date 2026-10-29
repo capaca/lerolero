@@ -11,6 +11,7 @@ import { summaryOf } from '../storage/summary.ts';
 import { groupConversationId, groupIdOf, GROUP_TAG } from './groups.ts';
 import { applyHeldEdits } from './edits.ts';
 import { replyOf } from './interactions.ts';
+import { seqOf, trackSeq } from './losses.ts';
 
 /**
  * Tag própria com o nome de quem envia, só na primeira mensagem de cada conversa:
@@ -105,7 +106,7 @@ export type StoredMessage = { message: MessageRecord; conversation: Conversation
 async function upsertConversation(
 	storage: Storage,
 	message: MessageRecord,
-	changes: { unread?: number; nameSent?: boolean; heardFrom?: boolean },
+	changes: { unread?: number; nameSent?: boolean; heardFrom?: boolean; seq?: number },
 	fresh: Pick<ConversationRecord, 'type' | 'members'>
 ): Promise<ConversationRecord> {
 	const id = message.conversationId;
@@ -119,10 +120,21 @@ async function upsertConversation(
 		lastMessageAt: isLatest ? message.createdAt : existing.lastMessageAt,
 		...(isLatest ? summaryOf(message) : {}),
 		nameSent: changes.nameSent || existing?.nameSent,
-		...(changes.heardFrom || existing?.heardFrom ? { heardFrom: true } : {})
+		...(changes.heardFrom || existing?.heardFrom ? { heardFrom: true } : {}),
+		...seqChanges(existing, message, changes.seq)
 	};
 	await storage.conversations.put(conversation);
 	return conversation;
+}
+
+/**
+ * O número (`seq`, RF-53) da mensagem na conversa: o meu, de qualquer aparelho, vira o último usado; o dos outros vai
+ * para a procura de buracos (losses.ts).
+ */
+function seqChanges(existing: ConversationRecord | undefined, message: MessageRecord, n: number | undefined): Partial<ConversationRecord> {
+	if (n === undefined) return {};
+	if (message.status !== 'recebida') return { lastSeq: Math.max(existing?.lastSeq ?? 0, n) };
+	return { seqs: trackSeq(existing?.seqs, message.sender, n, Math.floor(Date.now() / 1000)) };
 }
 
 /**
@@ -163,7 +175,8 @@ async function storeIncomingNow(
 
 	if (!mine) await rememberSender(storage, other, rumor, options.proven ?? true);
 	const unread = !mine && message.ack !== 'lida' && options.openConversationId !== message.conversationId ? 1 : 0;
-	const conversation = await upsertConversation(storage, message, { unread, heardFrom: !mine }, { type: 'direta', members: [other] });
+	const seq = known ? undefined : seqOf(rumor);
+	const conversation = await upsertConversation(storage, message, { unread, heardFrom: !mine, seq }, { type: 'direta', members: [other] });
 	return { message, conversation, isNew: true };
 }
 
@@ -196,7 +209,9 @@ function incomingRecord(
 		status: mine ? 'enviada' : 'recebida',
 		...(media ? { media } : {}),
 		...(replyOf(rumor) ? { replyTo: replyOf(rumor) } : {}),
-		...(alreadyRead ? { ack: 'lida' as const } : {})
+		...(alreadyRead ? { ack: 'lida' as const } : {}),
+		// a minha cópia, vinda de outro aparelho: este também consegue reenviar se ela se perder (RF-53)
+		...(mine ? { rumor } : {})
 	};
 }
 
@@ -228,7 +243,7 @@ async function storeGroupMessage(
 	if (!existing) return undefined;
 
 	const unread = !mine && message.ack !== 'lida' && options.openConversationId !== id ? 1 : 0;
-	let conversation = await upsertConversation(storage, message, { unread }, existing);
+	let conversation = await upsertConversation(storage, message, { unread, seq: seqOf(rumor) }, existing);
 	// a primeira mensagem de cada um no grupo também traz o nome, caso a apresentação se perca
 	const sentName = mine ? undefined : cleanName(rumor.tags.find((t) => t[0] === NAME_TAG)?.[1] ?? '');
 	if (sentName && conversation.group && conversation.group.names[rumor.pubkey] !== sentName) {
@@ -272,11 +287,12 @@ async function storeOutgoingNow(storage: Storage, rumor: Rumor, recipient?: stri
 		createdAt: rumor.created_at,
 		status: 'pendente',
 		...(media ? { media } : {}),
-		...(replyOf(rumor) ? { replyTo: replyOf(rumor) } : {})
+		...(replyOf(rumor) ? { replyTo: replyOf(rumor) } : {}),
+		rumor
 	};
 	await storage.messages.put(message);
 	const nameSent = rumor.tags.some((t) => t[0] === NAME_TAG);
-	const conversation = await upsertConversation(storage, message, { nameSent }, group ?? { type: 'direta', members: [recipient!] });
+	const conversation = await upsertConversation(storage, message, { nameSent, seq: seqOf(rumor) }, group ?? { type: 'direta', members: [recipient!] });
 	return { message, conversation, isNew: true };
 }
 
@@ -366,7 +382,7 @@ async function dropMediaIfUnused(storage: Storage, ox: string | undefined) {
 
 /** Troca a mensagem pelo aviso "apagada": some o texto e o arquivo, fica o lugar na conversa. */
 export async function markDeleted(storage: Storage, message: MessageRecord): Promise<MessageRecord> {
-	const deleted: MessageRecord = { ...message, text: '', media: undefined, replyTo: undefined, starred: undefined, deleted: true };
+	const deleted: MessageRecord = { ...message, text: '', media: undefined, replyTo: undefined, starred: undefined, rumor: undefined, deleted: true };
 	await storage.messages.put(deleted);
 	await storage.reactions.deleteByMessage(message.id);
 	await dropMediaIfUnused(storage, message.media?.ox);

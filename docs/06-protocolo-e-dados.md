@@ -52,7 +52,7 @@ kind 1059  Gift wrap — assinado por chave descartável; tag ["p", <destinatár
 | Confirmação (entregue / lida) | `4441` | próprio | Uma tag `["e", <id>]` por mensagem (até 200), `["status", "entregue" ou "lida"]` e `alt`. Vai só a quem escreveu as mensagens (nos grupos também), sem cópia para mim. Seção 3.4 |
 | Controle de grupo | `4440` | próprio | Seção 3.3; tag `alt` "aviso de grupo do Lero-lero" |
 | Cartão de perfil | `4442` | próprio | Seção 3.10 |
-| Pedido de reenvio | próprio | — | Kind a definir (seção 3.5) |
+| Pedido de reenvio | `4444` | próprio | Decidido em 2026-10-29 (RF-53): uma tag `["seq", <n>]` por número que falta (até 50), `alt` e, nos grupos, `g`. Vai só a quem escreveu, sem cópia para mim. Seção 3.5 |
 
 Os números dos kinds próprios devem ser escolhidos consultando o registro de kinds do repositório de NIPs, para evitar colisão (Q-P1). A faixa **4440–4449** fica reservada para os kinds próprios do Lero-lero (livre no registro em 2026-10-22).
 
@@ -103,7 +103,7 @@ O NIP-17 define uma conversa pelo **conjunto de participantes** (tags `p`), com 
 | Entregue | Destinatário | Ao decifrar a mensagem, publica confirmação `entregue` |
 | Retida em modo foco | Destinatário | Em vez de `entregue`, se ele permitir mostrar o estado (RF-52) |
 | Lida | Destinatário | Ao exibir a mensagem, se a confirmação de leitura estiver ligada (RF-51) |
-| Possivelmente perdida | Remetente (local) | Sem confirmação em 7 dias, ou pedido de reenvio recebido (seção 3.5) |
+| Possivelmente perdida | Remetente (local) | Sem confirmação de alguém em 7 dias desde o envio ou o último reenvio (seção 3.5) |
 
 Só vale a confirmação de quem está na conversa e só para mensagem minha. Sem a leitura ligada, a "lida" dos outros conta como "entregue". Quem recebe um pedido de mensagem (ainda não é contato) não confirma nada. Confirmações são **agrupadas**: um único evento pode confirmar várias mensagens de uma vez (lista de tags `e`), para economizar dados. Quem desliga a confirmação de leitura também não processa as dos outros.
 
@@ -115,6 +115,32 @@ Usamos as duas ideias:
 2. **Prazo do remetente:** sem confirmação em 7 dias, a mensagem vira "possivelmente perdida", com botão para reenviar. Só funciona se o destinatário enviar confirmações.
 
 A numeração funciona mesmo com confirmações desligadas e detecta perdas no modo Pausar.
+
+Decidido em 2026-10-29 (item 12 do roadmap):
+
+- **O remetente reenvia sozinho** ao receber um pedido de reenvio, a partir da cópia local, sem perguntar. Rejeitado:
+  marcar a mensagem e esperar o toque do remetente, porque o pedido já mostra que a mensagem não chegou.
+- **Nos grupos**, a mensagem vira "possivelmente perdida" quando algum membro não confirma em 7 dias, e o "Reenviar"
+  manda só para quem não confirmou. Rejeitado: reenviar a todos, que gasta dados de quem já recebeu.
+- **Quem recebe não vê nada** quando o app nota o buraco e pede o reenvio; a mensagem só aparece quando chega.
+  Rejeitado: um aviso na conversa ("1 mensagem ainda não chegou"), que preocupa sem a pessoa poder fazer nada.
+- O reenvio leva o **mesmo rumor** (o mesmo id), num embrulho novo: quem já tinha a mensagem descarta a repetida.
+  Por isso as minhas mensagens de texto e de arquivo guardam o rumor no aparelho; as de antes desta versão não têm e
+  nunca ficam "possivelmente perdidas".
+
+Como ficou:
+
+- **Numeração:** só texto e arquivo (kinds 14 e 15) levam `seq`; edição, reação, confirmação e pedido de apagar não.
+  O número é o seguinte ao maior que qualquer aparelho meu já usou na conversa (as minhas cópias também contam);
+  dois aparelhos sem internet ao mesmo tempo podem repetir um número, o que só tira a chance de achar um buraco ali.
+- **Buraco:** o primeiro número visto de cada pessoa não cria buraco (pode ser de antes de restaurar a conta ou de
+  entrar no grupo). Um salto maior que 50 guarda só os 50 mais próximos.
+- **Janela (Q-P3):** o pedido sai quando o número falta há **30 segundos**; o app confere a cada 15 s. Se a mensagem
+  não vier, pede de novo um dia depois, até **3 vezes**, e desiste depois de 7 dias. Pedir cedo demais só custa uma
+  repetida. Pedido só a contato ou ao grupo que aceitei, como as confirmações (RF-12).
+- **Quem enviou** reenvia só o que ainda tem, que não apagou, e a quem estava na mensagem (tags `p`), no máximo uma
+  vez por hora para cada pessoa e mensagem. Para quem ainda não me escreveu, o reenvio leva a prova de trabalho.
+- *Limite:* a edição (kind 4443) não é reenviada; quem recebe a mensagem pelo reenvio vê o texto original.
 
 ### 3.6 Mídia (Blossom)
 
@@ -208,8 +234,8 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 
 | # | Questão | Responsável |
 |---|---|---|
-| Q-P1 | Escolher os números dos kinds próprios (edição, confirmação, pedido de reenvio) no registro de NIPs (✅ controle de grupo = `4440`, confirmação = `4441`, cartão de perfil = `4442`, edição = `4443`, faixa 4440–4449 reservada, 2026-10-22); avaliar propor um NIP para confirmações de entrega, que hoje não têm padrão | Implementação |
+| Q-P1 | Escolher os números dos kinds próprios (edição, confirmação, pedido de reenvio) no registro de NIPs (✅ controle de grupo = `4440`, confirmação = `4441`, cartão de perfil = `4442`, edição = `4443`, pedido de reenvio = `4444`, faixa 4440–4449 reservada, 2026-10-22); avaliar propor um NIP para confirmações de entrega, que hoje não têm padrão | Implementação |
 | Q-P2 | Formato da figurinha sonora (v1): provavelmente kind `15` com imagem + áudio Opus curto, e `alt` "figurinha sonora" para outros apps (Q-F5) | Pedro (v1) |
-| Q-P3 | Janela de espera antes de pedir reenvio por buraco na numeração | Implementação |
+| Q-P3 | Janela de espera antes de pedir reenvio por buraco na numeração | ✅ 30 segundos, até 3 pedidos com um dia entre eles (2026-10-29, seção 3.5) |
 | Q-P4 | ✅ Português. Interoperabilidade da identidade via exportação da chave privada | — |
 | Q-P5 | ✅ **Cartão de perfil privado** (decidido em 2026-10-29): um evento próprio, cifrado e embrulhado como uma mensagem, no lugar da tag `nome`. Leva nome, foto de perfil (RF-02, cifrada no Blossom), versão e recursos do app (RNF-93) e relays de DM; o aviso de chave nova fica no RF-16 (futuro). Vai junto da minha primeira mensagem a cada pessoa e, quando algo muda, a todos com quem já falei, no 1:1 ou em grupo; quem só me mandou um pedido não aceito não recebe (T7). O nome que eu dei ao contato vence o do cartão, que aparece nos detalhes do contato; a foto do cartão aparece sempre. Rejeitadas: só nome e foto, ou sem os relays (o cartão já é o lugar deles e evita outro formato depois); só no 1:1 (membros de grupo ficariam sem foto); o nome do cartão sobrescrever o local (o contato trocaria o nome que eu escolhi) | — |

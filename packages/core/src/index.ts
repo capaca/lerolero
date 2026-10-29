@@ -36,6 +36,7 @@ export {
 	MAX_TEXT_LENGTH,
 	MAX_RECEIPT_IDS,
 	EDIT_KIND,
+	RESEND_KIND,
 	PROFILE_KIND,
 	RECEIPT_KIND,
 	REACTION_KIND,
@@ -127,6 +128,16 @@ export {
 	storeReceipt,
 	type Delivery
 } from './conversations/interactions.ts';
+export {
+	lostRecipients,
+	markAsked,
+	markResent,
+	nextSeqTag,
+	resendRequestsDue,
+	resendsFor,
+	resendTags,
+	type ResendRequest
+} from './conversations/losses.ts';
 export {
 	addMembers,
 	canDo,

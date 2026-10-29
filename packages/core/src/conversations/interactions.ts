@@ -6,6 +6,7 @@ import type { Storage } from '../storage/repositories.ts';
 import type { ConversationRecord, MessageRecord, Receipt } from '../storage/records.ts';
 import { groupConversationId, groupIdOf } from './groups.ts';
 import { exclusive } from './lock.ts';
+import { lostRecipients } from './losses.ts';
 import { directConversationId } from './messaging.ts';
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v);
@@ -123,14 +124,20 @@ async function storeReceiptNow(storage: Storage, me: string, rumor: Rumor, optio
 	return changed;
 }
 
-export type Delivery = 'pendente' | 'enviada' | 'entregue' | 'lida';
+export type Delivery = 'pendente' | 'enviada' | 'entregue' | 'lida' | 'perdida';
 
 /**
  * O estado de uma mensagem minha na tela (RF-50). Num grupo só passa a "entregue" ou "lida" quando todos os membros
- * de agora confirmaram: o estado mostrado é o do mais atrasado.
+ * de agora confirmaram: o estado mostrado é o do mais atrasado. Sem confirmação de alguém em 7 dias, "possivelmente
+ * perdida" (RF-53).
  */
-export function deliveryOf(message: Pick<MessageRecord, 'status' | 'receipts'>, recipients: string[]): Delivery {
+export function deliveryOf(
+	message: Pick<MessageRecord, 'status' | 'receipts' | 'rumor' | 'resentAt'>,
+	recipients: string[],
+	now = Date.now() / 1000
+): Delivery {
 	if (message.status === 'pendente') return 'pendente';
+	if (lostRecipients(message, recipients, now).length) return 'perdida';
 	if (!recipients.length || !message.receipts) return 'enviada';
 	const levels = recipients.map((r) => message.receipts![r]);
 	if (levels.every((l) => l === 'lida')) return 'lida';

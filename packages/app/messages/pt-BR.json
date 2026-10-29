@@ -237,6 +237,8 @@
 	"bolha_enviada": "Enviada",
 	"bolha_entregue": "Enviada e entregue",
 	"bolha_lida": "Enviada e lida",
+	"bolha_perdida": "Talvez não tenha chegado",
+	"bolha_reenviar": "Reenviar",
 	"citada_voce": "Você",
 	"citada_indisponivel": "Mensagem não disponível",
 	"citada_apagada": "Mensagem apagada",

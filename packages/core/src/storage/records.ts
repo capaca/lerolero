@@ -77,7 +77,17 @@ export type ConversationRecord = {
 	nameSent?: boolean;
 	/** só no 1:1: a pessoa já me escreveu, então o que eu mando não precisa de prova de trabalho (RF-90) */
 	heardFrom?: boolean;
+	/** o último número (`seq`) que usei nas minhas mensagens desta conversa, de qualquer aparelho meu (RF-53) */
+	lastSeq?: number;
+	/** o que chegou de cada um, para achar os buracos na numeração (conversations/losses.ts) */
+	seqs?: Record<string, SeqTrack>;
 };
+
+/** Numeração de quem me escreve numa conversa: o maior número visto e os que faltam abaixo dele. */
+export type SeqTrack = { top: number; missing: MissingSeq[] };
+
+/** Um número que falta: desde quando (segundos) e quantas vezes já pedi o reenvio. */
+export type MissingSeq = { n: number; since: number; asked: number; askedAt?: number };
 
 export type MessageStatus = 'pendente' | 'enviada' | 'recebida';
 
@@ -142,6 +152,13 @@ export type MessageRecord = {
 	starred?: boolean;
 	/** editada por quem escreveu (RF-24): horário da edição que vale, em segundos */
 	editedAt?: number;
+	/**
+	 * Só nas minhas (texto e arquivo): o rumor original, para reenviar a mesma mensagem, com o mesmo id, se ela se
+	 * perder (RF-53). Mensagens de antes da detecção de perdas não têm.
+	 */
+	rumor?: Omit<NostrEvent, 'sig'>;
+	/** quando reenviei pela última vez (segundos): o prazo de 7 dias recomeça daí */
+	resentAt?: number;
 	/** apagada para todos (RF-25): fica o aviso no lugar, sem conteúdo */
 	deleted?: boolean;
 	/** aviso de grupo ("Ana adicionou Bruno"); a tela monta o texto, com os nomes atuais e na língua da pessoa */

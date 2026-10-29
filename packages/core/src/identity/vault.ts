@@ -81,12 +81,16 @@ export const RECEIPT_KIND = 4441;
 export const PROFILE_KIND = 4442;
 /** Edição de mensagem (conversations/edits.ts, RF-24). */
 export const EDIT_KIND = 4443;
+/** Pedido de reenvio (docs/06 §3.5, RF-53): os números (`seq`) que faltam de quem escreveu. */
+export const RESEND_KIND = 4444;
+/** Números por pedido de reenvio: um buraco maior que isso é de quem trocou de aparelho, não de perda. */
+export const MAX_RESEND_SEQS = 50;
 /** Confirmações agrupadas: um evento cobre várias mensagens, mas não um número sem fim. */
 export const MAX_RECEIPT_IDS = 200;
 export const MAX_REACTION_LENGTH = 16;
 
 /** Tipos de rumor que o app escreve. */
-export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND | typeof PROFILE_KIND | typeof EDIT_KIND;
+export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND | typeof PROFILE_KIND | typeof EDIT_KIND | typeof RESEND_KIND;
 
 /** Backup cifrado (RF-06, docs/06 §3.7): dado de aplicativo (NIP-78), um por pessoa, cifrado para mim mesmo. */
 export const BACKUP_KIND = 30078;
@@ -117,6 +121,10 @@ function checkMessage(kind: number, content: string, tags: string[][]) {
 	if (kind === EDIT_KIND) {
 		if (!content.trim() || content.length > MAX_TEXT_LENGTH) throw new Error('edição vazia ou longa demais');
 		if (tags.filter((t) => t[0] === 'e').length !== 1) throw new Error('edição sem a mensagem');
+	}
+	if (kind === RESEND_KIND) {
+		const seqs = tags.filter((t) => t[0] === 'seq').length;
+		if (seqs === 0 || seqs > MAX_RESEND_SEQS) throw new Error('pedido de reenvio sem números ou com números demais');
 	}
 	if (kind === PROFILE_KIND && !tags.some((t) => t[0] === 'nome' && t[1]?.trim())) throw new Error('cartão de perfil sem nome');
 }
@@ -270,15 +278,18 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 		},
 
 		/**
-		 * Embrulha de novo um aviso de grupo que eu mesmo fiz, para quem não o recebeu
-		 * (repasse, groups.ts). O rumor é o original: o horário e o id não mudam.
+		 * Embrulha de novo um rumor meu: o aviso de grupo para quem não o recebeu (repasse, groups.ts) ou a mensagem que
+		 * se perdeu (RF-53). O rumor é o original: o horário e o id não mudam, e quem já o tinha descarta a repetida.
+		 * A mensagem só vai para quem estava nela (tags `p`).
 		 */
-		rewrapGroupControl(rumor: Rumor, recipients: string[]): { recipient: string; wrap: NostrEvent }[] {
+		rewrap(rumor: Rumor, recipients: string[]): { recipient: string; wrap: NostrEvent }[] {
 			if (!secretKey) throw new LockedError();
-			if (rumor.pubkey !== getPublicKey(secretKey) || rumor.kind !== 4440 || getEventHash(rumor) !== rumor.id) {
-				throw new Error('só repasso avisos de grupo meus');
+			if (rumor.pubkey !== getPublicKey(secretKey) || ![4440, 14, 15].includes(rumor.kind) || getEventHash(rumor) !== rumor.id) {
+				throw new Error('só embrulho de novo avisos de grupo e mensagens meus');
 			}
 			if (!recipients.every(isPublicKey)) throw new Error('destinatários inválidos');
+			const addressed = new Set(rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1]));
+			if (rumor.kind !== 4440 && !recipients.every((r) => addressed.has(r))) throw new Error('destinatário fora da mensagem');
 			return recipients.map((recipient) => ({ recipient, wrap: createWrap(createSeal(rumor, secretKey!, recipient), recipient) }));
 		},
 
