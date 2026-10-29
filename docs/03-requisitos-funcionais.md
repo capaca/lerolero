@@ -121,7 +121,7 @@
 
 | ID | Requisito | Prioridade | Fase |
 |---|---|---|---|
-| RF-90 | **Custo para enviar:** prova de trabalho ou limite de taxa na primeira mensagem para quem não é contato, calibrado para celulares simples (Q-A1) | Should | MVP |
+| RF-90 | **Custo para enviar:** prova de trabalho (NIP-13) no que vai para quem ainda não me escreveu, calibrada para celulares simples (Q-A1, RNF-18). Sem a prova, a mensagem de quem não é contato vai para Pedidos numa seção "Possível spam", sem aviso (decidido em 2026-10-29; rejeitado: descartar). Ver docs/06 §3.8 | Should | MVP |
 
 ## Fora de escopo até segunda ordem
 

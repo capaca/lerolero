@@ -73,6 +73,8 @@ export type ConversationRecord = {
 	unread: number;
 	/** já mandei meu nome nesta conversa (tag "nome" na primeira mensagem) */
 	nameSent?: boolean;
+	/** só no 1:1: a pessoa já me escreveu, então o que eu mando não precisa de prova de trabalho (RF-90) */
+	heardFrom?: boolean;
 };
 
 export type MessageStatus = 'pendente' | 'enviada' | 'recebida';

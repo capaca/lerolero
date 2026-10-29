@@ -13,6 +13,24 @@
 	import { readTextSize, saveTextSize, type TextSize } from '#lib/text-size.ts';
 
 	const npub = $derived(session.identity ? toNpub(session.identity.publicKey) : '');
+
+	// medição da prova de trabalho (RNF-18), só no app em dev: calibra a dificuldade no celular do Pedro
+	const POW_BITS = [12, 14, 16];
+	const POW_RUNS = 10;
+	let powResults = $state<{ bits: number; mean: number; max: number }[]>([]);
+	let measuring = $state(false);
+	async function measurePow() {
+		measuring = true;
+		powResults = [];
+		try {
+			for (const bits of POW_BITS) {
+				const times = await session.measurePow(bits, POW_RUNS);
+				powResults = [...powResults, { bits, mean: Math.round(times.reduce((a, b) => a + b, 0) / times.length), max: Math.max(...times) }];
+			}
+		} finally {
+			measuring = false;
+		}
+	}
 	let copied = $state(false);
 
 	const relays = relayList();
@@ -140,6 +158,17 @@
 			</ul>
 		{/if}
 	</section>
+
+	{#if __APP_LOCAL__}
+		<section class="card">
+			<h2>{m.ajustes_pow_titulo()}</h2>
+			<p class="hint">{m.ajustes_pow_dica({ n: POW_RUNS })}</p>
+			{#each powResults as r (r.bits)}
+				<p>{m.ajustes_pow_resultado({ bits: r.bits, media: r.mean, max: r.max })}</p>
+			{/each}
+			<button onclick={measurePow} disabled={measuring}>{measuring ? m.ajustes_pow_medindo() : m.ajustes_pow_medir()}</button>
+		</section>
+	{/if}
 
 	<p class="hint release">
 		{(__APP_HOMOLOG__ ? m.ajustes_versao_homologacao : __APP_LOCAL__ ? m.ajustes_versao_local : m.ajustes_versao)({ versao: __APP_RELEASE__ })}

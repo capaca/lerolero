@@ -1,10 +1,12 @@
 // Cofre da identidade. Roda dentro do Web Worker: a chave privada nasce, vive e
 // morre aqui, e a interface só recebe a chave pública e lacres já cifrados.
 
-import { finalizeEvent, getEventHash, getPublicKey, type EventTemplate, type NostrEvent } from 'nostr-tools/pure';
+import { finalizeEvent, generateSecretKey, getEventHash, getPublicKey, type EventTemplate, type NostrEvent } from 'nostr-tools/pure';
+import { encrypt, getConversationKey } from 'nostr-tools/nip44';
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06';
 import { createRumor, createSeal, createWrap, unwrapEvent } from 'nostr-tools/nip59';
 import { DEFAULT_KDF, seal, unseal, type KdfParams, type Sealed } from '../crypto/seal.ts';
+import { mine } from '../crypto/pow.ts';
 import { generatePhrase, parsePhrase } from './phrase.ts';
 
 export class InvalidPinError extends Error {
@@ -90,6 +92,9 @@ export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KI
 const MAX_GROUP_RECIPIENTS = 20;
 
 const isPublicKey = (v: string) => /^[0-9a-f]{64}$/.test(v);
+
+/** O NIP-59 sorteia o horário do embrulho em até 2 dias para trás. */
+const TWO_DAYS_S = 2 * 24 * 60 * 60;
 
 /** Regras comuns a mensagens 1:1 e de grupo: o cofre não embrulha qualquer coisa. */
 function checkMessage(kind: number, content: string, tags: string[][]) {
@@ -271,6 +276,42 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 			}
 			if (!recipients.every(isPublicKey)) throw new Error('destinatários inválidos');
 			return recipients.map((recipient) => ({ recipient, wrap: createWrap(createSeal(rumor, secretKey!, recipient), recipient) }));
+		},
+
+		/**
+		 * O mesmo rumor meu, num embrulho novo para `recipient` com prova de trabalho (RF-90): vai para quem ainda não me
+		 * escreveu. O horário do embrulho continua sorteado (NIP-59). Só rumor meu, com id certo e endereçado a ele.
+		 */
+		async proveWrap(rumor: Rumor, recipient: string, difficulty: number): Promise<NostrEvent> {
+			if (!secretKey) throw new LockedError();
+			if (rumor.pubkey !== getPublicKey(secretKey) || getEventHash(rumor) !== rumor.id) throw new Error('só embrulho mensagens minhas');
+			if (!isPublicKey(recipient) || !rumor.tags.some((t) => t[0] === 'p' && t[1] === recipient)) throw new Error('destinatário inválido');
+			const key = generateSecretKey();
+			const template = {
+				kind: 1059,
+				created_at: Math.round(Date.now() / 1000 - Math.random() * TWO_DAYS_S),
+				tags: [['p', recipient]],
+				content: encrypt(JSON.stringify(createSeal(rumor, secretKey, recipient)), getConversationKey(key, recipient)),
+				pubkey: getPublicKey(key)
+			};
+			const tags = await mine(template, difficulty);
+			return finalizeEvent({ kind: template.kind, created_at: template.created_at, tags, content: template.content }, key);
+		},
+
+		/**
+		 * Medição da prova (RNF-18), para calibrar a dificuldade no celular: `runs` provas sobre um embrulho do tamanho de
+		 * uma mensagem curta. Devolve quanto cada uma levou, em ms. Não usa a chave.
+		 */
+		async measurePow(difficulty: number, runs: number): Promise<number[]> {
+			const times: number[] = [];
+			for (let i = 0; i < runs; i++) {
+				// conteúdo diferente a cada rodada: com o mesmo, toda rodada acharia o mesmo nonce
+				const event = { kind: 1059, created_at: Math.floor(Date.now() / 1000), tags: [['p', 'a'.repeat(64)]], content: 'A'.repeat(1464) + crypto.randomUUID(), pubkey: 'b'.repeat(64) };
+				const start = performance.now();
+				await mine(event, difficulty);
+				times.push(Math.round(performance.now() - start));
+			}
+			return times;
 		},
 
 		/** Guarda a chave desbloqueada numa sessão (ver OpenSession). */

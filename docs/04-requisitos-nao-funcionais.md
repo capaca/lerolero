@@ -28,7 +28,7 @@ Metas de qualidade que valem para todo o app. Os números são propostas iniciai
 | RNF-15 | Memória usada pelo app | < 150 MB |
 | RNF-16 | Tamanho do download inicial do PWA (código) | < 500 KB comprimido |
 | RNF-17 | Tamanho do APK | < 15 MB |
-| RNF-18 | Prova de trabalho antispam (RF-90) | < 1 s no aparelho de referência |
+| RNF-18 | Prova de trabalho antispam (RF-90) | < 1 s no aparelho de referência (14 bits: média de 196 ms no Motorola Edge 60, medido em 2026-10-29; falta medir no de 2 GB) |
 
 ## 3. Consumo de dados e bateria
 

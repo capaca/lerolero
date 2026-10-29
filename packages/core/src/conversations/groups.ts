@@ -488,6 +488,13 @@ export async function takeForwards(storage: Storage, conversation: ConversationR
 
 // ---------- mudanças feitas por mim ----------
 
+/** Quem este aviso põe no grupo: são eles que o recebem com prova de trabalho, se ainda não me escreveram (RF-90). */
+export function joinersOf(change: GroupChange): string[] {
+	if (change.action === 'criar') return change.recipients;
+	if (change.action === 'adicionar') return change.tags.filter((t) => t[0] === TARGET_TAG).map((t) => t[1]);
+	return [];
+}
+
 export type GroupChange = {
 	groupId: string;
 	action: GroupAction;

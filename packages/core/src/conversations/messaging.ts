@@ -105,7 +105,7 @@ export type StoredMessage = { message: MessageRecord; conversation: Conversation
 async function upsertConversation(
 	storage: Storage,
 	message: MessageRecord,
-	changes: { unread?: number; nameSent?: boolean },
+	changes: { unread?: number; nameSent?: boolean; heardFrom?: boolean },
 	fresh: Pick<ConversationRecord, 'type' | 'members'>
 ): Promise<ConversationRecord> {
 	const id = message.conversationId;
@@ -118,7 +118,8 @@ async function upsertConversation(
 		unread: (existing?.unread ?? 0) + (changes.unread ?? 0),
 		lastMessageAt: isLatest ? message.createdAt : existing.lastMessageAt,
 		...(isLatest ? summaryOf(message) : {}),
-		nameSent: changes.nameSent || existing?.nameSent
+		nameSent: changes.nameSent || existing?.nameSent,
+		...(changes.heardFrom || existing?.heardFrom ? { heardFrom: true } : {})
 	};
 	await storage.conversations.put(conversation);
 	return conversation;
@@ -162,7 +163,7 @@ async function storeIncomingNow(
 
 	if (!mine) await rememberSender(storage, other, rumor);
 	const unread = !mine && options.openConversationId !== message.conversationId ? 1 : 0;
-	const conversation = await upsertConversation(storage, message, { unread }, { type: 'direta', members: [other] });
+	const conversation = await upsertConversation(storage, message, { unread, heardFrom: !mine }, { type: 'direta', members: [other] });
 	return { message, conversation, isNew: true };
 }
 
@@ -297,6 +298,25 @@ export async function nameTagFor(storage: Storage, recipient: string, myName: st
 }
 
 // ---------- apagar (RF-25) ----------
+
+/**
+ * O que eu mando para `recipient` precisa de prova de trabalho (RF-90)? Precisa enquanto a pessoa nunca me escreveu
+ * no 1:1: sem isso, eu posso ser só um "pedido de mensagem" para ela. Conversa de antes da marca `heardFrom` é
+ * conferida nas mensagens uma vez.
+ */
+export async function needsProof(storage: Storage, recipient: string): Promise<boolean> {
+	const conversation = await storage.conversations.get(directConversationId(recipient));
+	if (!conversation) return true;
+	if (conversation.heardFrom) return false;
+	const recent = await storage.messages.listByConversation(conversation.id, 200);
+	if (!recent.some((m) => m.sender === recipient)) return true;
+	// relê dentro da trava: gravar a cópia de antes apagaria o que mudou nesse meio-tempo (não lidas, prévia)
+	await exclusive(storage, async () => {
+		const current = await storage.conversations.get(conversation.id);
+		if (current) await storage.conversations.put({ ...current, heardFrom: true });
+	});
+	return false;
+}
 
 /** Tags do pedido de apagar (NIP-09, kind 5) para uma mensagem minha. */
 export const deletionTags = (message: MessageRecord): string[][] => [
