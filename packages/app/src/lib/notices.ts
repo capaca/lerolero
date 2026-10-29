@@ -1,6 +1,6 @@
 // Nomes dos membros e texto dos avisos de grupo, na língua da interface (ADR-0008). O core guarda só o aviso
 // estruturado (ação, alvos, nome do grupo) e quem é cada membro; a frase é montada aqui, na hora de mostrar.
-import type { ConversationRecord, GroupNotice, MemberName } from '@lerolero/core';
+import { withMentionLabels, type ConversationRecord, type GroupNotice, type MemberName } from '@lerolero/core';
 import { intlLocale } from '#lib/i18n.svelte.ts';
 import { m } from '#lib/paraglide/messages.js';
 
@@ -56,6 +56,7 @@ export function previewText(conversation: ConversationRecord, nameOf?: NameOf): 
 			return last ? noticeText(last.notice, last.author, nameOf ?? (() => undefined)) : '';
 		}
 		default:
-			return conversation.lastMessagePreview ?? '';
+			// menção (RF-35): "@Ana" com o nome que eu conheço; fora dos grupos, o começo da chave
+			return withMentionLabels(conversation.lastMessagePreview ?? '', (k) => `@${nameOf ? memberName(nameOf(k)) : m.membro_alguem()}`);
 	}
 }

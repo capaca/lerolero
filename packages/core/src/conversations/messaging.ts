@@ -9,6 +9,7 @@ import { validThumb } from '../media/photo.ts';
 import type { ConversationRecord, MessageMedia, MessageRecord } from '../storage/records.ts';
 import { summaryOf } from '../storage/summary.ts';
 import { groupConversationId, groupIdOf, GROUP_TAG } from './groups.ts';
+import { applyHeldEdits } from './edits.ts';
 import { replyOf } from './interactions.ts';
 
 /**
@@ -153,8 +154,11 @@ async function storeIncomingNow(
 
 	// Se o app morreu entre guardar a mensagem e criar a conversa, o embrulho volta e a mensagem já existe, sem
 	// conversa: refaz o resto em vez de a mensagem ficar invisível para sempre (a gravação não é atômica).
-	const message = known ?? incomingRecord(rumor, directConversationId(other), media, mine);
-	if (!known) await storage.messages.put(message);
+	let message = known ?? incomingRecord(rumor, directConversationId(other), media, mine);
+	if (!known) {
+		await storage.messages.put(message);
+		message = await applyHeldEdits(storage, message);
+	}
 
 	if (!mine) await rememberSender(storage, other, rumor);
 	const unread = !mine && options.openConversationId !== message.conversationId ? 1 : 0;
@@ -198,8 +202,9 @@ async function storeGroupMessage(
 
 	const mine = rumor.pubkey === me;
 	if (existing && !mine && !existing.group?.everMembers.includes(rumor.pubkey)) return undefined;
-	const message = incomingRecord(rumor, id, media, mine);
+	let message = incomingRecord(rumor, id, media, mine);
 	await storage.messages.put(message);
+	message = await applyHeldEdits(storage, message);
 	if (!existing) return undefined;
 
 	const unread = !mine && options.openConversationId !== id ? 1 : 0;

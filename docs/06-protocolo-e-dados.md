@@ -44,11 +44,11 @@ kind 1059  Gift wrap — assinado por chave descartável; tag ["p", <destinatár
 
 | Uso | Kind | Padrão | Observações |
 |---|---|---|---|
-| Mensagem de texto | `14` | NIP-17 | Resposta: tag `["e", <id do rumor citado>, "", "reply"]` (marcador do NIP-10). Tags próprias: `seq`, `g` (ver abaixo) e `["nome", <nome>]` na primeira mensagem de cada conversa: como o nome é privado, ele chega ao contato só dentro da mensagem cifrada |
+| Mensagem de texto | `14` | NIP-17 | Menção (RF-35): `nostr:npub1…` no texto (NIP-27), a chave e não o nome; cada um mostra o nome que conhece. Resposta: tag `["e", <id do rumor citado>, "", "reply"]` (marcador do NIP-10). Tags próprias: `seq`, `g` (ver abaixo) e `["nome", <nome>]` na primeira mensagem de cada conversa: como o nome é privado, ele chega ao contato só dentro da mensagem cifrada |
 | Mídia (foto, áudio) | `15` | NIP-17 | Tags do NIP-17 para arquivos: `file-type`, `encryption-algorithm` (`aes-gcm`), `decryption-key`, `decryption-nonce`, `x` (hash do arquivo cifrado), `ox` (hash do original), `size`, `dim`, `thumb` (prévia), URLs do Blossom. Foto: `dim` é `LARGURAxALTURA` em pixels e `thumb` é um JPEG de até ~5 KB em base64, no próprio texto da tag; quem recebe descarta `thumb` com mais de 8000 caracteres ou fora do base64 e `dim` que não seja dois números (decidido em 2026-10-27: sem `blurhash`, a prévia já é uma imagem de verdade, e o balão reserva o espaço antes de baixar). Encaminhar manda a mesma referência (URLs, chave, nonce e hashes) numa mensagem nova, sem baixar nem subir de novo (RF-70). Áudio: `duration` (segundos) e `start` (segundos de silêncio no começo, que o player pula; só vale se for maior que 0 e menor que `duration`; cliente que não conhece a tag toca o áudio inteiro, então não muda `SYNC_GENERATION`) |
 | Reação | `7` | NIP-25 | Tag `["e", <id do rumor>]` e `["k", <kind>]`; conteúdo = emoji (até 16 caracteres). Uma por pessoa e mensagem: a mais recente vale. Desfazer = pedido de apagar (kind `5`) citando o id da reação, só de quem a escreveu |
 | Apagar para todos | `5` | NIP-09 | Pedido de apagamento; outros apps podem ignorar (RF-25) |
-| Edição | próprio | — | Kind a definir; tag `["e", <id original>]` + novo texto + `alt` |
+| Edição | `4443` | próprio | Decidido em 2026-10-29 (RF-24): conteúdo = texto novo inteiro; tags `["e", <id original>]`, `["k", "14"]`, `alt` e, nos grupos, `g`. Só texto e só de quem escreveu, até 15 minutos depois da original (com 1 minuto de folga para o relógio); a mais nova vale. Vai a todos da conversa e à minha cópia; quem recebe mostra "editada" e não guarda o texto antigo. Edição que chega antes da mensagem espera por ela (até 200) |
 | Confirmação (entregue / lida) | `4441` | próprio | Uma tag `["e", <id>]` por mensagem (até 200), `["status", "entregue" ou "lida"]` e `alt`. Vai só a quem escreveu as mensagens (nos grupos também), sem cópia para mim. Seção 3.4 |
 | Controle de grupo | `4440` | próprio | Seção 3.3; tag `alt` "aviso de grupo do Lero-lero" |
 | Cartão de perfil | `4442` | próprio | Seção 3.10 |
@@ -205,7 +205,7 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 
 | # | Questão | Responsável |
 |---|---|---|
-| Q-P1 | Escolher os números dos kinds próprios (edição, confirmação, pedido de reenvio) no registro de NIPs (✅ controle de grupo = `4440`, faixa 4440–4449 reservada, 2026-10-22); avaliar propor um NIP para confirmações de entrega, que hoje não têm padrão | Implementação |
+| Q-P1 | Escolher os números dos kinds próprios (edição, confirmação, pedido de reenvio) no registro de NIPs (✅ controle de grupo = `4440`, confirmação = `4441`, cartão de perfil = `4442`, edição = `4443`, faixa 4440–4449 reservada, 2026-10-22); avaliar propor um NIP para confirmações de entrega, que hoje não têm padrão | Implementação |
 | Q-P2 | Formato da figurinha sonora (v1): provavelmente kind `15` com imagem + áudio Opus curto, e `alt` "figurinha sonora" para outros apps (Q-F5) | Pedro (v1) |
 | Q-P3 | Janela de espera antes de pedir reenvio por buraco na numeração | Implementação |
 | Q-P4 | ✅ Português. Interoperabilidade da identidade via exportação da chave privada | — |

@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Um balão da conversa. first/last marcam o começo e o fim de uma sequência da mesma pessoa:
 	// só o último ganha a pontinha; nos grupos, o nome vai no primeiro.
-	import { splitLinks, type Delivery, type MessageRecord } from '@lerolero/core';
+	import { splitLinks, splitMentions, withMentionLabels, type Delivery, type MessageRecord, type TextPart } from '@lerolero/core';
 	import AudioPlayer from './AudioPlayer.svelte';
 	import PhotoView from './PhotoView.svelte';
 	import { hue } from './Avatar.svelte';
@@ -27,6 +27,7 @@
 		onlink,
 		onquote,
 		onreact,
+		mentionLabel = (publicKey) => publicKey,
 		onmenu
 	}: {
 		message: MessageRecord;
@@ -52,6 +53,8 @@
 		onpick?: () => void;
 		onquote?: () => void;
 		onreact?: (emoji: string) => void;
+		/** como cada menção aparece ("@Ana", RF-35) */
+		mentionLabel?: (publicKey: string) => string;
 		/** toque longo (celular) ou botão direito (computador) */
 		onmenu: () => void;
 	} = $props();
@@ -76,6 +79,13 @@
 	// foto aberta ocupa o balão inteiro, como no WhatsApp; a fechada (pedido de mensagem) é só uma linha
 	// mensagem apagada não entra na seleção
 	const picking = $derived(selecting && !msg.deleted);
+	const me = $derived(session.identity?.publicKey);
+	// texto em pedaços: menções (RF-35) e, fora delas, endereços (T18)
+	const parts = $derived(
+		splitMentions(msg.text).flatMap((part): Array<{ text: string; mention: string } | TextPart> =>
+			'mention' in part ? [part] : links === 'texto' ? [{ text: part.text }] : splitLinks(part.text)
+		)
+	);
 	const isPhoto = $derived(!msg.deleted && !!msg.media?.type.startsWith('image/') && links !== 'texto');
 </script>
 
@@ -136,7 +146,7 @@
 					{:else if quote.message.media}
 						<Icon name="paperclip" size={13} />
 					{:else}
-						{quote.message.text}
+						{withMentionLabels(quote.message.text, mentionLabel)}
 					{/if}
 				</span>
 			</button>
@@ -175,8 +185,10 @@
 			<p class="hint file"><Icon name="paperclip" size={16} /> {m.bolha_arquivo()}</p>
 		{:else}
 			<p>
-				{#each links === 'texto' ? [{ text: msg.text }] : splitLinks(msg.text) as part, i (i)}
-					{#if 'href' in part && links === 'aviso'}
+				{#each parts as part, i (i)}
+					{#if 'mention' in part}
+						<span class="mention" class:me={part.mention === me}>{mentionLabel(part.mention)}</span>
+					{:else if 'href' in part && links === 'aviso'}
 						<a
 							href={part.href}
 							target="_blank"
@@ -209,6 +221,7 @@
 		{/if}
 		<span class="meta">
 			{#if msg.starred}<span class="star"><Icon name="star" size={12} label={m.bolha_favorita()} /></span>{/if}
+			{#if msg.editedAt && !msg.deleted}<span class="edited">{m.bolha_editada()}</span>{/if}
 			{formatTime(msg.createdAt)}
 			{#if mine && !msg.upload?.failed}
 				{@const label = { pendente: m.bolha_enviando(), enviada: m.bolha_enviada(), entregue: m.bolha_entregue(), lida: m.bolha_lida() }[delivery]}
@@ -221,6 +234,19 @@
 </div>
 
 <style>
+	.mention {
+		font-weight: 600;
+		color: var(--accent);
+	}
+	/* fui eu o mencionado: destaque mais forte (RF-35) */
+	.mention.me {
+		padding: 0 0.2em;
+		border-radius: 4px;
+		background: color-mix(in srgb, var(--accent) 22%, transparent);
+	}
+	.edited {
+		margin-right: 0.25rem;
+	}
 	.sender {
 		display: block;
 		font-size: 0.8rem;

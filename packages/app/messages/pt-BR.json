@@ -219,6 +219,7 @@
 	"grupo_nao_esta": "Este grupo não está neste aparelho.",
 	"bolha_voce_apagou": "Você apagou esta mensagem",
 	"bolha_apagada": "Esta mensagem foi apagada",
+	"bolha_editada": "editada",
 	"bolha_audio_pedido": "Áudio de quem não é seu contato. Aceite o pedido para ouvir.",
 	"bolha_foto_pedido": "Foto de quem não é seu contato. Aceite o pedido para ver.",
 	"bolha_foto_abrir": "Abrir foto",
@@ -240,9 +241,14 @@
 	"reacao_chip": "Reação {emoji}: {count}",
 	"resposta_para": "Respondendo a {nome}",
 	"resposta_cancelar": "Cancelar resposta",
+	"edicao_titulo": "Editando mensagem",
+	"edicao_cancelar": "Cancelar edição",
+	"edicao_salvar": "Salvar edição",
+	"mencao_lista": "Mencionar alguém",
 	"menu_opcoes": "Opções da mensagem",
 	"menu_encaminhar": "Encaminhar",
 	"menu_responder": "Responder",
+	"menu_editar": "Editar",
 	"menu_reagir": "Reagir com {emoji}",
 	"menu_reacoes": "Reações",
 	"menu_mais_reacoes": "Mais reações",
@@ -712,5 +718,7 @@
 	"roteiro_passo_21": "Extra: A escolhe Ajustes → Tamanho da letra → Muito grande e grava um áudio falando",
 	"roteiro_esperado_21": "As telas ficam com a letra maior e sem rolar para os lados; durante a gravação, a barra ao lado do tempo sobe e desce com a voz",
 	"roteiro_passo_22": "Extra: A escolhe Ajustes → Editar nome e foto, põe uma foto, muda o nome e salva",
-	"roteiro_esperado_22": "Sem A mandar mensagem nova, a foto de A aparece para B na lista de conversas e no contato; em B, o nome que B deu a A continua, e o nome novo aparece em “Se apresenta como”"
+	"roteiro_esperado_22": "Sem A mandar mensagem nova, a foto de A aparece para B na lista de conversas e no contato; em B, o nome que B deu a A continua, e o nome novo aparece em “Se apresenta como”",
+	"roteiro_passo_23": "Extra: num grupo, A digita @, escolhe B na lista e envia; depois segura a própria mensagem, toca em Editar, muda o texto e salva",
+	"roteiro_esperado_23": "B vê o próprio nome destacado na mensagem; depois da edição, o texto novo aparece para todos com “editada”, sem virar mensagem nova"
 }

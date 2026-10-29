@@ -41,7 +41,7 @@ export function replyOf(rumor: Pick<Rumor, 'tags'>): string | undefined {
 }
 
 /** A conversa a que um rumor de reação ou confirmação pertence, do ponto de vista de quem o escreveu. */
-async function conversationOf(storage: Storage, me: string, rumor: Rumor): Promise<ConversationRecord | undefined> {
+export async function conversationOf(storage: Storage, me: string, rumor: Rumor): Promise<ConversationRecord | undefined> {
 	const groupId = groupIdOf(rumor);
 	if (groupId) {
 		const conversation = await storage.conversations.get(groupConversationId(groupId));

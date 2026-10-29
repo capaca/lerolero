@@ -21,6 +21,7 @@ export {
 	LockedError,
 	MAX_TEXT_LENGTH,
 	MAX_RECEIPT_IDS,
+	EDIT_KIND,
 	PROFILE_KIND,
 	RECEIPT_KIND,
 	REACTION_KIND,
@@ -39,6 +40,8 @@ export { toNpub } from './identity/npub.ts';
 export { DELAYS_MS, FREE_ATTEMPTS, NO_FAILURES, recordFailure, waitTime, type AttemptState } from './identity/attempts.ts';
 export { cleanName, InvalidInviteError, inviteLink, parseInvite, type Invite, type InviteProblem } from './contacts/invite.ts';
 export { addContact, contactName, listContacts, renameContact, SelfInviteError } from './contacts/contacts.ts';
+export { mentionedIn, mentionOf, splitMentions, withMentionLabels, type MentionPart } from './conversations/mentions.ts';
+export { canEdit, EDIT_WINDOW_S, editMine, editTags, storeEdit } from './conversations/edits.ts';
 export {
 	markProfileSent,
 	photoAllowed,

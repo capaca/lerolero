@@ -77,12 +77,14 @@ export const REACTION_KIND = 7;
 export const RECEIPT_KIND = 4441;
 /** Cartão de perfil (contacts/profile.ts, Q-P5). */
 export const PROFILE_KIND = 4442;
+/** Edição de mensagem (conversations/edits.ts, RF-24). */
+export const EDIT_KIND = 4443;
 /** Confirmações agrupadas: um evento cobre várias mensagens, mas não um número sem fim. */
 export const MAX_RECEIPT_IDS = 200;
 export const MAX_REACTION_LENGTH = 16;
 
 /** Tipos de rumor que o app escreve. */
-export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND | typeof PROFILE_KIND;
+export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND | typeof PROFILE_KIND | typeof EDIT_KIND;
 
 /** Membros de grupo além de mim que recebem um embrulho; 20 cobre os 19 outros membros e alguém que acabou de sair (RF-30). */
 const MAX_GROUP_RECIPIENTS = 20;
@@ -102,6 +104,10 @@ function checkMessage(kind: number, content: string, tags: string[][]) {
 		const ids = tags.filter((t) => t[0] === 'e').length;
 		if (ids === 0 || ids > MAX_RECEIPT_IDS) throw new Error('confirmação sem mensagens ou com mensagens demais');
 		if (!tags.some((t) => t[0] === 'status' && (t[1] === 'entregue' || t[1] === 'lida'))) throw new Error('confirmação sem o estado');
+	}
+	if (kind === EDIT_KIND) {
+		if (!content.trim() || content.length > MAX_TEXT_LENGTH) throw new Error('edição vazia ou longa demais');
+		if (tags.filter((t) => t[0] === 'e').length !== 1) throw new Error('edição sem a mensagem');
 	}
 	if (kind === PROFILE_KIND && !tags.some((t) => t[0] === 'nome' && t[1]?.trim())) throw new Error('cartão de perfil sem nome');
 }

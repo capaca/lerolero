@@ -122,7 +122,7 @@ test('guia de teste e roteiro de aceite: nenhum texto fixo', async ({ novoAparel
 	await expect(page.locator('h1')).toBeVisible();
 	await semTextoFixo(page);
 	await page.goto('./teste/roteiro');
-	await expect(page.locator('tbody tr')).toHaveCount(25);
+	await expect(page.locator('tbody tr')).toHaveCount(26);
 	await semTextoFixo(page);
 });
 
@@ -188,6 +188,16 @@ test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum
 	await expect(ana.page.locator('.row .chip')).toBeVisible();
 	await semTextoFixo(ana.page, nomes);
 
+	// editar a minha (segundo item do menu das minhas, depois de Responder): a faixa de edição e a marca "editada"
+	await ana.page.locator('.row.mine', { hasText: 'oi' }).locator('.bubble').click({ button: 'right' });
+	await ana.page.locator('.sheet .item').nth(1).click();
+	await expect(ana.page.locator('.composer .reply')).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.locator('.composer textarea').fill('apagar');
+	await ana.page.locator('.composer button.round.primary').click();
+	await expect(ana.page.locator('.row.mine .edited')).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
+
 	await ana.page.locator('.composer button.round.primary').click();
 	await expect(ana.page.locator('.composer .recording')).toBeVisible();
 	await semTextoFixo(ana.page, nomes);
@@ -198,6 +208,14 @@ test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum
 	await ana.page.locator('.conversations a', { hasText: 'Amigos' }).click();
 	await expect(ana.page.locator('.notice-line')).toBeVisible();
 	await semTextoFixo(ana.page, nomes);
+	// a lista de menções ao digitar "@" e a menção no balão
+	await ana.page.locator('.composer textarea').pressSequentially('@');
+	await expect(ana.page.locator('.composer .mentions button')).toHaveCount(1);
+	await semTextoFixo(ana.page, [...nomes, '@Bia']);
+	await ana.page.locator('.composer .mentions button').click();
+	await ana.page.locator('.composer button.round.primary').click();
+	await expect(ana.page.locator('.row.mine .mention')).toBeVisible();
+	await semTextoFixo(ana.page, [...nomes, '@Bia']);
 
 	// pedido de mensagem do Caio, aberto por Contatos no app normal
 	await abrirPedido(ana.page, 'Caio');

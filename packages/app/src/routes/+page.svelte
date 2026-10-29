@@ -18,7 +18,7 @@
 	let showPhraseReminder = $state(false);
 	let contactCount = $state(0);
 	// undefined enquanto carrega, para não piscar a tela de "nenhuma conversa"
-	// nameOf: nos grupos, para a prévia de um aviso ("Ana adicionou João")
+	// nameOf: nos grupos, para a prévia de um aviso ("Ana adicionou João") ou de uma menção ("@Ana")
 	let conversations = $state.raw<Array<{ conversation: ConversationRecord; name?: string; key: string; href: string; nameOf?: NameOf }>>();
 	let newChatOpen = $state(false);
 	// toque longo (ou botão direito) numa conversa abre o menu de excluir
@@ -77,7 +77,8 @@
 				if (conversation.group) {
 					// a cor do avatar do grupo sai do id dele, como a do contato sai da chave
 					const key = conversation.id.slice('grupo:'.length);
-					const nameOf = conversation.lastMessageKind === 'aviso' ? await session.groupNames(conversation) : undefined;
+					const named = conversation.lastMessageKind === 'aviso' || conversation.lastMessagePreview?.includes('nostr:npub1');
+					const nameOf = named ? await session.groupNames(conversation) : undefined;
 					return { conversation, key, name: conversation.group.state.name, href: resolve('/grupo/[id]', { id: key }), nameOf };
 				}
 				const key = conversation.members[0];
