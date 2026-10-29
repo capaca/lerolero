@@ -74,34 +74,25 @@ e diga o que conferir no celular nesse endereço. Mudança só de docs não vai 
 
 ## 6. Release
 
-Quando o Pedro pedir para publicar (ou juntar o que já entrou), decida o tipo pelos PRs desde a última tag
-(regra da ADR-0007):
-
-```bash
-git fetch -q --tags && git log --oneline "$(git describe --tags --abbrev=0 origin/main 2>/dev/null || git rev-list --max-parents=0 origin/main)"..origin/main
-```
+Quando o Pedro pedir para publicar (ou juntar o que já entrou), rode `scripts/release.sh preparar`. A release
+publica o commit que está na homologação, não o que estiver na `main` (ADR-0007); o script lista o que sai (da última
+tag até a homologação), o que fica de fora e há quantos minutos foi a última release. Decida o tipo:
 
 - **minor**: algum PR traz algo que o testador vê de novo (funcionalidade, tela, fluxo, texto que muda o uso);
 - **patch**: só correções e ajustes que não mudam o que se faz no app;
-- **nada a lançar**: só testes, docs ou bastidores. Uma release pede ao testador para atualizar; não gaste à toa.
+- **nada a lançar**: só testes, docs ou bastidores (o script marca esses com `[sem release]`). Uma release pede ao
+  testador para atualizar; não gaste à toa.
 
-A release publica o commit que está na homologação (`commit.txt` do branch `gh-pages` de `lerolero-app/lerolero`),
-não o que estiver na `main`. Confira qual é e se o Pedro já o validou no celular:
-
-```bash
-gh api repos/lerolero-app/lerolero/contents/commit.txt?ref=gh-pages --jq .content | base64 -d | xargs git log -1 --oneline
-```
-
-Mostre ao Pedro a lista de PRs com o tipo sugerido e o commit que vai sair, e espere a confirmação. Só então dispare:
+Mostre ao Pedro a lista com o tipo sugerido e o commit que vai sair, confirme que ele já o validou na homologação e
+espere a confirmação. Só então, **numa chamada só para isso**, dispare (o script recusa se a última release foi há
+menos de 10 minutos):
 
 ```bash
-gh workflow run release.yml -f tipo=minor   # ou patch
-gh run list --workflow release.yml --limit 1 --json databaseId \
-  --jq '"https://github.com/capaca/lerolero/actions/runs/\(.[0].databaseId)"'
+scripts/release.sh disparar minor   # ou patch; mostra o link da execução
 ```
 
-Passe o link, acompanhe e, no fim, passe o link da Release criada (`gh release view --json url --jq .url`).
-O número da versão aparece em Ajustes.
+Passe o link e, em outra chamada, em segundo plano, `scripts/release.sh acompanhar` (no fim mostra a versão e o link
+da Release). O número da versão aparece em Ajustes.
 
 ## 7. Dizer como testar no celular
 
