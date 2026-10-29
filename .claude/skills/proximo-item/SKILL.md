@@ -48,7 +48,8 @@ rejeitadas ficam como rejeitadas). Item grande: proponha etapas pequenas, cada u
 - Verifique com `scripts/verificar.sh` e, mudando o app, `scripts/verificar.sh build e2e`.
 - Ajuste de tela: suba `scripts/celular.sh` em segundo plano e revise com o Pedro no celular antes do PR.
 - Se o PR conclui o item, marque-o no mesmo PR: na "Ordem do restante do MVP" de `docs/07-roadmap.md`, termine a
-  linha com "✅ Feita em <data>" (é a marca que o `situacao.sh` procura). Item feito em parte: escreva o que falta.
+  linha com "✅ Feita em <data>" (é a marca que o `situacao.sh` procura), marque ✅ no marco e conte como ficou em `docs/historico.md`. Item feito
+  em parte: escreva o que falta.
 
 ## 5. PR
 

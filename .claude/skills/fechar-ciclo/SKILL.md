@@ -15,8 +15,8 @@ poucas linhas o que conferir no celular em https://lerolero-app.github.io/lerole
 
 ## 2. Roadmap
 
-Confira se o item concluído tem "✅ Feita em <data>" na "Ordem do restante do MVP" de `docs/07-roadmap.md` e se a
-linha "Andamento" do marco está certa. Se faltou no PR, faça um PR só de docs com a skill `registrar-decisao`.
+Confira se o item concluído tem "✅ Feita em <data>" na "Ordem do restante do MVP" de `docs/07-roadmap.md`, ✅ no
+marco e a "Situação" certa na tabela de marcos, e se o relato da entrega está em `docs/historico.md`. Se faltou no PR, faça um PR só de docs com a skill `registrar-decisao`.
 
 ## 3. Memória de status
 

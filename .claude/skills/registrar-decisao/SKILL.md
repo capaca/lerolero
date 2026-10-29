@@ -10,14 +10,15 @@ Os docs são a fonte da verdade do projeto e precisam bater com o código e com 
 ## "Acrescentar ao plano" = só registrar
 
 Quando o Pedro pede para acrescentar algo ao plano ou anotar uma ideia, **não implemente**. Registre no
-`docs/07-roadmap.md`, no marco certo, e, se houver dúvida a resolver, nas **Questões em aberto** do documento
+`docs/07-roadmap.md` (no marco certo como ⬜, ou em "Pedidos e ideias ainda fora da ordem"), e, se houver dúvida a resolver, nas **Questões em aberto** do documento
 correspondente, sempre com um responsável.
 
 ## Onde cada coisa vai
 
 | O que mudou | Onde registrar |
 |---|---|
-| Funcionalidade planejada, ordem do trabalho, andamento | `docs/07-roadmap.md` (marco, linha "Andamento", critério "Pronto quando") |
+| Funcionalidade planejada, ordem do trabalho, andamento | `docs/07-roadmap.md`: uma linha por item, ⬜ ou ✅ no marco, "Situação" na tabela de marcos, "Limites conhecidos". Sem relatos |
+| Como algo ficou pronto (escolhas, alternativas, bugs achados no caminho, o que ficou de fora) | `docs/historico.md`, na data da entrega, entrada mais recente no topo |
 | O que o app faz | `docs/03-requisitos-funcionais.md` (RF-xx) |
 | Metas de desempenho, dados, tamanho, acessibilidade | `docs/04-requisitos-nao-funcionais.md` (RNF-xx) |
 | Risco novo ou risco aceito | `docs/02-modelo-de-ameacas.md` (tabela T-xx: ameaça, mitigação, quando) |
