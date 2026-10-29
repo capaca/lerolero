@@ -41,8 +41,9 @@ export const FLUSH_CONCURRENCY = 5;
  *   3: apagar para todos (kind 5)
  *   4: grupos (tag `g` e avisos de grupo, kind 4440)
  *   5: respostas, reações (kind 7) e confirmações de entrega e leitura (kind 4441)
+ *   6: cartão de perfil (kind 4442)
  */
-export const SYNC_GENERATION = 5;
+export const SYNC_GENERATION = 6;
 
 /**
  * Se o aparelho sincronizou com uma geração anterior, esquece cursores e embrulhos

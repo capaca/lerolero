@@ -122,7 +122,7 @@ test('guia de teste e roteiro de aceite: nenhum texto fixo', async ({ novoAparel
 	await expect(page.locator('h1')).toBeVisible();
 	await semTextoFixo(page);
 	await page.goto('./teste/roteiro');
-	await expect(page.locator('tbody tr')).toHaveCount(24);
+	await expect(page.locator('tbody tr')).toHaveCount(25);
 	await semTextoFixo(page);
 });
 
@@ -322,10 +322,13 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('.person').click();
 	await semTextoFixo(page, nomes);
 
-	// ajustes, a frase (conferida desta vez) e o comentário
+	// ajustes, o perfil, a frase (conferida desta vez) e o comentário
 	await page.goto(PSEUDO_URL + 'ajustes');
 	await expect(page.locator('.relays li').first()).toBeVisible({ timeout: 20_000 });
 	await semTextoFixo(page, [...nomes, ...(await dados(page, '.key')), ...(await dados(page, '.relays li'))]);
+	await page.goto(PSEUDO_URL + 'ajustes/perfil');
+	await expect(page.locator('input#nome')).toBeVisible();
+	await semTextoFixo(page, nomes);
 	await page.goto(PSEUDO_URL + 'ajustes/frase');
 	await semTextoFixo(page);
 	await digitarPin(page, 'pin', PIN);

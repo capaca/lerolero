@@ -51,6 +51,7 @@ kind 1059  Gift wrap — assinado por chave descartável; tag ["p", <destinatár
 | Edição | próprio | — | Kind a definir; tag `["e", <id original>]` + novo texto + `alt` |
 | Confirmação (entregue / lida) | `4441` | próprio | Uma tag `["e", <id>]` por mensagem (até 200), `["status", "entregue" ou "lida"]` e `alt`. Vai só a quem escreveu as mensagens (nos grupos também), sem cópia para mim. Seção 3.4 |
 | Controle de grupo | `4440` | próprio | Seção 3.3; tag `alt` "aviso de grupo do Lero-lero" |
+| Cartão de perfil | `4442` | próprio | Seção 3.10 |
 | Pedido de reenvio | próprio | — | Kind a definir (seção 3.5) |
 
 Os números dos kinds próprios devem ser escolhidos consultando o registro de kinds do repositório de NIPs, para evitar colisão (Q-P1). A faixa **4440–4449** fica reservada para os kinds próprios do Lero-lero (livre no registro em 2026-10-22).
@@ -144,6 +145,28 @@ A numeração funciona mesmo com confirmações desligadas e detecta perdas no m
 - **Deduplicação:** guardar os ids de gift wraps processados por 9 dias (7 de retenção + 2 de margem) e descartar repetidos.
 - **Fila de envio:** eventos prontos ficam na fila até ao menos um relay confirmar; novas tentativas com espera crescente (RNF-33).
 
+### 3.10 Cartão de perfil (Q-P5, RF-02)
+
+Decidido em 2026-10-29. O nome e a foto não ficam num perfil público (kind `0`): vão num rumor kind `4442`, embrulhado
+como uma mensagem 1:1 (NIP-59), **um embrulho por pessoa**, para ninguém ver a lista de quem mais recebeu.
+
+- Tags: `["v", "1"]`, `["nome", <nome>]` (obrigatória), até 3 `["relay", <wss://…>]` (relays de DM), `["app", <versão>]`,
+  um `["recurso", <nome>]` por tipo de mensagem que o app lê (RNF-93: `texto`, `audio`, `foto`, `reacao`, `confirmacao`,
+  `grupo`, `cartao`) e `alt`.
+- Foto: como no kind `15`, o endereço no conteúdo e as tags do arquivo (`file-type`, `decryption-key`, `x`, `ox`, `dim`,
+  `thumb`…). É o quadrado do meio da foto escolhida, 512 px e até ~60 KB, cifrado no Blossom; a prévia (96 px) vai no
+  próprio cartão e aparece antes de baixar, e continua aparecendo se o servidor apagar o arquivo. Sem foto, conteúdo vazio.
+- O `created_at` é a versão do cartão: o mais novo vale. Muda quando o nome, a foto, os relays ou a versão do app mudam.
+- **Quem recebe:** vai junto da minha primeira mensagem a cada pessoa (no 1:1 e nos grupos) e da apresentação num grupo;
+  quando nome ou foto mudam, a todos com quem já falei: quem já recebeu um cartão, os contatos do 1:1 em que escrevi e
+  os membros dos grupos em que estou. Quem só me mandou um pedido não aceito não recebe (T7). Uma versão nova só da
+  versão do app vai junto da próxima mensagem, sem pressa.
+- **Quem lê:** o nome do cartão vira o "nome escolhido" do contato e o nome do membro nos grupos; o nome que eu dei ao
+  contato continua valendo (RF-14). Os relays passam a ser onde procuro a pessoa. De quem não é contato o cartão só fica
+  guardado (não vira pedido). A foto aparece só para contato aceito e quem está num grupo comigo; de pedido, só depois
+  de aceitar (T9). De bloqueado, descartado.
+- A tag `nome` na primeira mensagem continua indo, para quem ainda usa uma versão sem o cartão.
+
 ## 4. Dados no aparelho (IndexedDB)
 
 Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
@@ -156,6 +179,7 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 | `conversations` | id, tipo (`direta`, `grupo`), membros (com horário de entrada), administradores, criador, nome, última mensagem, não lidas, exceção de modo foco, último `seq` enviado | PK: id; idx: última mensagem |
 | `messages` | id do rumor, conversa, remetente, kind, texto, horário real, `seq`, status, resposta a, editada em, apagada, retida (modo foco), hash da mídia (`ox`) | PK: id; idx: [conversa + horário], status, retida |
 | `reactions` | mensagem, autor, emoji | idx: mensagem |
+| `profiles` | cartão de perfil mais recente de cada pessoa (o meu também): nome, foto, relays, versão do app, recursos, horário (versão 7 do Dexie) | PK: chave pública |
 | `media` | `ox` (hash original), tipo, tamanho, arquivo (Blob), URLs Blossom, chave, nonce, `x`, guardar (sim/não), último acesso | PK: `ox`; idx: último acesso |
 | `outbox` | eventos prontos, relays de destino, tentativas, próxima tentativa | idx: próxima tentativa |
 | `sync` | relay, cursor | PK: relay |
@@ -185,4 +209,4 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 | Q-P2 | Formato da figurinha sonora (v1): provavelmente kind `15` com imagem + áudio Opus curto, e `alt` "figurinha sonora" para outros apps (Q-F5) | Pedro (v1) |
 | Q-P3 | Janela de espera antes de pedir reenvio por buraco na numeração | Implementação |
 | Q-P4 | ✅ Português. Interoperabilidade da identidade via exportação da chave privada | — |
-| Q-P5 | **Cartão de perfil privado:** trocar a tag `nome` por um evento próprio, cifrado e embrulhado como uma mensagem, enviado a cada contato na primeira conversa e sempre que algo mudar. Candidatos: nome, foto de perfil (RF-02, cifrada no Blossom), relays de DM, versão e recursos do app (RNF-93), aviso de chave nova (Q-A4). Proposta: fazer no M2, junto com a foto | Pedro + implementação (M2) |
+| Q-P5 | ✅ **Cartão de perfil privado** (decidido em 2026-10-29): um evento próprio, cifrado e embrulhado como uma mensagem, no lugar da tag `nome`. Leva nome, foto de perfil (RF-02, cifrada no Blossom), versão e recursos do app (RNF-93) e relays de DM; o aviso de chave nova fica no RF-16 (futuro). Vai junto da minha primeira mensagem a cada pessoa e, quando algo muda, a todos com quem já falei, no 1:1 ou em grupo; quem só me mandou um pedido não aceito não recebe (T7). O nome que eu dei ao contato vence o do cartão, que aparece nos detalhes do contato; a foto do cartão aparece sempre. Rejeitadas: só nome e foto, ou sem os relays (o cartão já é o lugar deles e evita outro formato depois); só no 1:1 (membros de grupo ficariam sem foto); o nome do cartão sobrescrever o local (o contato trocaria o nome que eu escolhi) | — |

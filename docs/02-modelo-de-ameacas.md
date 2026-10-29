@@ -61,7 +61,7 @@ Como os usuários espalham suas mensagens por vários relays independentes, **ne
 | T6 | Serviço de push vê conteúdo | Push sem conteúdo, só "acorde" | Android nativo |
 | T7 | Spam em massa de desconhecidos | **Pedidos de mensagem:** desconhecidos vão para uma caixa separada, sem notificação e sem carregar links ou mídia até o usuário aceitar | MVP |
 | T8 | Spam automatizado em grande volume | **Custo para enviar:** prova de trabalho ou limite de taxa para a primeira mensagem a quem não é contato | MVP ou v1 |
-| T9 | Golpe do falso parente (golpista usa nome e foto de um conhecido) | Pedidos de mensagem (T7) já separam o desconhecido. Mais mecanismos em estudo (Q-A4) | MVP + futuro |
+| T9 | Golpe do falso parente (golpista usa nome e foto de um conhecido) | Pedidos de mensagem (T7) já separam o desconhecido; a foto de perfil de quem mandou pedido só aparece depois de aceito (decidido em 2026-10-29) e o nome que dei ao contato vence o do cartão (RF-14). Mais mecanismos em estudo (Q-A4) | MVP + futuro |
 | T10 | Celular roubado ou acessado por terceiros | **Opcional:** PIN/biometria próprios do app e mensagens temporárias | v1 |
 | T11 | Perda do celular = perda da identidade | **Frase de recuperação** (12 palavras) + backup cifrado de contatos e configurações nos relays | MVP |
 | T12 | Vazamento da chave expõe todo o histórico | Risco aceito no MVP. Forward secrecy no futuro (Double Ratchet ou MLS) | Futuro |

@@ -20,7 +20,7 @@
 | ID | Requisito | Prioridade | Fase |
 |---|---|---|---|
 | RF-01 | Criar identidade sem telefone nem e-mail: o app gera o par de chaves e o usuário escolhe um nome de exibição | Must | MVP |
-| RF-02 | Foto de perfil opcional | Could | MVP |
+| RF-02 | Foto de perfil opcional, no cartão de perfil privado (só para quem conversa comigo; de pedido de mensagem, só depois de aceitar) ([06](06-protocolo-e-dados.md) §3.10) | Could | MVP |
 | RF-03 | Mostrar a **frase de recuperação** (12 palavras) com explicação simples e um **teste de verificação** (ex.: "digite a 3ª e a 7ª palavras"). **Não no cadastro, e sim ao ganhar o primeiro contato** (decidido em 2026-10-26, Q-U1 do [07](07-roadmap.md)): uma tela própria, uma vez, com "Guardar agora" e "Depois" | Must | MVP |
 | RF-04 | Lembrete periódico para quem ainda não confirmou que guardou a frase: aviso na tela inicial, só depois de ter algum contato; "Depois" ou "Lembrar depois" o adiam por 3 dias (1 dia se o risco de perder os dados for maior, como no Safari do iPhone sem instalar) | Should | MVP |
 | RF-05 | Restaurar a identidade num aparelho novo a partir da frase | Must | MVP |

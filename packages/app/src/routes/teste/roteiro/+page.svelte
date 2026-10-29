@@ -4,7 +4,7 @@
 	import Rich from '#lib/components/Rich.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 
-	// Critério de aceite do M1 (passos 1 a 15) e extras do M3 (16 a 20); docs/07-roadmap.md
+	// Critério de aceite do M1 (passos 1 a 15) e extras do M3 (16 a 22); docs/07-roadmap.md
 	const steps = [
 		[m.roteiro_passo_1, m.roteiro_esperado_1],
 		[m.roteiro_passo_2, m.roteiro_esperado_2],
@@ -26,7 +26,8 @@
 		[m.roteiro_passo_18, m.roteiro_esperado_18],
 		[m.roteiro_passo_19, m.roteiro_esperado_19],
 		[m.roteiro_passo_20, m.roteiro_esperado_20],
-		[m.roteiro_passo_21, m.roteiro_esperado_21]
+		[m.roteiro_passo_21, m.roteiro_esperado_21],
+		[m.roteiro_passo_22, m.roteiro_esperado_22]
 	];
 </script>
 

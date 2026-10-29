@@ -73,6 +73,17 @@ import {
 	storeIncoming,
 	sendTime,
 	storeOutgoing,
+	cleanName,
+	markProfileSent,
+	photoAllowed,
+	prepareMedia,
+	PROFILE_FEATURES,
+	PROFILE_KIND,
+	profileAudience,
+	profileDue,
+	profileEvent,
+	storeProfile,
+	type ProfileRecord,
 	sessionIsOpen,
 	SyncEngine,
 	upgradeSyncGeneration,
@@ -88,7 +99,7 @@ import {
 	type Vault
 } from '@lerolero/core';
 import { NoRelaysError, NotInGroupError, PinLockedError } from './errors.ts';
-import { prepareFromFile } from './photo-encoder.ts';
+import { prepareFromFile, prepareProfileFromFile } from './photo-encoder.ts';
 import { m } from '#lib/paraglide/messages.js';
 import { memberName } from './notices.ts';
 import { relayList } from './relays.ts';
@@ -150,6 +161,13 @@ class Session {
 	/** áudios subindo agora e o aviso da próxima tentativa de cada um que falhou */
 	private uploading = new Set<string>();
 	private uploadTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	/**
+	 * Fotos de perfil para o Avatar, por chave: a foto baixada ou, enquanto não baixa, a prévia do cartão. Só de
+	 * quem a foto pode aparecer (contato aceito, grupo comigo e eu mesmo; de pedido não, T9).
+	 */
+	photos = $state<Record<string, string>>({});
+	private photoUrls = new Map<string, string>();
+	private downloadingPhotos = new Set<string>();
 
 	async init() {
 		this.identity = await storage.identity.get();
@@ -246,6 +264,7 @@ class Session {
 		await this.savingSession;
 		await storage.settings.set(OPEN_SESSION_KEY, undefined);
 		await vault.lock();
+		this.clearPhotos();
 		this.status = 'bloqueado';
 	}
 
@@ -293,6 +312,7 @@ class Session {
 		await upgradeSyncGeneration(storage);
 		await engine.start(await this.myDmRelays());
 		void this.resumeUploads();
+		void this.refreshPhotos();
 		this.watchConnection();
 		await this.publishDmRelays();
 	}
@@ -360,6 +380,14 @@ class Session {
 		const rumor = await vault.unwrap(wrap);
 		if (rumor.kind === GROUP_CONTROL_KIND) return this.receiveGroupControl(rumor);
 		const me = this.current.publicKey;
+		if (rumor.kind === PROFILE_KIND) {
+			const card = await storeProfile(storage, me, rumor);
+			if (card) {
+				this.version++;
+				await this.refreshPhoto(card.publicKey);
+			}
+			return;
+		}
 		if (rumor.kind === REACTION_KIND) {
 			if (await storeReaction(storage, me, rumor)) this.version++;
 			return;
@@ -449,6 +477,8 @@ class Session {
 		const change = await storeGroupControl(storage, me, rumor);
 		if (!change?.isNew) return;
 		this.version++;
+		// quem entrou no grupo passa a poder aparecer com foto
+		void this.refreshPhotos();
 		// avisos meus vindos de outro aparelho: lá já me apresentei
 		if (rumor.pubkey !== me) await this.afterGroupChange(change);
 	}
@@ -459,6 +489,8 @@ class Session {
 		const myName = this.current.displayName;
 		if (joined) await this.sendGroupChange(introduce(conversation, myName));
 		else if (newMembers.length) await this.sendGroupChange(introduce(conversation, myName, newMembers));
+		// o cartão vai junto da apresentação (Q-P5)
+		void this.sendProfile(joined ? conversation.members : newMembers);
 		for (const { rumor, to } of await takeForwards(storage, conversation, this.current.publicKey)) {
 			for (const { recipient, wrap } of await vault.rewrapGroupControl(rumor, to)) void this.enqueueTo(recipient, wrap);
 		}
@@ -568,6 +600,7 @@ class Session {
 			}
 			for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap, store ? wrapped.rumor.id : undefined);
 			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+			if (store) void this.sendProfile(conversation.members);
 			return wrapped.rumor;
 		}
 		const recipient = conversationId.slice('direta:'.length);
@@ -599,6 +632,7 @@ class Session {
 		// a fila guarda e tenta de novo sozinha: a tela não espera a rede
 		void network.engine.enqueue(wrapped.toRecipient, relays, store ? wrapped.rumor.id : undefined);
 		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+		if (store) void this.sendProfile([recipient]);
 		return wrapped.rumor;
 	}
 
@@ -821,6 +855,9 @@ class Session {
 	private async deliveryRelays(publicKey: string): Promise<string[]> {
 		const contact = await storage.contacts.get(publicKey);
 		if (contact?.dmRelays.length) return contact.dmRelays;
+		// membro de grupo que não é contato: os relays que vieram no cartão dele
+		const card = await storage.profiles.get(publicKey);
+		if (card?.relays.length) return card.relays;
 		const cached = this.foundRelays.get(publicKey);
 		if (cached) return cached;
 		const list = await relayList();
@@ -906,8 +943,10 @@ class Session {
 		return { publicKey: this.current.publicKey, name: this.current.displayName, relays: await this.myDmRelays() };
 	}
 
-	addContact(invite: Invite, localName?: string): Promise<ContactRecord> {
-		return addContact(storage.contacts, invite, { myPublicKey: this.current.publicKey, localName });
+	async addContact(invite: Invite, localName?: string): Promise<ContactRecord> {
+		const contact = await addContact(storage.contacts, invite, { myPublicKey: this.current.publicKey, localName });
+		await this.refreshPhoto(contact.publicKey);
+		return contact;
 	}
 
 	getContact(publicKey: string) {
@@ -948,21 +987,149 @@ class Session {
 	async acceptRequest(publicKey: string) {
 		await acceptRequest(storage, publicKey);
 		this.version++;
+		// aceito: a foto do cartão, que ficou guardada, passa a aparecer (T9)
+		await this.refreshPhoto(publicKey);
 	}
 
 	/** Bloquear (RF-13): a conversa some daqui e o que vier dessa chave é descartado. */
 	async blockContact(publicKey: string) {
 		await blockContact(storage, publicKey, (id) => this.discardUpload(id));
 		this.version++;
+		await this.refreshPhoto(publicKey);
 	}
 
 	async unblockContact(publicKey: string) {
 		await unblockContact(storage, publicKey);
 		this.version++;
+		await this.refreshPhoto(publicKey);
 	}
 
 	renameContact(publicKey: string, localName: string) {
 		return renameContact(storage.contacts, publicKey, localName);
+	}
+
+	// ---------- cartão de perfil (Q-P5, RF-02) ----------
+
+	/**
+	 * O meu cartão. Quem usava o app antes dele não tem um guardado: nasce do nome e dos relays. Mudou a versão do
+	 * app, ganha um horário novo e sai de novo para cada um junto da próxima mensagem (só a versão, sem pressa).
+	 */
+	async myProfile(): Promise<ProfileRecord> {
+		const me = this.current.publicKey;
+		const saved = await storage.profiles.get(me);
+		const fields = { name: this.current.displayName, relays: await this.myDmRelays(), app: __APP_RELEASE__, features: PROFILE_FEATURES };
+		const same =
+			saved &&
+			saved.name === fields.name &&
+			saved.app === fields.app &&
+			saved.relays.join(' ') === fields.relays.join(' ') &&
+			saved.features.join(' ') === fields.features.join(' ');
+		if (same) return saved;
+		const card: ProfileRecord = { ...saved, ...fields, publicKey: me, updatedAt: nextVersion(saved) };
+		await storage.profiles.put(card);
+		return card;
+	}
+
+	/** Manda o meu cartão a quem ainda não tem a versão atual (cada um no seu embrulho: ninguém vê a lista). */
+	private async sendProfile(recipients: string[]) {
+		try {
+			if (!this.network || !recipients.length) return;
+			const card = await this.myProfile();
+			const due = await profileDue(storage, recipients, card.updatedAt);
+			if (!due.length) return;
+			const { content, tags } = profileEvent(card);
+			for (const recipient of due) {
+				const wrapped = await vault.wrapDirectMessage(recipient, content, tags, PROFILE_KIND, card.updatedAt);
+				await this.enqueueTo(recipient, wrapped.toRecipient);
+			}
+			await markProfileSent(storage, due, card.updatedAt);
+		} catch {
+			// sem rede: o cartão vai junto da próxima mensagem
+		}
+	}
+
+	/**
+	 * Muda meu nome e a foto (`null` tira a foto; sem o campo, fica a atual) e manda o cartão novo a todos com
+	 * quem já falei. A foto nova sobe antes, cifrada, para os Blossom; sem rede, nada muda e a tela avisa.
+	 */
+	async updateProfile(name: string, photo?: Blob | null) {
+		const clean = cleanName(name);
+		if (!clean) throw new Error('nome vazio');
+		const me = this.current.publicKey;
+		const card = await this.myProfile();
+		const old = card.photo;
+		let next = photo === null ? undefined : old;
+		if (photo) {
+			const { file, width, height, thumb } = await prepareProfileFromFile(photo);
+			const list = await relayList();
+			const ref = await prepareMedia(storage, file, {
+				servers: [...list.blossom, ...list.blossomReserva],
+				signer: (template) => vault.sign(template)
+			});
+			const record = await storage.media.get(ref.ox);
+			if (record) await storage.media.put({ ...record, keep: true });
+			next = { ...ref, width, height, thumb };
+		}
+		await this.save({ ...this.current, displayName: clean });
+		await storage.profiles.put({ ...card, name: clean, photo: next, updatedAt: nextVersion(card) });
+		// a foto antiga sai daqui e dos servidores (quem ainda não baixou fica com a prévia)
+		if (old && old.ox !== next?.ox) {
+			if ((await storage.messages.countUsingMedia(old.ox)) === 0) await storage.media.delete(old.ox);
+			void removeFromBlossom(old.urls, old.x, (template) => vault.sign(template)).catch(() => {});
+		}
+		this.version++;
+		await this.refreshPhoto(me);
+		void this.sendProfile(await profileAudience(storage, me));
+	}
+
+	/** O cartão que a pessoa mandou, se chegou algum. */
+	getProfile(publicKey: string) {
+		return storage.profiles.get(publicKey);
+	}
+
+	private async refreshPhotos() {
+		for (const card of await storage.profiles.list()) await this.refreshPhoto(card.publicKey);
+	}
+
+	/** Atualiza a foto de uma pessoa no Avatar; baixa a foto inteira na primeira vez (a prévia aparece antes). */
+	private async refreshPhoto(publicKey: string) {
+		if (!this.identity) return;
+		const photo = (await storage.profiles.get(publicKey))?.photo;
+		const allowed = photo && (await photoAllowed(storage, this.current.publicKey, publicKey));
+		const file = allowed ? (await storage.media.get(photo.ox))?.file : undefined;
+		const old = this.photoUrls.get(publicKey);
+		if (old) URL.revokeObjectURL(old);
+		this.photoUrls.delete(publicKey);
+		if (!allowed) {
+			delete this.photos[publicKey];
+			return;
+		}
+		if (file) {
+			const url = URL.createObjectURL(file);
+			this.photoUrls.set(publicKey, url);
+			this.photos[publicKey] = url;
+			return;
+		}
+		if (photo.thumb) this.photos[publicKey] = `data:image/jpeg;base64,${photo.thumb}`;
+		if (this.downloadingPhotos.has(photo.ox)) return;
+		this.downloadingPhotos.add(photo.ox);
+		try {
+			await openMedia(storage, photo);
+			// a foto de perfil não expira do aparelho (RF-72): é o que aparece em todo lugar
+			const record = await storage.media.get(photo.ox);
+			if (record) await storage.media.put({ ...record, keep: true });
+			await this.refreshPhoto(publicKey);
+		} catch {
+			// sem rede ou o servidor apagou: fica a prévia; tenta de novo na próxima abertura
+		} finally {
+			this.downloadingPhotos.delete(photo.ox);
+		}
+	}
+
+	private clearPhotos() {
+		for (const url of this.photoUrls.values()) URL.revokeObjectURL(url);
+		this.photoUrls.clear();
+		this.photos = {};
 	}
 
 	getSetting<T>(key: string) {
@@ -975,5 +1142,8 @@ class Session {
 }
 
 export const session = new Session();
+
+/** Horário de uma versão nova do meu cartão, em segundos: sempre depois da anterior. */
+const nextVersion = (card?: ProfileRecord) => Math.max(Math.floor(Date.now() / 1000), (card?.updatedAt ?? 0) + 1);
 
 const relaysOf = (tags: string[][]) => tags.filter((t) => t[0] === 'relay').map((t) => t[1]);

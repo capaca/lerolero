@@ -207,4 +207,22 @@ export type GroupEventRecord = {
 	name?: string;
 };
 
+/**
+ * Cartão de perfil de alguém (kind 4442, docs/06 §3.5, Q-P5): o mais recente que chegou de cada pessoa.
+ * O meu fica aqui também, com a minha chave.
+ */
+export type ProfileRecord = {
+	publicKey: string;
+	name: string;
+	/** foto de perfil (RF-02): cifrada no Blossom, com a prévia que viaja no próprio cartão */
+	photo?: MessageMedia;
+	/** relays de DM (NIP-17) onde a pessoa recebe */
+	relays: string[];
+	/** versão do app de quem mandou e o que ele sabe ler (RNF-93) */
+	app?: string;
+	features: string[];
+	/** horário do cartão (rumor), em segundos: o mais novo vale */
+	updatedAt: number;
+};
+
 export type SeenWrapRecord = { id: string; receivedAt: number };

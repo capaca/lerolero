@@ -7,6 +7,7 @@ import type {
 	MediaRecord,
 	MessageRecord,
 	OutboxRecord,
+	ProfileRecord,
 	ReactionRecord,
 	SeenWrapRecord,
 	SettingRecord,
@@ -27,6 +28,7 @@ export class LeroleroDb extends Dexie {
 	media!: EntityTable<MediaRecord, 'ox'>;
 	group_events!: EntityTable<GroupEventRecord, 'id'>;
 	reactions!: EntityTable<ReactionRecord, 'id'>;
+	profiles!: EntityTable<ProfileRecord, 'publicKey'>;
 
 	constructor(name = 'lerolero') {
 		super(name);
@@ -62,5 +64,7 @@ export class LeroleroDb extends Dexie {
 		});
 		// reações às mensagens (RF-23): por mensagem, para somar os chips, e por conversa, para carregar a tela de uma vez
 		this.version(6).stores({ reactions: 'id, messageId, conversationId' });
+		// cartões de perfil (Q-P5): um por pessoa
+		this.version(7).stores({ profiles: 'publicKey' });
 	}
 }

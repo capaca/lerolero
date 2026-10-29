@@ -32,12 +32,30 @@ async function toBase64(blob: Blob): Promise<string> {
 	return btoa(binary);
 }
 
-export async function preparePhoto(encode: PhotoEncoder): Promise<PreparedPhoto> {
+/** Foto de perfil (RF-02): quadrada, pequena, e quem recebe a baixa de todos os contatos. */
+export const PROFILE_PHOTO_SIDE = 512;
+export const PROFILE_PHOTO_MAX_BYTES = 60_000;
+const PROFILE_ATTEMPTS: Array<[side: number, quality: number]> = [
+	[PROFILE_PHOTO_SIDE, 0.82],
+	[PROFILE_PHOTO_SIDE, 0.65],
+	[384, 0.6]
+];
+
+export function preparePhoto(encode: PhotoEncoder): Promise<PreparedPhoto> {
+	return prepare(encode, ATTEMPTS, PHOTO_MAX_BYTES);
+}
+
+/** O encoder da foto de perfil já recorta o quadrado do meio. */
+export function prepareProfilePhoto(encode: PhotoEncoder): Promise<PreparedPhoto> {
+	return prepare(encode, PROFILE_ATTEMPTS, PROFILE_PHOTO_MAX_BYTES);
+}
+
+async function prepare(encode: PhotoEncoder, attempts: Array<[number, number]>, maxBytes: number): Promise<PreparedPhoto> {
 	let best: Awaited<ReturnType<PhotoEncoder>> | undefined;
-	for (const [side, quality] of ATTEMPTS) {
+	for (const [side, quality] of attempts) {
 		const out = await encode(side, quality);
 		if (!best || out.blob.size < best.blob.size) best = out;
-		if (out.blob.size <= PHOTO_MAX_BYTES) break;
+		if (out.blob.size <= maxBytes) break;
 	}
 	let thumb: Blob | undefined;
 	for (const quality of THUMB_QUALITIES) {

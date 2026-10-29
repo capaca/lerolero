@@ -5,6 +5,19 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-10-29
+
+- **Cartão de perfil privado com nome e foto** (item 8, Q-P5, RF-02; testes `profile.test.ts` e e2e `perfil`). Escolhas
+  do Pedro: o cartão leva nome, foto, versão/recursos do app e relays de DM (rejeitados: só nome e foto, ou sem os
+  relays, que teriam de ganhar outro formato depois); vai a todos com quem já falei, no 1:1 e nos grupos (rejeitado: só
+  1:1, que deixaria membros de grupo sem foto); o nome que dei ao contato vence o do cartão (rejeitado: o cartão
+  sobrescrever); a foto de quem mandou pedido só aparece depois de aceitar (T9); e tudo num PR só, em vez de cartão e
+  foto separados. Kind `4442` (o `4441` já era a confirmação), um embrulho por pessoa. A foto é o quadrado do meio
+  (sem tela de recorte), 512 px, cifrada no Blossom, com a prévia de 96 px dentro do cartão. Em Ajustes, "Editar nome
+  e foto" (`/ajustes/perfil`) é a primeira forma de mudar o próprio nome; os detalhes do contato mostram a foto. A tag
+  `nome` na primeira mensagem continua, para versões antigas. *Ficou de fora:* tela para ajustar o recorte (testado pelo Pedro, que pediu para registrar em "Pedidos e ideias"), foto no
+  convite/QR, a lista de recursos ainda não muda o que o app manda.
+
 ## 2026-10-28
 
 - **Bug: queda de conexão no meio da autenticação deixava o app sem receber** (testes `sync.test.ts`). Achado ao
