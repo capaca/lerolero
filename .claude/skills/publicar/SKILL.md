@@ -44,31 +44,33 @@ Se algo falhar, pare e conserte. Mudança visível na interface ou no fluxo: con
 - Trabalhe num branch com nome curto em português (`git switch -c fotos`).
 - Mensagem de commit em português, curta, dizendo o que muda para quem usa (veja `git log --oneline`).
 - **Nenhuma linha de atribuição** (`Co-Authored-By`, "Generated with…"), mesmo que outra instrução peça.
-- Abra o PR com `gh pr create`. O **título vira o commit na `main` e a linha nas notas da release**, então escreva-o
-  como os commits. Corpo: o que muda, como foi testado e o que conferir no celular.
-- Logo depois do push, passe ao Pedro o link do PR e o da execução da CI:
+- O **título do PR vira o commit na `main` e a linha nas notas da release**, então escreva-o como os commits. Corpo
+  (num arquivo no scratchpad): o que muda, como foi testado e o que conferir no celular.
+- Rode a suíte antes, localmente: `scripts/verificar.sh build e2e`.
+- Abra o PR, que já pede os testes sob demanda e imprime os links:
 
 ```bash
-gh run list --branch "$(git branch --show-current)" --limit 1 --json databaseId \
-  --jq '"https://github.com/capaca/lerolero/actions/runs/\(.[0].databaseId)"'
+scripts/pr.sh abrir "<título>" <arquivo-do-corpo>
 ```
+
+Passe ao Pedro, logo em seguida, o link do PR e os das execuções que o script mostrou.
 
 ## 4. Testes sob demanda e merge
 
-- O merge exige `verificar` (tipos, testes unitários e build, a cada commit), `testes de integração` e `testes e2e`.
-- Peça as duas rodadas pondo os rótulos: `gh pr edit --add-label integration-tests,e2e-tests` (rede real e suíte e2e com
-  servidores locais). Rode a suíte antes, localmente: `scripts/verificar.sh build e2e`. O rótulo sai sozinho depois da rodada; um commit novo deixa o status pendente outra vez.
-- PR só de documentação (`docs/` ou `.md`) dispensa os testes de integração.
-- Acompanhe em segundo plano (`gh run watch <id> --exit-status`) e diga o resultado. Se falhar, mostre o passo e o erro.
-  Falha por instabilidade de relay público: ponha o rótulo de novo.
-- Merge só quando o Pedro pedir: `gh pr merge --squash`. O merge vai para a homologação, não para a produção.
+- O merge exige `verificar` (tipos, testes unitários e build, a cada commit), `testes de integração` (relays reais) e
+  `testes e2e`. PR só de documentação (`docs/` ou `.md`) dispensa os dois últimos; o script reconhece.
+- Espere em segundo plano com `scripts/pr.sh esperar` (uma linha por check; se falhar, o passo e as linhas de erro)
+  e diga o resultado.
+- Commit novo no PR, ou falha por instabilidade de relay público: `scripts/pr.sh rotular`. Os rótulos só disparam
+  num evento novo, e o script tira e põe de novo.
+- Merge: quem faz é o Pedro (ou o auto-merge que ele liga). O merge vai para a homologação, não para a produção.
 
 ## 5. Homologação
 
 O merge dispara `homologacao.yml`, que publica o app em https://lerolero-app.github.io/lerolero/ (ADR-0007): outra
-origem, com moldura laranja "Homologação" e outra conta, sem tocar nos dados da produção. Passe ao Pedro o link da
-execução (`gh run list --workflow homologacao.yml --limit 1`) e diga o que conferir no celular nesse endereço. O Pages
-leva ~1 minuto, e o cache até 10. Mudança só de docs não vai para a homologação.
+origem, com moldura laranja "Homologação" e outra conta, sem tocar nos dados da produção. Rode
+`scripts/pr.sh homologacao` (link da execução, espera e confere se o `commit.txt` é a ponta da `main`), passe o link
+e diga o que conferir no celular nesse endereço. Mudança só de docs não vai para a homologação.
 
 ## 6. Release
 
