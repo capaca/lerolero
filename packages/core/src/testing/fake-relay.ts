@@ -12,6 +12,11 @@ export class FakeRelay {
 	readonly events: NostrEvent[] = [];
 	/** recusa EVENTs (simula relay que não aceita) */
 	rejectWrites = false;
+	/** quantas conexões já foram aceitas (para o teste saber que houve reconexão) */
+	accepted = 0;
+	/** não responde ao AUTH (simula conexão que cai no meio da autenticação); `pendingAuth` conta os AUTH recebidos */
+	ignoreAuth = false;
+	pendingAuth = 0;
 	private server?: WebSocketServer;
 	private clients = new Set<Client>();
 	private port = 0;
@@ -47,6 +52,7 @@ export class FakeRelay {
 	private accept(ws: WebSocket) {
 		const client: Client = { ws, challenge: Math.random().toString(36).slice(2), subs: new Map() };
 		this.clients.add(client);
+		this.accepted++;
 		ws.on('close', () => this.clients.delete(client));
 		ws.on('message', (data) => this.handle(client, String(data)));
 		this.send(client, ['AUTH', client.challenge]);
@@ -56,6 +62,7 @@ export class FakeRelay {
 		const msg = JSON.parse(raw) as unknown[];
 		const [type] = msg;
 		if (type === 'AUTH') {
+			if (this.ignoreAuth) return void this.pendingAuth++;
 			const event = msg[1] as NostrEvent;
 			const ok =
 				verifyEvent(event) &&

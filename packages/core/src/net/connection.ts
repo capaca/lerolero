@@ -65,6 +65,8 @@ export class RelayConnection {
 				ws.onclose = () => {
 					this.authenticated = false;
 					this.challenge = undefined;
+					// uma autenticação pendente é do socket que caiu: a próxima conexão não pode herdá-la
+					this.authInFlight = undefined;
 					this.onclose?.();
 				};
 				ws.onmessage = (e) => this.receive(String(e.data));
@@ -109,7 +111,10 @@ export class RelayConnection {
 	/** Responde ao desafio AUTH (NIP-42). Várias chamadas ao mesmo tempo compartilham a mesma resposta. */
 	private auth(): Promise<boolean> {
 		if (this.authenticated) return Promise.resolve(true);
-		this.authInFlight ??= (async () => {
+		if (this.authInFlight) return this.authInFlight;
+		const ws = this.ws;
+		let flight!: Promise<boolean>;
+		flight = (async () => {
 			try {
 				if (!this.challenge) {
 					await this.waitFor((msg) => (msg[0] === 'AUTH' ? true : undefined), 'desafio AUTH').catch(() => undefined);
@@ -129,15 +134,18 @@ export class RelayConnection {
 					'autenticação'
 				);
 				this.send(['AUTH', event]);
-				this.authenticated = await done;
-				return this.authenticated;
+				const ok = await done;
+				// se o socket mudou no meio, o resultado vale para o antigo e não para o atual
+				if (ws === this.ws) this.authenticated = ok;
+				return ok;
 			} catch {
 				return false;
 			} finally {
-				this.authInFlight = undefined;
+				if (this.authInFlight === flight) this.authInFlight = undefined;
 			}
 		})();
-		return this.authInFlight;
+		this.authInFlight = flight;
+		return flight;
 	}
 
 	private receive(raw: string) {
