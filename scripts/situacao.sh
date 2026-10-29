@@ -16,7 +16,11 @@ echo "Produção:    $tag ($(git log -1 --format=%ad --date=short "$tag"))"
 homolog=$(gh api 'repos/lerolero-app/lerolero/contents/commit.txt?ref=gh-pages' --jq .content 2>/dev/null | base64 -d | tr -d '[:space:]')
 if [ -n "$homolog" ]; then
 	echo "Homologação: $(git log -1 --format='%h %s' "$homolog" | cut -c1-110)"
-	[ "$(git rev-parse origin/main)" != "$(git rev-parse "$homolog")" ] && echo "             (atrás da main: a publicação pode estar em andamento)"
+	# Merge só de docs não vai para a homologação: aí ficar atrás da main é o normal.
+	if [ "$(git rev-parse origin/main)" != "$(git rev-parse "$homolog")" ] &&
+		git diff --name-only "$homolog" origin/main | grep -qvE '^docs/|\.md$'; then
+		echo "             (atrás da main: a publicação pode estar em andamento)"
+	fi
 else
 	echo "Homologação: não consegui ler o commit.txt"
 fi
