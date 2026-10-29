@@ -7,6 +7,13 @@ conhecidos".
 
 ## 2026-10-29
 
+- **Retenção dos relays conferida** (Q-R1; `prototipos/relays`, `npm run testar -- retencao`, 7,7 dias depois de
+  publicar). Toda a lista padrão guardou tudo, menos o Blossom cdn.hzrd149.com, que estava no ar e apagou o arquivo:
+  saiu das reservas e entrou o blossom.jumble.social (escolha do Pedro). `relays.json` deixa de ser provisório; com a
+  data nova, os apps já instalados pegam a lista sozinhos. Fora da lista, 8 relays perderam eventos (damus, snort,
+  relay.nostr.net e outros menores). No Mac do Pedro, o Node só fala com os relays reais com
+  `NODE_OPTIONS=--use-system-ca` (interceptação de TLS).
+
 - **Prova de trabalho e "Possível spam"** (item 11, RF-90, T8; testes `pow.test.ts`, `requests.test.ts`,
   `groups.test.ts` e e2e `spam`), em dois PRs. Quem envia põe a prova (NIP-13) no gift wrap do que vai para alguém
   que ainda não lhe escreveu no 1:1, e do aviso que põe alguém num grupo; a mensagem aparece na tela na hora e a prova

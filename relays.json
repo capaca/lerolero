@@ -1,7 +1,7 @@
 {
   "versao": 1,
-  "atualizado": "2026-10-22",
-  "status": "provisório: falta confirmar a retenção de 7 dias (conferir a partir de 2026-10-29)",
+  "atualizado": "2026-10-29",
+  "status": "retenção de 7 dias confirmada em 2026-10-29",
   "dm": [
     "wss://auth.nostr1.com",
     "wss://relay.monostr.com",
@@ -24,7 +24,7 @@
   "blossomReserva": [
     "https://blossom.ditto.pub",
     "https://files.sovbit.host",
-    "https://cdn.hzrd149.com",
+    "https://blossom.jumble.social",
     "https://blossom.nmail.li"
   ]
 }
