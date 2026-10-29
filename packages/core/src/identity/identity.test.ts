@@ -6,7 +6,11 @@ import {
 	normalizeWord,
 	parsePhrase,
 	pickCheckPositions,
-	suggestWords
+	suggestWords,
+	numberedWords,
+	phraseFromFragment,
+	phraseFromRecoveryText,
+	recoveryFragment,
 } from './phrase.ts';
 import {
 	createVault,
@@ -65,6 +69,20 @@ describe('frase de recuperação', () => {
 		const swapped = PHRASE.split(' ');
 		[swapped[0], swapped[1]] = [swapped[1], swapped[0]];
 		expect(problem(swapped)).toEqual({ reason: 'soma' });
+	});
+
+	it('lê o arquivo de recuperação pelo link ou pela lista numerada (RF-09 a)', () => {
+		const words = PHRASE.split(' ');
+		expect(phraseFromFragment(recoveryFragment(words))).toEqual(words);
+		expect(phraseFromFragment('#segredo-surreal')).toBeUndefined();
+		const file = (link: string) =>
+			`Lero-lero\n\nComo recuperar\n1. No celular novo, toque neste link:\n${link}\n2. Ou digite as palavras.\n\n${numberedWords(words)}\n`;
+		expect(phraseFromRecoveryText(file('https://capaca.github.io/lerolero/restaurar' + recoveryFragment(words)))).toEqual(words);
+		// link quebrado (o domínio mudou, alguém mexeu no texto): vale a lista
+		expect(phraseFromRecoveryText(file('https://exemplo.com/restaurar#segredo-xyz'))).toEqual(words);
+		expect(phraseFromRecoveryText('1. segredo\r\n2) Surreal\r\n' + numberedWords(words).split('\n').slice(2).join('\r\n'))).toEqual(words);
+		expect(phraseFromRecoveryText(numberedWords(words.slice(0, 11)))).toBeUndefined();
+		expect(phraseFromRecoveryText('uma lista de compras')).toBeUndefined();
 	});
 
 	it('sorteia posições diferentes para o teste de verificação', () => {

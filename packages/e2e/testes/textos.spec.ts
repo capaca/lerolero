@@ -93,6 +93,18 @@ test('entrada (boas-vindas, cadastro, PIN, recuperar, esqueci o PIN): nenhum tex
 	await expect(page.getByRole('alert')).toBeVisible();
 	await semTextoFixo(page, ['abacate', 'xyzw']);
 
+	// pelo arquivo de recuperação (RF-09 a): um que não serve avisa; o link preenche as palavras
+	await page.locator('input[type="file"]').setInputFiles({ name: 'x.txt', mimeType: 'text/plain', buffer: Buffer.from('x') });
+	await expect(page.getByRole('alert')).toHaveCount(2);
+	await semTextoFixo(page, ['abacate', 'xyzw']);
+	const doLink = generatePhrase();
+	await page.goto('./bem-vindo');
+	await page.goto('./restaurar#' + doLink.join('-'));
+	await expect(page.locator('#frase')).toHaveValue(doLink.join(' '));
+	await semTextoFixo(page, doLink);
+	await digitarPin(page, 'pin', PIN);
+	await page.keyboard.type(PIN);
+
 	// frase válida de uma conta sem backup (RF-06): a segunda etapa pede o nome
 	const frase = generatePhrase();
 	await page.locator('#frase').fill(frase.join(' '));
@@ -250,6 +262,14 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('button.primary').click();
 	await semTextoFixo(page);
 	await digitarPin(page, 'pin', PIN);
+	// o arquivo (RF-09 a), já com o "Guardei o arquivo" do depois de baixar
+	await expect(page.locator('.actions button.link')).toBeVisible({ timeout: 20_000 });
+	const baixado = page.waitForEvent('download');
+	await page.locator('.actions button').first().click();
+	await baixado;
+	await expect(page.locator('.done')).toBeVisible();
+	await semTextoFixo(page);
+	await page.locator('.actions button.link').click(); // anotar as palavras
 	await expect(page.locator('ol li')).toHaveCount(12, { timeout: 20_000 });
 	const palavras = await dados(page, 'ol li');
 	await semTextoFixo(page, palavras);
@@ -373,6 +393,12 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('button[type="submit"]').click();
 	await expect(page.getByRole('status')).toBeVisible();
 	await semTextoFixo(page, palavras);
+	await page.goto(PSEUDO_URL + 'ajustes/protecao');
+	await expect(page.locator('main p').first()).toBeVisible();
+	await semTextoFixo(page);
+	await digitarPin(page, 'pin', PIN);
+	await expect(page.locator('.actions button').first()).toBeVisible({ timeout: 20_000 });
+	await semTextoFixo(page);
 	await page.goto(PSEUDO_URL + 'favoritas');
 	await expect(page.locator('main .hint')).toBeVisible();
 	await semTextoFixo(page);

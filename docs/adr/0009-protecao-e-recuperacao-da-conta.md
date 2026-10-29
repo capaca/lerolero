@@ -76,9 +76,13 @@ Regras do desenho:
    (Protegida / Falta proteger), com os passos oferecidos na hora certa.
 3. **Na restauração**, a ordem é do mais fácil para o mais seguro: passkey, preenchimento automático, arquivo, digitar
    as palavras. A tela de "Já tenho conta" mostra só o que o aparelho suporta.
-4. **O arquivo (D2) fica em texto aberto**, sem cifrar com o PIN (escolha recomendada, a confirmar pelo Pedro ao
-   implementar): ele já fica atrás da conta Google ou Apple da pessoa; cifrar com o PIN daria pouca proteção real
-   contra quem já está dentro dessa conta (é o mesmo T15) e criaria o caso "esqueci o PIN e perdi o celular".
+4. **O arquivo (D2) fica em texto aberto**, sem cifrar com o PIN (confirmado pelo Pedro em 2026-10-29): ele já fica
+   atrás da conta Google ou Apple da pessoa; cifrar com o PIN daria pouca proteção real contra quem já está dentro dessa
+   conta (é o mesmo T15) e criaria o caso "esqueci o PIN e perdi o celular". Rejeitado: cifrar com o PIN. O formato é
+   `.txt`, que abre em qualquer app (rejeitado: `.html`, que no celular costuma não abrir na pré-visualização). A
+   camada conta como concluída quando a pessoa compartilha o arquivo ou imprime o cartão e toca em "Guardei o
+   arquivo", sem conferir as palavras (rejeitados: contar só por compartilhar, que vale até quando o arquivo vai para
+   outra pessoa; e exigir o teste das palavras, que traz de volta a parte trabalhosa).
 5. **Na C**, o backup cifrado com a chave da passkey (PRF) vai para os relays, e a identidade (npub) viaja junto com a
    passkey, para o aparelho novo saber qual backup buscar. A C só começa **depois da decisão do domínio (Q-N1)**.
 6. **Passkey nunca no lugar da frase** (mantém a decisão de Q-A6).

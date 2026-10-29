@@ -9,9 +9,13 @@ export {
 	InvalidPhraseError,
 	matchWord,
 	normalizeWord,
+	numberedWords,
 	parsePhrase,
+	phraseFromFragment,
+	phraseFromRecoveryText,
 	PHRASE_LENGTH,
 	pickCheckPositions,
+	recoveryFragment,
 	suggestWords,
 	type PhraseProblem
 } from './identity/phrase.ts';

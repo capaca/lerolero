@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Aberta uma vez, ao ganhar o primeiro contato (Q-U1): é quando passa a haver algo a perder.
-	// "Depois" adia o lembrete da tela inicial (RF-04) e segue para o contato.
+	// "Depois" adia o lembrete da tela inicial (RF-04) e segue para o contato. O jeito principal é o arquivo ou o
+	// cartão (RF-09 a); anotar as palavras e conferir duas continua como alternativa.
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -8,11 +9,12 @@
 	import PhraseBackup from '#lib/components/PhraseBackup.svelte';
 	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
 	import PhraseReveal from '#lib/components/PhraseReveal.svelte';
+	import RecoveryFile from '#lib/components/RecoveryFile.svelte';
 	import { markPhraseOffered, snoozePhraseReminder } from '#lib/phrase-reminder.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
-	type Step = 'aviso' | 'pin' | 'frase' | 'teste';
+	type Step = 'aviso' | 'pin' | 'arquivo' | 'frase' | 'teste';
 	let step = $state<Step>('aviso');
 	let words = $state<string[]>([]);
 	let wroteItDown = $state(false);
@@ -48,11 +50,17 @@
 	{:else if step === 'pin'}
 		<h1>{m.frase_guardar_titulo()}</h1>
 		<PhraseReveal
+			label={m.protecao_pin_rotulo()}
+			action={m.comum_continuar()}
 			onrevealed={(w) => {
 				words = w;
-				step = 'frase';
+				step = 'arquivo';
 			}}
 		/>
+	{:else if step === 'arquivo'}
+		<h1>{m.frase_guardar_titulo()}</h1>
+		<RecoveryFile {words} onsaved={confirmed} onwrite={() => (step = 'frase')} />
+		<button class="link" onclick={later}>{m.frase_fazer_depois()}</button>
 	{:else if step === 'frase'}
 		<h1>{m.frase_sua()}</h1>
 		<PhraseBackup {words} />

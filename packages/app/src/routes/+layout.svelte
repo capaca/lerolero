@@ -29,6 +29,7 @@
 			'/',
 			'/ajustes',
 			'/ajustes/frase',
+			'/ajustes/protecao',
 			'/ajustes/comentario',
 			'/ajustes/perfil',
 			'/favoritas',

@@ -29,7 +29,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29 |
-| M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho e detecção de perdas feitos; itens 13 a 15 da ordem |
+| M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo de recuperação feitos; itens 14 e 15 da ordem |
 | M5 Polimento | 4 sem | A fazer: item 16 |
 | Revisão de prontidão | — | A fazer, antes do beta |
 | Beta fechado | 6 sem de uso | A fazer |
@@ -58,7 +58,7 @@ do WhatsApp.
 10. Backup cifrado de contatos, grupos, configurações e do perfil, sem as favoritas (M4; RF-06). ✅ Feita em 2026-10-29.
 11. Prova de trabalho com "Possível spam" em Pedidos (M4; RF-90, T8). ✅ Feita em 2026-10-29.
 12. Detecção de perdas (M4; RF-53): numeração por conversa, pedido de reenvio e prazo de 7 dias. ✅ Feita em 2026-10-29.
-13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): compartilhar um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), imprimir o cartão, restaurar pelo arquivo ou pelo link, e a tela "Proteção da conta". Sem dependências; entra com e2e.
+13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): compartilhar um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), imprimir o cartão, restaurar pelo arquivo ou pelo link, e a tela "Proteção da conta". Sem dependências; entra com e2e. ✅ Feita em 2026-10-29.
 14. Frase no gerenciador de senhas (M4; D1, RF-09 b). **Começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra.
 15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).**
 16. Polimento (M5), com a velocidade da suíte e2e, revisão de prontidão e beta.
@@ -130,8 +130,9 @@ como língua-base.
 - ✅ Backup cifrado de perfil, contatos, grupos e ajustes (RF-06).
 - ✅ Prova de trabalho (14 bits) e "Possível spam" em Pedidos (RF-90).
 - ✅ Detecção de perdas: numeração, pedido de reenvio automático e prazo de 7 dias com "Reenviar" (RF-53).
-- ⬜ Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): arquivo ou cartão,
-  gerenciador de senhas, passkey (RF-08, 09). Itens 13 a 15.
+- ✅ Proteção da conta pelo arquivo ou cartão de recuperação e tela "Proteção da conta" (RF-09 a, D2 do
+  [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)).
+- ⬜ Proteção da conta pelo gerenciador de senhas e pela passkey (RF-08, RF-09 b). Itens 14 e 15.
 - ➡️ Modo foco (RF-52, 60..62) e entrega em lotes (RF-63): v1.
 
 **Pronto quando:** o critério de aceite "Perda de identidade" passa; a prova de trabalho leva menos de 1 s no aparelho
@@ -295,7 +296,7 @@ a Q-N7 (custo zero × servidor de referência) e a Q-N8 (teto de usuários); as 
 | # | Questão | Responsável |
 |---|---|---|
 | Q-M1 | Refazer as estimativas e a projeção de datas com base no ritmo real | Pedro |
-| Q-U2 | Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): o arquivo de recuperação fica em texto aberto (recomendado) ou cifrado com o PIN? E a D1 vale a pena se o aviso de salvar senha não aparecer no PWA instalado? | Pedro (ao implementar os itens 13 e 14) |
+| Q-U2 | Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): ✅ o arquivo de recuperação fica em **texto aberto**, num `.txt` (decidido em 2026-10-29; ver a regra 4 do ADR). Falta: a D1 vale a pena se o aviso de salvar senha não aparecer no PWA instalado? | Pedro (ao implementar o item 14) |
 
 Resolvidas: Q-I1 (internacionalização, 2026-10-27, [ADR-0008](adr/0008-internacionalizacao.md)) e Q-U1 (cadastro sem a
 frase, 2026-10-26); detalhes no [histórico](historico.md).

@@ -7,6 +7,25 @@ conhecidos".
 
 ## 2026-10-29
 
+- **Arquivo ou cartão de recuperação** (item 13, RF-09 a, D2 do ADR-0009; testes `identity.test.ts` e e2e
+  `protecao`), num PR só (escolha do Pedro). Nova tela "Proteção da conta" (Ajustes › Proteção da conta, com o
+  estado), que pede o PIN e oferece "Salvar no celular" (baixa o arquivo), "Mandar para o Drive ou outro app" (o menu de
+  compartilhar, onde ele aceita arquivos) e "Imprimir o cartão", com as palavras e um QR do link. Bug achado na
+  revisão no Motorola: com um botão só, que compartilhava e baixava se o compartilhar falhasse, nada acontecia; o
+  download depois de um `await` perde o toque, e o erro do compartilhar não aparecia. Agora o download sai no próprio
+  toque e o erro do compartilhar aparece na tela (regressão no e2e `protecao`). Pelo `http` do `celular.sh`, o menu de
+  compartilhar do Android não abriu e a promessa não terminou (o toque seguinte deu `InvalidStateError`); o botão
+  passa a ficar desligado enquanto um compartilhar está aberto. *A conferir na homologação (HTTPS):* se o "Mandar
+  para o Drive" abre o menu; se não abrir, o botão sai no Android antes da release. A tela "Guarde seu código" do primeiro contato passou a usar o arquivo
+  como jeito principal; anotar as palavras e conferir duas ficou como alternativa. O lembrete da tela inicial leva a
+  "Proteção da conta". O arquivo é um `.txt` em texto aberto, com o nome da pessoa, o aviso de não mandar a ninguém, o
+  link `/restaurar#palavra-palavra-…` e a lista numerada. Em "Já tenho uma conta", "Abrir o arquivo de recuperação"
+  lê o link ou, se ele não servir (domínio novo, texto editado), a lista; o link preenche as palavras e as tira do
+  endereço na hora (T21, risco novo aceito). Escolhas do Pedro (Q-U2): texto aberto em vez de cifrar com o PIN; `.txt`
+  em vez de `.html`; a conta fica protegida ao tocar em "Guardei o arquivo" depois de salvar ou imprimir, sem conferir
+  palavras (rejeitados: contar só por compartilhar, e exigir o teste das palavras). Nas telas novas a interface fala
+  em "código de recuperação"; a tela das 12 palavras manteve "frase". *Ficou de fora:* saber se a impressão saiu de
+  fato (o navegador não conta), e trocar "frase" por "código" no resto do app.
 - **Detecção de perdas** (item 12, RF-53; testes `losses.test.ts` e e2e `perdas`), num PR só (escolha do Pedro).
   Cada mensagem de texto ou arquivo leva o número `seq` na conversa; quem recebe e nota um buraco espera 30 s e pede
   o reenvio (kind 4444, sem nada na tela), e quem enviou reenvia sozinho o mesmo rumor, com o mesmo id, a partir da
