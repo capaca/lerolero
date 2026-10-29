@@ -585,6 +585,17 @@ describe('pedidos de grupo (RF-12, T7)', () => {
 		expect((await listGroupRequests(bob.storage)).map((r) => r.conversation.group?.state.name)).toEqual(['Família']);
 	});
 
+	it('quem não é contato me põe num grupo sem a prova de trabalho: o pedido fica em "Possível spam" (RF-90)', async () => {
+		const alice = await person('Alice');
+		const bob = await person('Bob');
+		const created = createGroup(alice.publicKey, 'Promoções', [bob.publicKey], 'Alice', tick());
+		const wrapped = wrap(alice, created);
+		const item = wrapped.toRecipients.find((r) => r.recipient === bob.publicKey)!;
+		await storeGroupControl(bob.storage, bob.publicKey, bob.vault.unwrap(item.wrap), clock, false);
+		expect((await conversationOf(bob, created.groupId)).group?.request).toMatchObject({ state: 'pedido', unproven: true });
+		expect((await listGroupRequests(bob.storage)).map((r) => r.suspect)).toEqual([true]);
+	});
+
 	it('quem me pôs é contato: grupo normal', async () => {
 		const alice = await person('Alice');
 		const bob = await person('Bob');

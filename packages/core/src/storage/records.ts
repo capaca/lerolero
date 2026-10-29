@@ -27,6 +27,8 @@ export type ContactRecord = {
 	state: ContactState;
 	dmRelays: string[];
 	addedAt: number;
+	/** pedido que chegou sem prova de trabalho (RF-90): fica em "Possível spam", sem aviso */
+	unproven?: boolean;
 };
 
 /** Membro de grupo; a antiguidade decide quem herda o título de criador (docs/06 §3.3). */
@@ -53,7 +55,7 @@ export type GroupInfo = {
 	 * Quem me pôs no grupo não é contato (RF-12): o grupo fica em Contatos, como pedido, até eu aceitar. `recusado` é o
 	 * bloqueio: o grupo some e o que vier dele é descartado. Sem o campo, o grupo é normal.
 	 */
-	request?: { state: 'pedido' | 'recusado'; by: string };
+	request?: { state: 'pedido' | 'recusado'; by: string; unproven?: boolean };
 };
 
 export type ConversationRecord = {

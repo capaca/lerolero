@@ -33,6 +33,8 @@ import {
 	joinersOf,
 	needsProof,
 	POW_DIFFICULTY,
+	powOf,
+	trimSuspects,
 	groupNames,
 	introduce,
 	storeGroupControl,
@@ -504,7 +506,9 @@ class Session {
 
 	private async receive(wrap: Parameters<Vault['unwrap']>[0]) {
 		const rumor = await vault.unwrap(wrap);
-		if (rumor.kind === GROUP_CONTROL_KIND) return this.receiveGroupControl(rumor);
+		// sem a prova (RF-90), o pedido de quem não é contato vai para "Possível spam", sem aviso
+		const proven = powOf(wrap.id) >= POW_DIFFICULTY;
+		if (rumor.kind === GROUP_CONTROL_KIND) return this.receiveGroupControl(rumor, proven);
 		const me = this.current.publicKey;
 		if (rumor.kind === EDIT_KIND) {
 			if (await storeEdit(storage, me, rumor)) this.version++;
@@ -528,7 +532,8 @@ class Session {
 			return;
 		}
 		const readBefore = await storage.settings.get<number>(RESTORED_AT_KEY);
-		const stored = await storeIncoming(storage, me, rumor, { openConversationId: this.openConversationId, readBefore });
+		const stored = await storeIncoming(storage, me, rumor, { openConversationId: this.openConversationId, readBefore, proven });
+		if (stored?.isNew && !proven) void trimSuspects(storage, (id) => this.discardUpload(id));
 		if (rumor.kind === 5 && (await removeReactions(storage, rumor))) this.version++;
 		if (stored?.isNew) {
 			this.version++;
@@ -603,9 +608,9 @@ class Session {
 	}
 
 	/** Aviso de grupo: atualiza o grupo, me apresento a quem entrou e repasso o que faltou (docs/06 §3.3). */
-	private async receiveGroupControl(rumor: Awaited<ReturnType<Vault['unwrap']>>) {
+	private async receiveGroupControl(rumor: Awaited<ReturnType<Vault['unwrap']>>, proven: boolean) {
 		const me = this.current.publicKey;
-		const change = await storeGroupControl(storage, me, rumor);
+		const change = await storeGroupControl(storage, me, rumor, Date.now(), proven);
 		if (!change?.isNew) return;
 		this.version++;
 		this.backupSoon();

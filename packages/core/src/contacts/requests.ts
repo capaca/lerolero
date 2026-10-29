@@ -6,7 +6,11 @@ import { clearConversation, deleteConversation, directConversationId } from '../
 import type { ContactRecord, ConversationRecord } from '../storage/records.ts';
 import type { Storage } from '../storage/repositories.ts';
 
-export type MessageRequest = { contact: ContactRecord; conversation: ConversationRecord };
+/** `suspect`: chegou sem prova de trabalho (RF-90): vai para "Possível spam", sem ponto nem contagem. */
+export type MessageRequest = { contact: ContactRecord; conversation: ConversationRecord; suspect: boolean };
+
+/** Quantas conversas de "Possível spam" ficam guardadas; passando disso, a mais antiga sai (T8: espaço no aparelho). */
+export const MAX_SUSPECTS = 50;
 
 /** Pedidos com mensagem para ler, o mais recente primeiro. Quem pediu e não escreveu (ou foi desbloqueado) não aparece. */
 export async function listRequests(storage: Storage): Promise<MessageRequest[]> {
@@ -14,7 +18,7 @@ export async function listRequests(storage: Storage): Promise<MessageRequest[]> 
 	for (const contact of await storage.contacts.list()) {
 		if (contact.state !== 'pedido') continue;
 		const conversation = await storage.conversations.get(directConversationId(contact.publicKey));
-		if (conversation) found.push({ contact, conversation });
+		if (conversation) found.push({ contact, conversation, suspect: !!contact.unproven });
 	}
 	return found.sort((a, b) => b.conversation.lastMessageAt - a.conversation.lastMessageAt);
 }
@@ -27,7 +31,16 @@ export async function listBlocked(storage: Storage): Promise<ContactRecord[]> {
 export async function acceptRequest(storage: Storage, publicKey: string): Promise<void> {
 	const contact = await storage.contacts.get(publicKey);
 	if (!contact) await storage.contacts.put({ publicKey, state: 'aceito', dmRelays: [], addedAt: Date.now() });
-	else if (contact.state === 'pedido') await storage.contacts.put({ ...contact, state: 'aceito' });
+	else if (contact.state === 'pedido') {
+		const { unproven: _, ...accepted } = contact;
+		await storage.contacts.put({ ...accepted, state: 'aceito' });
+	}
+}
+
+/** Passou do limite de "Possível spam": apaga as conversas mais antigas (o pedido fica, sem conversa, e some da lista). */
+export async function trimSuspects(storage: Storage, discard: (messageId: string) => Promise<void>): Promise<void> {
+	const suspects = (await listRequests(storage)).filter((r) => r.suspect);
+	for (const { conversation } of suspects.slice(MAX_SUSPECTS)) await deleteConversation(storage, conversation.id, discard);
 }
 
 /**
@@ -46,7 +59,7 @@ export async function unblockContact(storage: Storage, publicKey: string): Promi
 	if (contact?.state === 'bloqueado') await storage.contacts.put({ ...contact, state: 'pedido' });
 }
 
-export type GroupRequest = { conversation: ConversationRecord; by: ContactRecord | undefined };
+export type GroupRequest = { conversation: ConversationRecord; by: ContactRecord | undefined; suspect: boolean };
 
 /** Grupos para os quais alguém que não é contato me adicionou, o mais recente primeiro (RF-12, T7). */
 export async function listGroupRequests(storage: Storage): Promise<GroupRequest[]> {
@@ -54,7 +67,7 @@ export async function listGroupRequests(storage: Storage): Promise<GroupRequest[
 	for (const conversation of await storage.conversations.listByRecent()) {
 		const request = conversation.group?.request;
 		if (request?.state !== 'pedido' || !conversation.group?.amMember) continue;
-		found.push({ conversation, by: request.by ? await storage.contacts.get(request.by) : undefined });
+		found.push({ conversation, by: request.by ? await storage.contacts.get(request.by) : undefined, suspect: !!request.unproven });
 	}
 	return found.sort((a, b) => b.conversation.lastMessageAt - a.conversation.lastMessageAt);
 }

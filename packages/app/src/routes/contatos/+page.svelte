@@ -15,7 +15,9 @@
 	let requests = $state.raw<MessageRequest[]>([]);
 	let groupRequests = $state.raw<GroupRequest[]>([]);
 	let blocked = $state.raw<ContactRecord[]>([]);
-	const total = $derived(requests.length + groupRequests.length);
+	// "Possível spam": pedidos que chegaram sem a prova de trabalho (RF-90); ficam à parte, fora da contagem
+	const total = $derived(requests.filter((r) => !r.suspect).length + groupRequests.filter((r) => !r.suspect).length);
+	const suspects = $derived(requests.filter((r) => r.suspect).length + groupRequests.filter((r) => r.suspect).length);
 	// o ponto do ícone de Contatos abre direto os pedidos (?aba=pedidos); sem o parâmetro vale Contatos
 	const tab = $derived<Tab>(page.url.searchParams.get('aba') === 'pedidos' ? 'pedidos' : 'contatos');
 
@@ -118,12 +120,9 @@
 		</div>
 	{:else}
 		<div id="painel-pedidos" role="tabpanel" aria-labelledby="aba-pedidos">
-			{#if total === 0}
-				<p class="hint">{m.contatos_pedidos_vazio()}</p>
-			{:else}
-				<p class="hint">{m.contatos_pedidos_dica()}</p>
+			{#snippet requestList(suspect: boolean)}
 				<ul class="list">
-					{#each groupRequests as { conversation, by } (conversation.id)}
+					{#each groupRequests.filter((r) => r.suspect === suspect) as { conversation, by } (conversation.id)}
 						{@const id = conversation.id.slice('grupo:'.length)}
 						<li>
 							<a href={resolve('/grupo/[id]', { id })}>
@@ -137,7 +136,7 @@
 							</a>
 						</li>
 					{/each}
-					{#each requests as { contact, conversation } (contact.publicKey)}
+					{#each requests.filter((r) => r.suspect === suspect) as { contact, conversation } (contact.publicKey)}
 						<li>
 							<a href={resolve('/conversa/[chave]', { chave: contact.publicKey })}>
 								<Avatar name={contactName(contact)} publicKey={contact.publicKey} />
@@ -149,6 +148,21 @@
 						</li>
 					{/each}
 				</ul>
+			{/snippet}
+
+			{#if total === 0}
+				<p class="hint">{m.contatos_pedidos_vazio()}</p>
+			{:else}
+				<p class="hint">{m.contatos_pedidos_dica()}</p>
+				{@render requestList(false)}
+			{/if}
+
+			{#if suspects > 0}
+				<details class="spam">
+					<summary>{m.contatos_spam({ count: suspects })}</summary>
+					<p class="hint">{m.contatos_spam_dica()}</p>
+					{@render requestList(true)}
+				</details>
 			{/if}
 
 			{#if blocked.length > 0}
@@ -231,5 +245,14 @@
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+	}
+	/* fechado por padrão: quem quiser olha */
+	.spam {
+		margin-top: 1.5rem;
+	}
+	.spam summary {
+		cursor: pointer;
+		font-weight: 600;
+		padding: 0.6rem 0;
 	}
 </style>

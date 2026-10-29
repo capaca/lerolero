@@ -9,8 +9,8 @@ caminho) está no [histórico de entregas](historico.md).
 ## Onde estamos
 
 - **Feito:** M0 (menos duas esperas), M1, M2 e M3 inteiros; do M4,
-  pedidos de mensagem e bloqueio e o backup cifrado.
-- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 11).
+  pedidos de mensagem e bloqueio, o backup cifrado e a prova de trabalho.
+- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 12).
 - **Em produção:** https://capaca.github.io/lerolero/; homologação em https://lerolero-app.github.io/lerolero/.
 
 ## Premissas
@@ -29,7 +29,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29 |
-| M4 Segurança e confiança | 4 sem | Pedidos, bloqueio e backup feitos; itens 11 a 15 da ordem |
+| M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup e prova de trabalho feitos; itens 12 a 15 da ordem |
 | M5 Polimento | 4 sem | A fazer: item 16 |
 | Revisão de prontidão | — | A fazer, antes do beta |
 | Beta fechado | 6 sem de uso | A fazer |
@@ -56,7 +56,7 @@ do WhatsApp.
 8. Cartão de perfil privado com nome e foto (M3; Q-P5, RF-02). ✅ Feita em 2026-10-29.
 9. Editar mensagem e mencionar com `@` (M3; RF-24, 35). ✅ Feita em 2026-10-29.
 10. Backup cifrado de contatos, grupos, configurações e do perfil, sem as favoritas (M4; RF-06). ✅ Feita em 2026-10-29.
-11. Prova de trabalho (M4; RF-90, T8), em duas etapas: (1) envio com a prova e medição no Motorola do Pedro; (2) "Possível spam" em Pedidos para o que chega sem ela. Etapa 1 feita em 2026-10-29 (14 bits); falta a 2.
+11. Prova de trabalho com "Possível spam" em Pedidos (M4; RF-90, T8). ✅ Feita em 2026-10-29.
 12. Detecção de perdas (M4; RF-53): numeração por conversa, pedido de reenvio e prazo de 7 dias.
 13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): compartilhar um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), imprimir o cartão, restaurar pelo arquivo ou pelo link, e a tela "Proteção da conta". Sem dependências; entra com e2e.
 14. Frase no gerenciador de senhas (M4; D1, RF-09 b). **Começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra.
@@ -128,7 +128,7 @@ como língua-base.
 
 - ✅ Pedidos de mensagem e bloqueio, inclusive vindos de grupo, com Contatos em abas (RF-12, 13).
 - ✅ Backup cifrado de perfil, contatos, grupos e ajustes (RF-06).
-- ⬜ Prova de trabalho (RF-90). Item 11.
+- ✅ Prova de trabalho (14 bits) e "Possível spam" em Pedidos (RF-90).
 - ⬜ Detecção de perdas (RF-53). Item 12.
 - ⬜ Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): arquivo ou cartão,
   gerenciador de senhas, passkey (RF-08, 09). Itens 13 a 15.

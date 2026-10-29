@@ -161,7 +161,7 @@ async function storeIncomingNow(
 		message = await applyHeldEdits(storage, message);
 	}
 
-	if (!mine) await rememberSender(storage, other, rumor);
+	if (!mine) await rememberSender(storage, other, rumor, options.proven ?? true);
 	const unread = !mine && message.ack !== 'lida' && options.openConversationId !== message.conversationId ? 1 : 0;
 	const conversation = await upsertConversation(storage, message, { unread, heardFrom: !mine }, { type: 'direta', members: [other] });
 	return { message, conversation, isNew: true };
@@ -174,6 +174,8 @@ export type IncomingOptions = {
 	 * lido e sem confirmação de novo (o "lida" não é sincronizado entre aparelhos; decidido em 2026-10-29).
 	 */
 	readBefore?: number;
+	/** o embrulho tinha a prova de trabalho (RF-90); sem ela, o pedido de quem não é contato vira "Possível spam" */
+	proven?: boolean;
 };
 
 function incomingRecord(
@@ -237,15 +239,19 @@ async function storeGroupMessage(
 }
 
 /** Quem escreveu: atualiza o nome escolhido; se não é contato, guarda como pedido (a caixa de pedidos vem no M4). */
-async function rememberSender(storage: Storage, sender: string, rumor: Rumor) {
+async function rememberSender(storage: Storage, sender: string, rumor: Rumor, proven: boolean) {
 	const sentName = rumor.tags.find((t) => t[0] === NAME_TAG)?.[1];
 	const name = sentName ? cleanName(sentName) || undefined : undefined;
 	const contact = await storage.contacts.get(sender);
 	if (!contact) {
-		await storage.contacts.put({ publicKey: sender, chosenName: name, state: 'pedido', dmRelays: [], addedAt: Date.now() });
-	} else if (name && name !== contact.chosenName) {
-		await storage.contacts.put({ ...contact, chosenName: name });
+		const unproven = proven ? {} : { unproven: true };
+		await storage.contacts.put({ publicKey: sender, chosenName: name, state: 'pedido', dmRelays: [], addedAt: Date.now(), ...unproven });
+		return;
 	}
+	// uma mensagem com a prova tira o pedido de "Possível spam" (ex.: a pessoa atualizou o app)
+	const { unproven: _, ...proved } = contact;
+	const next = contact.unproven && proven ? proved : contact;
+	if (next !== contact || (name && name !== contact.chosenName)) await storage.contacts.put({ ...next, chosenName: name ?? contact.chosenName });
 }
 
 /**

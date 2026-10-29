@@ -321,7 +321,9 @@ async function storeGroupControlNow(
 	storage: Storage,
 	me: string,
 	rumor: Rumor,
-	now = Date.now()
+	now = Date.now(),
+	/** o embrulho tinha a prova de trabalho (RF-90); sem ela, o grupo de quem não é contato vira "Possível spam" */
+	proven = true
 ): Promise<StoredGroupChange | undefined> {
 	const parsed = parseControl(rumor, now);
 	if (!parsed) return undefined;
@@ -345,7 +347,8 @@ async function storeGroupControlNow(
 	const before = existing?.group;
 	const amMember = isMember(state, me);
 	// nomes que vieram nas mensagens (messaging.ts) continuam; os das apresentações valem por cima
-	const request = before?.request ?? (amMember && !before?.amMember ? await requestOnJoin(storage, me, all, new Set(applied)) : undefined);
+	const joinRequest = amMember && !before?.amMember ? await requestOnJoin(storage, me, all, new Set(applied)) : undefined;
+	const request = before?.request ?? (joinRequest?.state === 'pedido' && !proven ? { ...joinRequest, unproven: true } : joinRequest);
 	const group: GroupInfo = { state, names: { ...before?.names, ...names }, everMembers, amMember, ...(request ? { request } : {}) };
 	const conversation: ConversationRecord = {
 		unread: 0,
