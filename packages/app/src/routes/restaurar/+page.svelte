@@ -13,6 +13,8 @@
 	let pinAgain = $state('');
 	let busy = $state(false);
 	let error = $state('');
+	/** frase aceita sem backup com o nome (RF-06): falta só o nome; o motivo muda o aviso */
+	let missingName = $state<'sem-backup' | 'sem-rede'>();
 
 	// PIN em dois campos: completar o 1º pula para o 2º; se não bater, treme e apaga o 2º
 	let pinAgainInput = $state<PinInput>();
@@ -31,7 +33,22 @@
 		busy = true;
 		error = '';
 		try {
-			await session.restore(phrase, pin, name.trim());
+			const result = await session.restore(phrase, pin);
+			if (result !== 'pronto') return void (missingName = result);
+			await goto(resolve('/'));
+		} catch (err) {
+			error = friendlyError(err);
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function submitName(event: SubmitEvent) {
+		event.preventDefault();
+		busy = true;
+		error = '';
+		try {
+			await session.finishRestore(name.trim());
 			await goto(resolve('/'));
 		} catch (err) {
 			error = friendlyError(err);
@@ -45,26 +62,37 @@
 
 <main>
 	<h1>{m.restaurar_titulo()}</h1>
-	<p class="hint">{m.restaurar_dica()}</p>
-	<form onsubmit={submit}>
-		<PhraseInput id="frase" bind:value={phrase} />
-		<label for="nome">{m.comum_seu_nome()}</label>
-		<input id="nome" maxlength="40" autocomplete="nickname" required bind:value={name} />
-		<p class="hint">{m.restaurar_nome_dica()}</p>
-		<PinInput id="pin" label={m.restaurar_pin_rotulo()} bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
-		<PinInput
-			bind:this={pinAgainInput}
-			id="pin2"
-			label={m.comum_pin_repetir()}
-			bind:value={pinAgain}
-			error={!!error && !pinAgain}
-			shakes={pinShakes}
-			oncomplete={() => pin !== pinAgain && pinMismatch()}
-		/>
-		{#if error}<p class="error" role="alert">{error}</p>{/if}
-		<div class="actions">
-			<button class="primary" type="submit" disabled={busy}>{busy ? m.restaurar_recuperando() : m.restaurar_recuperar()}</button>
-			<a href={resolve('/bem-vindo')}>{m.comum_voltar()}</a>
-		</div>
-	</form>
+	{#if missingName}
+		<p class="hint">{missingName === 'sem-rede' ? m.restaurar_backup_depois() : m.restaurar_sem_backup()}</p>
+		<form onsubmit={submitName}>
+			<label for="nome">{m.comum_seu_nome()}</label>
+			<!-- svelte-ignore a11y_autofocus -->
+			<input id="nome" maxlength="40" autocomplete="nickname" required autofocus bind:value={name} />
+			<p class="hint">{m.restaurar_nome_dica()}</p>
+			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			<div class="actions">
+				<button class="primary" type="submit" disabled={busy}>{m.restaurar_entrar()}</button>
+			</div>
+		</form>
+	{:else}
+		<p class="hint">{m.restaurar_dica()}</p>
+		<form onsubmit={submit}>
+			<PhraseInput id="frase" bind:value={phrase} />
+			<PinInput id="pin" label={m.restaurar_pin_rotulo()} bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
+			<PinInput
+				bind:this={pinAgainInput}
+				id="pin2"
+				label={m.comum_pin_repetir()}
+				bind:value={pinAgain}
+				error={!!error && !pinAgain}
+				shakes={pinShakes}
+				oncomplete={() => pin !== pinAgain && pinMismatch()}
+			/>
+			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			<div class="actions">
+				<button class="primary" type="submit" disabled={busy}>{busy ? m.restaurar_recuperando() : m.restaurar_recuperar()}</button>
+				<a href={resolve('/bem-vindo')}>{m.comum_voltar()}</a>
+			</div>
+		</form>
+	{/if}
 </main>

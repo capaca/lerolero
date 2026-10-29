@@ -129,9 +129,12 @@ A numeração funciona mesmo com confirmações desligadas e detecta perdas no m
 ### 3.7 Backup cifrado (RF-06)
 
 - Evento kind `30078` (NIP-78, dados de aplicativo) com tag `["d", "<app>/backup"]`, conteúdo cifrado com NIP-44 **para a própria chave**.
-- Contém: contatos (chave, nome local, estado), grupos (id, membros, administradores, nome), configurações (modo foco, confirmações, expiração de mídia, relays).
-- **Não contém** mensagens nem mídia.
-- Publicado nos relays do usuário, atualizado quando contatos, grupos ou configurações mudam (com intervalo mínimo, para economizar dados).
+- Contém: o próprio perfil (nome e a referência da foto no Blossom), contatos (chave, nome local, estado), grupos (id, membros, administradores, nome), configurações (modo foco, confirmações, expiração de mídia, relays).
+- **Não contém** mensagens, mídia nem favoritas (decidido em 2026-10-29: texto de conversa nos relays sem prazo ampliaria a T11; o NIP-44 cifra no máximo ~64 KB).
+- Configurações no backup: confirmação de leitura e relays onde recebo. O tamanho da letra é do aparelho.
+- Publicado nos relays gerais e nos de DM do usuário, 5 s depois da última mudança e só se o conteúdo mudou (para economizar dados); republicado a cada 3 dias, para não sumir de relay que apaga eventos antigos.
+- **Nunca sobrescrever às cegas:** o aparelho só publica depois de saber se há backup nos relays (achou e juntou, ou algum relay respondeu que não há). Restaurar sem rede adia a publicação até a busca dar certo.
+- **Restaurar:** depois da frase e do PIN o app busca o backup; achou, aplica e entra sem pedir o nome. Contato que a sincronização já trouxe como pedido volta ao estado do backup; o que foi decidido no aparelho novo prevalece. Grupo restaurado vira o ponto de partida do estado (ação local `restaurar`, que não chega pela rede), e os avisos seguintes valem sobre ele.
 
 ### 3.8 Antispam (RF-90)
 
