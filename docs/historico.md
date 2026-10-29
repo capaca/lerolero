@@ -7,6 +7,23 @@ conhecidos".
 
 ## 2026-10-29
 
+- **Backup cifrado** (item 10, RF-06; testes `backup.test.ts` e e2e `backup`). Um evento kind `30078` (NIP-78) com a
+  tag `d` `lerolero/backup`, cifrado com NIP-44 para a própria chave pelo cofre (método próprio: o `sign` continua sem
+  assinar esse kind). Leva o nome e a foto (a referência no Blossom), os contatos aceitos e bloqueados com o nome dado a
+  cada um, os grupos de que participo e dois ajustes: confirmação de leitura e relays onde recebo. O tamanho da letra
+  fica por aparelho. Escolhas do Pedro: as favoritas **não** entram (rejeitados: o texto das 100 mais recentes e uma
+  opção em Ajustes; ver RF-06), o perfil entra e a restauração não pede o nome quando acha o backup, e tudo num PR só.
+  A restauração passou a ter duas etapas: frase e PIN; o nome só aparece se não houver backup (com um aviso diferente
+  se foi falta de rede). O grupo restaurado vira o ponto de partida do replay (`RESTORED_ACTION`), e os avisos que
+  chegam depois seguem dele. O backup sai 5 s depois da última mudança, só se o conteúdo mudou, e de novo a cada 3 dias
+  para não sumir de relay que apaga o antigo. *Cuidado de projeto:* um aparelho que ainda não sabe se há backup nos
+  relays (restaurou sem rede) não publica nada até conferir, para não apagar o bom com um quase vazio; por isso a
+  consulta ao pool passou a contar quantos relays responderam (`queryAnswered`). *Ficou de fora:* favoritas e
+  mensagens antigas; a foto só volta se o arquivo ainda estiver no Blossom. Quem já usava o app publica o primeiro
+  backup ao abrir esta versão. *Achado na validação do Pedro:* depois de restaurar, as mensagens dos últimos 7 dias
+  voltavam como não lidas (o "lida" não é sincronizado entre aparelhos; já acontecia antes do backup). Decidido pelo
+  Pedro: o que chegou antes do momento da restauração entra como lido e sem confirmação de novo (rejeitados: lido até
+  a minha última resposta, mais pesado, e deixar como estava). Teste de regressão em `messaging.test.ts` e no e2e.
 - **Editar mensagem e mencionar com `@`** (item 9, RF-24 e 35; testes `edits.test.ts` e e2e `editar-mencionar`).
   Escolhas do Pedro: editar até 15 minutos (rejeitados: 1 hora e sem prazo), com a marca "editada" e sem guardar o
   texto antigo (rejeitado: mostrar o histórico), e tudo num PR só. A edição é o kind `4443`, com o texto novo inteiro;

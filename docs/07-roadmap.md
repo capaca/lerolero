@@ -9,8 +9,8 @@ caminho) está no [histórico de entregas](historico.md).
 ## Onde estamos
 
 - **Feito:** M0 (menos duas esperas), M1, M2 e M3 inteiros; do M4,
-  pedidos de mensagem e bloqueio.
-- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 10).
+  pedidos de mensagem e bloqueio e o backup cifrado.
+- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 11).
 - **Em produção:** https://capaca.github.io/lerolero/; homologação em https://lerolero-app.github.io/lerolero/.
 
 ## Premissas
@@ -29,7 +29,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29 |
-| M4 Segurança e confiança | 4 sem | Pedidos e bloqueio feitos; itens 10 a 15 da ordem |
+| M4 Segurança e confiança | 4 sem | Pedidos, bloqueio e backup feitos; itens 11 a 15 da ordem |
 | M5 Polimento | 4 sem | A fazer: item 16 |
 | Revisão de prontidão | — | A fazer, antes do beta |
 | Beta fechado | 6 sem de uso | A fazer |
@@ -55,7 +55,7 @@ do WhatsApp.
 7. Etapa 3 de UX/UI: aviso de sem conexão, tamanho da letra, nível do microfone (M3). ✅ Feita em 2026-10-28.
 8. Cartão de perfil privado com nome e foto (M3; Q-P5, RF-02). ✅ Feita em 2026-10-29.
 9. Editar mensagem e mencionar com `@` (M3; RF-24, 35). ✅ Feita em 2026-10-29.
-10. Backup cifrado de contatos, grupos e configurações (M4; RF-06). Decide se as favoritas entram.
+10. Backup cifrado de contatos, grupos, configurações e do perfil, sem as favoritas (M4; RF-06). ✅ Feita em 2026-10-29.
 11. Prova de trabalho (M4; RF-90, T8). Pedidos de mensagem e bloqueio já feitos em 2026-10-26.
 12. Detecção de perdas (M4; RF-53): numeração por conversa, pedido de reenvio e prazo de 7 dias.
 13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): compartilhar um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), imprimir o cartão, restaurar pelo arquivo ou pelo link, e a tela "Proteção da conta". Sem dependências; entra com e2e.
@@ -127,7 +127,7 @@ como língua-base.
 ### M4 — Segurança e confiança
 
 - ✅ Pedidos de mensagem e bloqueio, inclusive vindos de grupo, com Contatos em abas (RF-12, 13).
-- ⬜ Backup cifrado (RF-06). Item 10.
+- ✅ Backup cifrado de perfil, contatos, grupos e ajustes (RF-06).
 - ⬜ Prova de trabalho (RF-90). Item 11.
 - ⬜ Detecção de perdas (RF-53). Item 12.
 - ⬜ Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): arquivo ou cartão,
@@ -202,6 +202,15 @@ Registrados a pedido do Pedro; entram na ordem quando ele decidir.
 - **Aviso de versão nova mais rápido** (2026-10-22). Hoje pode levar 10 minutos ou mais: o Pages guarda os arquivos em
   cache por até 10 minutos e o app só procura versão nova quando volta para a tela. Possível: procurar a cada poucos
   minutos com o app aberto. O cache só encurta com domínio próprio (Q-N1) e outro hospedeiro.
+- **Favoritar ainda vale a pena?** (2026-10-29). As favoritas ficam só no aparelho e não entram no backup (RF-06,
+  decidido em 2026-10-29), então somem na troca de celular. Rever se a função continua útil assim, se muda (ex.: só
+  como atalho para achar a mensagem) ou se sai.
+- **Backup completo e opcional na nuvem** (2026-10-29; para avaliar depois). Complementa o RF-06, que de propósito não
+  leva mensagens, favoritas nem mídia: um arquivo cifrado com chave derivada da frase, guardado onde só a pessoa acessa.
+  Proposta em duas etapas: (1) exportar e importar o arquivo em Ajustes, pelo menu de compartilhar (sem servidor nem
+  login, funciona no PWA); (2) automático no Google Drive, que pede OAuth, domínio próprio (Q-N1) e revisão do Google,
+  e combina mais com a v1 nativa (no iPhone, o iCloud não está aberto ao PWA). Decidir: mídia entra ou é opcional
+  (tamanho), lembrete de salvar e como importar por cima de mensagens que já estão no aparelho.
 - **Escolha da língua em Ajustes e manifesto do PWA traduzido**: quando houver a segunda língua.
 - **Testes e2e que ficaram nos rascunhos** (`prototipos/e2e-rascunho`): extras da identidade e do PIN (bloquear,
   esqueci o PIN, limite de tentativas), o pedido de contato e a publicação por cima de um app antigo com o cache do

@@ -138,6 +138,32 @@ export const esquecerAjuste = (page: Page, chave: string) =>
 		chave
 	);
 
+/** Lê um ajuste guardado no aparelho (tabela `settings`). */
+export const lerAjuste = <T>(page: Page, chave: string) =>
+	page.evaluate(
+		(chave) =>
+			new Promise<unknown>((ok, falha) => {
+				const req = indexedDB.open('lerolero');
+				req.onerror = () => falha(req.error);
+				req.onsuccess = () => {
+					const get = req.result.transaction('settings').objectStore('settings').get(chave);
+					get.onsuccess = () => ok(get.result?.value);
+					get.onerror = () => falha(get.error);
+				};
+			}),
+		chave
+	) as Promise<T | undefined>;
+
+/** Recupera a conta num aparelho novo pela frase e um PIN; o nome só é pedido se não houver backup (RF-06). */
+export async function recuperarConta(page: Page, frase: string[], pin = '246810') {
+	await page.goto('./');
+	await page.getByRole('link', { name: 'Já tenho uma conta' }).or(page.getByRole('button', { name: 'Já tenho uma conta' })).click();
+	await page.locator('#frase').fill(frase.join(' '));
+	await digitarPin(page, 'pin', pin);
+	await page.keyboard.type(pin);
+	await page.getByRole('button', { name: 'Recuperar conta' }).click();
+}
+
 /** Esquece a sessão aberta (vale 5 min): a próxima abertura do app pede o PIN. */
 export const vencerSessao = (page: Page) => esquecerAjuste(page, 'sessaoAberta');
 

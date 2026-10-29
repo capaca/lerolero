@@ -5,6 +5,7 @@ import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import type { KdfParams } from '../crypto/seal.ts';
 import { createVault, type Rumor } from '../identity/vault.ts';
 import { openStorage } from '../storage/repositories.ts';
+import { receiptsDue } from './interactions.ts';
 import {
 	deleteConversation,
 	deleteForMe,
@@ -134,6 +135,26 @@ describe('conversas 1:1', () => {
 		expect((await bob.storage.conversations.get(conversationId))?.unread).toBe(2);
 		await markRead(bob.storage, conversationId);
 		expect((await bob.storage.conversations.get(conversationId))?.unread).toBe(0);
+	});
+
+	// Regressão (2026-10-29): depois de restaurar, as mensagens dos últimos 7 dias voltavam como não lidas, mesmo as
+	// já lidas no aparelho antigo, e "abrir" a conversa mandava de novo a confirmação de lida
+	it('restaurada a conta, o que chegou antes entra como lido e sem confirmação de novo; o que vem depois, não', async () => {
+		const alice = await device();
+		const bob = await device();
+		const old = alice.vault.wrapDirectMessage(bob.publicKey, 'de antes', [], 14, 1_000);
+		const fresh = alice.vault.wrapDirectMessage(bob.publicKey, 'de depois', [], 14, 3_000);
+		const readBefore = 2_000;
+		await bob.storage.contacts.put({ publicKey: alice.publicKey, state: 'aceito', dmRelays: [], addedAt: 1 });
+
+		const before = await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(old.toRecipient), { readBefore });
+		expect(before?.message.ack).toBe('lida');
+		expect(before?.conversation.unread).toBe(0);
+		expect(await receiptsDue(bob.storage, bob.publicKey, [old.rumor.id], 'entregue')).toEqual(new Map());
+
+		const after = await storeIncoming(bob.storage, bob.publicKey, bob.vault.unwrap(fresh.toRecipient), { readBefore });
+		expect(after?.message.ack).toBeUndefined();
+		expect(after?.conversation.unread).toBe(1);
 	});
 
 	it('o nome vai na primeira mensagem; desconhecido vira pedido com esse nome', async () => {

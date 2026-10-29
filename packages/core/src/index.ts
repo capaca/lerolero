@@ -15,6 +15,19 @@ export {
 	type PhraseProblem
 } from './identity/phrase.ts';
 export {
+	applyBackup,
+	backupChanged,
+	backupContent,
+	BACKUP_CHECKED_KEY,
+	BACKUP_REFRESH_MS,
+	BACKUP_SENT_KEY,
+	buildBackup,
+	fetchBackup,
+	parseBackup,
+	type Backup
+} from './backup/backup.ts';
+export {
+	BACKUP_KIND,
 	createVault,
 	InvalidPinError,
 	InvalidWrapError,

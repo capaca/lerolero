@@ -16,6 +16,7 @@ import {
 	vencerSessao
 } from '../ajudantes.ts';
 import { PSEUDO_URL } from '../servidores.ts';
+import { generatePhrase } from '../../core/src/identity/phrase.ts';
 
 /** Textos visíveis, rótulos e o título que ainda estão fixos; `permitidos` são dados da pessoa (o nome). */
 function textosFixos(page: Page, permitidos: string[] = []) {
@@ -85,12 +86,18 @@ test('entrada (boas-vindas, cadastro, PIN, recuperar, esqueci o PIN): nenhum tex
 	await page.locator('#frase').fill('abacate xyzw ');
 	await expect(page.locator('.hint .error')).toBeVisible();
 	await semTextoFixo(page, ['abacate', 'xyzw']);
-	await page.locator('#nome').fill('Maria');
 	await digitarPin(page, 'pin', PIN);
 	await page.keyboard.type(PIN);
 	await page.locator('button[type="submit"]').click();
 	await expect(page.getByRole('alert')).toBeVisible();
-	await semTextoFixo(page, ['abacate', 'xyzw', 'Maria']);
+	await semTextoFixo(page, ['abacate', 'xyzw']);
+
+	// frase válida de uma conta sem backup (RF-06): a segunda etapa pede o nome
+	const frase = generatePhrase();
+	await page.locator('#frase').fill(frase.join(' '));
+	await page.locator('button[type="submit"]').click();
+	await expect(page.locator('#nome')).toBeVisible({ timeout: 20_000 });
+	await semTextoFixo(page, frase);
 
 	// cadastro: nome, PIN com os dois campos diferentes
 	await page.goto('./cadastro');

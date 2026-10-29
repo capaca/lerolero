@@ -81,6 +81,12 @@ export class FakeRelay {
 					const i = this.events.findIndex((e) => e.kind === event.kind && e.pubkey === event.pubkey);
 					if (i >= 0) this.events.splice(i, 1);
 				}
+				// endereçáveis (30000–39999): o mesmo, por autor, tipo e tag d
+				if (event.kind >= 30000 && event.kind < 40000) {
+					const d = (e: NostrEvent) => e.tags.find((t) => t[0] === 'd')?.[1] ?? '';
+					const i = this.events.findIndex((e) => e.kind === event.kind && e.pubkey === event.pubkey && d(e) === d(event));
+					if (i >= 0) this.events.splice(i, 1);
+				}
 				this.events.push(event);
 				for (const c of this.clients)
 					for (const [id, filters] of c.subs)

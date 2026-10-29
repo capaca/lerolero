@@ -133,7 +133,7 @@ async function storeIncomingNow(
 	storage: Storage,
 	me: string,
 	rumor: Rumor,
-	options: { openConversationId?: string } = {}
+	options: IncomingOptions = {}
 ): Promise<StoredMessage | undefined> {
 	if (rumor.kind === 5) return applyDeletion(storage, rumor);
 	if (rumor.kind !== 14 && rumor.kind !== 15) return undefined;
@@ -154,19 +154,35 @@ async function storeIncomingNow(
 
 	// Se o app morreu entre guardar a mensagem e criar a conversa, o embrulho volta e a mensagem já existe, sem
 	// conversa: refaz o resto em vez de a mensagem ficar invisível para sempre (a gravação não é atômica).
-	let message = known ?? incomingRecord(rumor, directConversationId(other), media, mine);
+	let message = known ?? incomingRecord(rumor, directConversationId(other), media, mine, options);
 	if (!known) {
 		await storage.messages.put(message);
 		message = await applyHeldEdits(storage, message);
 	}
 
 	if (!mine) await rememberSender(storage, other, rumor);
-	const unread = !mine && options.openConversationId !== message.conversationId ? 1 : 0;
+	const unread = !mine && message.ack !== 'lida' && options.openConversationId !== message.conversationId ? 1 : 0;
 	const conversation = await upsertConversation(storage, message, { unread }, { type: 'direta', members: [other] });
 	return { message, conversation, isNew: true };
 }
 
-function incomingRecord(rumor: Rumor, conversationId: string, media: MessageMedia | undefined, mine: boolean): MessageRecord {
+export type IncomingOptions = {
+	openConversationId?: string;
+	/**
+	 * Restaurei a conta neste horário (segundos): o que chegou antes já foi lido no aparelho antigo, então entra como
+	 * lido e sem confirmação de novo (o "lida" não é sincronizado entre aparelhos; decidido em 2026-10-29).
+	 */
+	readBefore?: number;
+};
+
+function incomingRecord(
+	rumor: Rumor,
+	conversationId: string,
+	media: MessageMedia | undefined,
+	mine: boolean,
+	options: IncomingOptions
+): MessageRecord {
+	const alreadyRead = !mine && options.readBefore !== undefined && rumor.created_at < options.readBefore;
 	return {
 		id: rumor.id,
 		conversationId,
@@ -176,7 +192,8 @@ function incomingRecord(rumor: Rumor, conversationId: string, media: MessageMedi
 		createdAt: rumor.created_at,
 		status: mine ? 'enviada' : 'recebida',
 		...(media ? { media } : {}),
-		...(replyOf(rumor) ? { replyTo: replyOf(rumor) } : {})
+		...(replyOf(rumor) ? { replyTo: replyOf(rumor) } : {}),
+		...(alreadyRead ? { ack: 'lida' as const } : {})
 	};
 }
 
@@ -190,7 +207,7 @@ async function storeGroupMessage(
 	me: string,
 	rumor: Rumor,
 	media: MessageMedia | undefined,
-	options: { openConversationId?: string }
+	options: IncomingOptions
 ): Promise<StoredMessage | undefined> {
 	const groupId = groupIdOf(rumor);
 	if (!groupId) return undefined;
@@ -202,12 +219,12 @@ async function storeGroupMessage(
 
 	const mine = rumor.pubkey === me;
 	if (existing && !mine && !existing.group?.everMembers.includes(rumor.pubkey)) return undefined;
-	let message = incomingRecord(rumor, id, media, mine);
+	let message = incomingRecord(rumor, id, media, mine, options);
 	await storage.messages.put(message);
 	message = await applyHeldEdits(storage, message);
 	if (!existing) return undefined;
 
-	const unread = !mine && options.openConversationId !== id ? 1 : 0;
+	const unread = !mine && message.ack !== 'lida' && options.openConversationId !== id ? 1 : 0;
 	let conversation = await upsertConversation(storage, message, { unread }, existing);
 	// a primeira mensagem de cada um no grupo também traz o nome, caso a apresentação se perca
 	const sentName = mine ? undefined : cleanName(rumor.tags.find((t) => t[0] === NAME_TAG)?.[1] ?? '');
