@@ -24,7 +24,7 @@
 | RF-03 | Mostrar a **frase de recuperação** (12 palavras) com explicação simples e um **teste de verificação** (ex.: "digite a 3ª e a 7ª palavras"). **Não no cadastro, e sim ao ganhar o primeiro contato** (decidido em 2026-10-26, Q-U1 do [07](07-roadmap.md)): uma tela própria, uma vez, com "Guardar agora" e "Depois" | Must | MVP |
 | RF-04 | Lembrete periódico para quem ainda não confirmou que guardou a frase: aviso na tela inicial, só depois de ter algum contato; "Depois" ou "Lembrar depois" o adiam por 3 dias (1 dia se o risco de perder os dados for maior, como no Safari do iPhone sem instalar) | Should | MVP |
 | RF-05 | Restaurar a identidade num aparelho novo a partir da frase | Must | MVP |
-| RF-06 | Backup cifrado de contatos e configurações nos relays, restaurado junto com a identidade | Should | MVP |
+| RF-06 | Backup cifrado de contatos, grupos, configurações e do próprio perfil (nome e foto) nos relays, restaurado junto com a identidade; achando o backup, a restauração não pede o nome de novo. **Não leva mensagens nem favoritas** (decidido em 2026-10-29: o texto ficaria nos relays sem prazo, ampliando a T11, além do limite de ~64 KB do NIP-44 e dos dados gastos a cada republicação; rejeitadas: favoritas com texto limitadas às 100 mais recentes e opção em Ajustes) | Should | MVP |
 | RF-07 | Bloqueio do app com PIN ou biometria do aparelho (opcional) | — | v1 |
 | RF-08 | **Passkey** (WebAuthn com PRF): entrar com digital ou rosto no lugar do PIN e restaurar num aparelho novo sem digitar a frase; o backup cifrado com a chave da passkey fica nos relays. Opt-in, nunca no lugar da frase; começa só depois da decisão do domínio (Q-N1). [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md). Pix e gov.br seguem adiados (Q-A7) | Should | MVP, depois de Q-N1 |
 | RF-09 | **Guardar o código de recuperação sem copiar à mão** ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): (a) botão que abre o menu de compartilhar com um arquivo autoexplicativo (o que é, aviso para não enviar a ninguém, como restaurar, link de restauração e as 12 palavras) e opção de imprimir um cartão; (b) a frase salva no gerenciador de senhas do navegador, por um formulário que ele reconhece. Tela única "Proteção da conta" com o estado; uma camada concluída basta para parar o lembrete do RF-04. Restaurar também a partir do arquivo, do link ou do preenchimento automático | Should | MVP |
@@ -154,7 +154,7 @@
 - Apagar a imagem de uma conversa não a apaga das outras.
 
 **Perda de identidade (RF-05, RF-06)**
-- Num aparelho novo, digitar a frase restaura a identidade, os contatos e as configurações. O histórico antigo pode não voltar, e o app avisa isso antes de o usuário trocar de aparelho.
+- Num aparelho novo, digitar a frase restaura a identidade, o nome e a foto, os contatos, os grupos e as configurações. O histórico antigo e as favoritas podem não voltar, e o app avisa isso antes de o usuário trocar de aparelho.
 
 ## Questões em aberto
 

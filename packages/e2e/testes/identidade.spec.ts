@@ -1,5 +1,5 @@
 // Cadastro, PIN e recuperação da conta (RF-01..06): o caminho de quem chega no app pela primeira vez.
-import { abrirAjustes, criarConta, digitarPin, esquecerAjuste, expect, meuConvite, noInicio, PIN, test, vencerSessao, verFrase } from '../ajudantes.ts';
+import { abrirAjustes, criarConta, digitarPin, esquecerAjuste, expect, meuConvite, noInicio, PIN, recuperarConta, test, vencerSessao, verFrase } from '../ajudantes.ts';
 
 test('cadastro: PINs diferentes avisam, iguais criam a conta sem tocar em botão e sem pedir a frase', async ({ novoAparelho }) => {
 	const page = await novoAparelho();
@@ -89,13 +89,7 @@ test('recuperar a conta com a frase em outro aparelho dá a mesma chave', async 
 	const frase = await verFrase(maria.page);
 
 	const outro = await novoAparelho();
-	await outro.goto('./');
-	await outro.getByRole('link', { name: 'Já tenho uma conta' }).or(outro.getByRole('button', { name: 'Já tenho uma conta' })).click();
-	await outro.locator('#frase').fill(frase.join(' '));
-	await outro.locator('#nome').fill('Maria');
-	await digitarPin(outro, 'pin', '246810');
-	await outro.keyboard.type('246810');
-	await outro.getByRole('button', { name: 'Recuperar conta' }).click();
+	await recuperarConta(outro, frase);
 	await noInicio(outro);
 	await abrirAjustes(outro);
 	await expect(outro.locator('.key')).toHaveText(chave!);

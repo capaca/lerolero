@@ -18,7 +18,7 @@ Este documento define **o que** o app protege, **de quem** protege e **quais ris
 |---|---|---|
 | A1 — Conteúdo | Texto, áudio, imagens, figurinhas, arquivos | Criptografia ponta a ponta, sempre |
 | A2 — Identidade | Chave privada do usuário | Fica só no aparelho; recuperável pela frase de recuperação |
-| A3 — Lista de contatos | Com quem o usuário conversa | Nunca enviada em claro; backup só cifrado |
+| A3 — Lista de contatos | Com quem o usuário conversa | Nunca enviada em claro; backup só cifrado. Risco aceito (2026-10-29): o evento do backup (kind 30078, RF-06) é assinado pela chave, então o relay sabe que ela usa o Lero-lero e, pelo tamanho, tem uma ideia de quantos contatos ela tem |
 | A4 — Metadados | Quem recebe, quando, volume, IP | Proteção parcial (ver "Nível de proteção") |
 | A5 — Atividade | Quando o usuário está online, leu ou está em modo foco | Controlada pelo usuário (confirmações desativáveis) |
 
@@ -63,7 +63,7 @@ Como os usuários espalham suas mensagens por vários relays independentes, **ne
 | T8 | Spam automatizado em grande volume | **Custo para enviar:** prova de trabalho ou limite de taxa para a primeira mensagem a quem não é contato | MVP ou v1 |
 | T9 | Golpe do falso parente (golpista usa nome e foto de um conhecido) | Pedidos de mensagem (T7) já separam o desconhecido; a foto de perfil de quem mandou pedido só aparece depois de aceito (decidido em 2026-10-29) e o nome que dei ao contato vence o do cartão (RF-14). Mais mecanismos em estudo (Q-A4) | MVP + futuro |
 | T10 | Celular roubado ou acessado por terceiros | **Opcional:** PIN/biometria próprios do app e mensagens temporárias | v1 |
-| T11 | Perda do celular = perda da identidade | **Frase de recuperação** (12 palavras) + backup cifrado de contatos e configurações nos relays | MVP |
+| T11 | Perda do celular = perda da identidade | **Frase de recuperação** (12 palavras) + backup cifrado de perfil, contatos, grupos e configurações nos relays (sem mensagens nem favoritas: com elas, uma frase vazada abriria texto de conversa sem prazo) | MVP |
 | T12 | Vazamento da chave expõe todo o histórico | Risco aceito no MVP. Forward secrecy no futuro (Double Ratchet ou MLS) | Futuro |
 | T14 | Adivinhar o PIN pelo próprio app, com o celular na mão | **Espera crescente:** 5 tentativas livres, depois 30 s, 1 min, 5 min, 15 min e 1 h por tentativa (contador único para desbloquear e para ver a frase). Testar o milhão de PINs de 6 dígitos vira mais de um século | MVP |
 | T15 | Copiar os dados do navegador (celular com root, computador destravado, perícia) e testar os PINs fora do app | **Limitação conhecida do PWA:** o Argon2id encarece cada tentativa, mas sem limite de tentativas 1 milhão de PINs pode cair em horas com placas de vídeo. O PIN do PWA protege contra quem pega o celular, não contra quem extrai os dados. No app nativo (v1), o cofre de hardware do sistema (Android Keystore etc.) guarda a chave e limita as tentativas | MVP (aceito) → v1 |

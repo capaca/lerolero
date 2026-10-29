@@ -4,6 +4,16 @@
 import {
 	acceptRequest,
 	acceptGroupRequest,
+	applyBackup,
+	backupChanged,
+	backupContent,
+	BACKUP_CHECKED_KEY,
+	BACKUP_REFRESH_MS,
+	BACKUP_SENT_KEY,
+	buildBackup,
+	fetchBackup,
+	parseBackup,
+	type Backup,
 	blockContact,
 	blockGroupRequest,
 	listGroupRequests,
@@ -142,6 +152,11 @@ async function requestPersistence() {
 }
 
 const DM_LIST_ID = 'relays-dm';
+const BACKUP_ID = 'backup';
+/** Espera depois de uma mudança, para juntar várias num backup só (RF-06: economizar dados). */
+const BACKUP_DELAY_MS = 5_000;
+/** Quando a conta foi restaurada neste aparelho (segundos): o que chegou antes entra como lido (storeIncoming). */
+const RESTORED_AT_KEY = 'restauradaEm';
 
 class Session {
 	status = $state<Status>('carregando');
@@ -172,6 +187,9 @@ class Session {
 	photos = $state<Record<string, string>>({});
 	private photoUrls = new Map<string, string>();
 	private downloadingPhotos = new Set<string>();
+	/** a frase foi aceita, mas falta o nome: não havia backup com ele (restore → finishRestore) */
+	private pendingRestore?: { publicKey: string; phrase: IdentityRecord['phrase']; backup?: Backup; checked: boolean };
+	private backupTimer?: ReturnType<typeof setTimeout>;
 
 	async init() {
 		this.identity = await storage.identity.get();
@@ -226,14 +244,40 @@ class Session {
 	async create(displayName: string, pin: string): Promise<string[]> {
 		const { publicKey, phrase, words } = await vault.create(pin);
 		await this.save({ id: 'eu', publicKey, phrase, phraseConfirmed: false, displayName, createdAt: Date.now() });
+		// conta nova: não há backup a procurar antes de publicar o primeiro
+		await storage.settings.set(BACKUP_CHECKED_KEY, true);
 		this.unlocked();
 		return words;
 	}
 
-	async restore(phraseInput: string, pin: string, displayName: string) {
+	/**
+	 * Restaura pela frase e procura o backup (RF-06). Achou: volta com o nome e a foto de lá ('pronto'). Não achou,
+	 * a tela pede o nome (finishRestore): 'sem-backup' se os relays responderam que não há, 'sem-rede' se não deu
+	 * para saber (o backup é procurado de novo quando a rede voltar, checkBackup).
+	 */
+	async restore(phraseInput: string, pin: string): Promise<'pronto' | 'sem-backup' | 'sem-rede'> {
 		const { publicKey, phrase } = await vault.restore(phraseInput, pin);
+		const { backup, checked } = await this.findBackup(publicKey);
+		this.pendingRestore = { publicKey, phrase, backup, checked };
+		if (!backup?.profile.name) return checked ? 'sem-backup' : 'sem-rede';
+		await this.finishRestore(backup.profile.name);
+		return 'pronto';
+	}
+
+	async finishRestore(displayName: string) {
+		if (!this.pendingRestore) throw new Error('Não há restauração em andamento');
+		const { publicKey, phrase, backup, checked } = this.pendingRestore;
 		// quem restaurou digitou a frase: está provado que ela foi guardada
 		await this.save({ id: 'eu', publicKey, phrase, phraseConfirmed: true, displayName, createdAt: Date.now() });
+		await storage.settings.set(RESTORED_AT_KEY, Math.floor(Date.now() / 1000));
+		if (backup) {
+			await applyBackup(storage, publicKey, backup);
+			const { name, photo, updatedAt } = backup.profile;
+			// o cartão volta com o horário de lá: o próximo, com os relays e a versão deste app, sai mais novo
+			if (name === displayName) await storage.profiles.put({ publicKey, name, ...(photo ? { photo } : {}), relays: [], features: [], updatedAt });
+		}
+		if (checked) await storage.settings.set(BACKUP_CHECKED_KEY, true);
+		this.pendingRestore = undefined;
 		this.unlocked();
 	}
 
@@ -304,6 +348,7 @@ class Session {
 				onWrap: (wrap) => this.receive(wrap),
 				onSent: async (item) => {
 					if (item.messageId === DM_LIST_ID) await storage.settings.set('relaysDmPublicados', relaysOf(item.event.tags));
+					else if (item.messageId === BACKUP_ID) return;
 					else if (item.messageId) {
 						await markSent(storage, item.messageId);
 						this.version++;
@@ -319,6 +364,7 @@ class Session {
 		void this.refreshPhotos();
 		this.watchConnection();
 		await this.publishDmRelays();
+		await this.checkBackup();
 	}
 
 	/**
@@ -355,6 +401,7 @@ class Session {
 
 	private stopNetwork() {
 		this.stopWatchingConnection();
+		clearTimeout(this.backupTimer);
 		this.uploadTimers.forEach(clearTimeout);
 		this.uploadTimers.clear();
 		this.network?.engine.stop();
@@ -376,6 +423,78 @@ class Session {
 		const event = await vault.sign(dmRelayListTemplate(relays));
 		const general = (await relayList()).geral;
 		await this.network?.engine.enqueue(event, [...general, ...relays], DM_LIST_ID);
+	}
+
+	// ---------- backup cifrado (RF-06, docs/06 §3.7) ----------
+
+	/** Onde o backup fica: os relays gerais e os meus, como o kind 10050. */
+	private async backupRelays(publicKey: string, pool: RelayPool): Promise<string[]> {
+		const list = await relayList();
+		const saved = (await storage.settings.get<string[]>('meusRelaysDm')) ?? [];
+		const announced = await fetchDmRelays(pool, list.geral, publicKey).catch(() => []);
+		return [...new Set([...list.geral, ...list.dm, ...saved, ...announced])];
+	}
+
+	/** O backup mais novo que eu consiga abrir; `checked` diz se dá para confiar que não há nenhum. */
+	private async findBackup(publicKey: string, pool?: RelayPool): Promise<{ backup?: Backup; checked: boolean }> {
+		const own = !pool;
+		pool ??= new RelayPool({ signer: (template) => vault.sign(template), timeoutMs: 8_000 });
+		try {
+			const { events, answered } = await fetchBackup(pool, await this.backupRelays(publicKey, pool), publicKey);
+			for (const event of events) {
+				try {
+					const backup = parseBackup(await vault.openBackup(event));
+					if (backup) return { backup, checked: true };
+				} catch {
+					// evento que não é meu ou estragado: tenta o próximo
+				}
+			}
+			return { checked: answered };
+		} catch {
+			return { checked: false };
+		} finally {
+			if (own) pool.close();
+		}
+	}
+
+	/**
+	 * Restaurou sem rede: o backup ainda não foi procurado. Procura agora e junta ao que já está aqui. Até saber se ele
+	 * existe, nada é publicado, para um backup quase vazio deste aparelho não apagar o bom.
+	 */
+	private async checkBackup() {
+		const network = this.network;
+		if (!network) return;
+		if (!(await storage.settings.get<boolean>(BACKUP_CHECKED_KEY))) {
+			const { backup, checked } = await this.findBackup(this.current.publicKey, network.pool);
+			if (backup) {
+				await applyBackup(storage, this.current.publicKey, backup);
+				this.version++;
+			}
+			if (!checked) return;
+			await storage.settings.set(BACKUP_CHECKED_KEY, true);
+		}
+		await this.publishBackup();
+	}
+
+	/** Algo do backup mudou (contato, grupo, perfil, ajuste): publica daqui a pouco, juntando as mudanças. */
+	private backupSoon() {
+		clearTimeout(this.backupTimer);
+		this.backupTimer = setTimeout(() => void this.publishBackup().catch(() => {}), BACKUP_DELAY_MS);
+	}
+
+	/** Publica só se mudou desde o último, ou se o último já tem uns dias (relay que apaga o antigo). */
+	private async publishBackup() {
+		const network = this.network;
+		if (!network || !(await storage.settings.get<boolean>(BACKUP_CHECKED_KEY))) return;
+		const me = this.current.publicKey;
+		const backup = await buildBackup(storage, me);
+		const sent = await storage.settings.get<{ content: string; at: number }>(BACKUP_SENT_KEY);
+		if (!backupChanged(sent?.content, backup) && Date.now() - (sent?.at ?? 0) < BACKUP_REFRESH_MS) return;
+		const content = backupContent(backup);
+		const event = await vault.sealBackup(content, backup.createdAt);
+		// a fila insiste até algum relay aceitar, mesmo se o app fechar: já conta como publicado
+		await network.engine.enqueue(event, await this.backupRelays(me, network.pool), BACKUP_ID);
+		await storage.settings.set(BACKUP_SENT_KEY, { content, at: Date.now() });
 	}
 
 	// ---------- conversas ----------
@@ -405,7 +524,8 @@ class Session {
 			if (await storeReceipt(storage, me, rumor, { readReceipts })) this.version++;
 			return;
 		}
-		const stored = await storeIncoming(storage, me, rumor, { openConversationId: this.openConversationId });
+		const readBefore = await storage.settings.get<number>(RESTORED_AT_KEY);
+		const stored = await storeIncoming(storage, me, rumor, { openConversationId: this.openConversationId, readBefore });
 		if (rumor.kind === 5 && (await removeReactions(storage, rumor))) this.version++;
 		if (stored?.isNew) {
 			this.version++;
@@ -485,6 +605,7 @@ class Session {
 		const change = await storeGroupControl(storage, me, rumor);
 		if (!change?.isNew) return;
 		this.version++;
+		this.backupSoon();
 		// quem entrou no grupo passa a poder aparecer com foto
 		void this.refreshPhotos();
 		// avisos meus vindos de outro aparelho: lá já me apresentei
@@ -510,6 +631,7 @@ class Session {
 		const wrapped = await vault.wrapGroupMessage(change.recipients, '', change.tags, GROUP_CONTROL_KIND, change.createdAt);
 		await storeGroupControl(storage, this.current.publicKey, wrapped.rumor);
 		this.version++;
+		this.backupSoon();
 		// os relays de todos são buscados antes de devolver e a fila recebe os avisos na sequência: se a página
 		// recarregasse no meio da busca solta, o aviso sumia e o membro nunca era adicionado ao grupo
 		const relays = await Promise.all(wrapped.toRecipients.map(({ recipient }) => this.relaysOrDefault(recipient)));
@@ -966,6 +1088,7 @@ class Session {
 
 	async addContact(invite: Invite, localName?: string): Promise<ContactRecord> {
 		const contact = await addContact(storage.contacts, invite, { myPublicKey: this.current.publicKey, localName });
+		this.backupSoon();
 		await this.refreshPhoto(contact.publicKey);
 		return contact;
 	}
@@ -995,6 +1118,7 @@ class Session {
 	/** Aceitar o grupo: passa à lista e só agora me apresento aos membros. */
 	async acceptGroupRequest(conversationId: string) {
 		const accepted = await acceptGroupRequest(storage, conversationId);
+		this.backupSoon();
 		if (accepted) await this.afterGroupChange({ conversation: accepted, isNew: true, joined: true, newMembers: [] });
 		this.version++;
 	}
@@ -1003,11 +1127,13 @@ class Session {
 	async blockGroupRequest(conversationId: string) {
 		await blockGroupRequest(storage, conversationId, (id) => this.discardUpload(id));
 		this.version++;
+		this.backupSoon();
 	}
 
 	async acceptRequest(publicKey: string) {
 		await acceptRequest(storage, publicKey);
 		this.version++;
+		this.backupSoon();
 		// aceito: a foto do cartão, que ficou guardada, passa a aparecer (T9)
 		await this.refreshPhoto(publicKey);
 	}
@@ -1016,17 +1142,21 @@ class Session {
 	async blockContact(publicKey: string) {
 		await blockContact(storage, publicKey, (id) => this.discardUpload(id));
 		this.version++;
+		this.backupSoon();
 		await this.refreshPhoto(publicKey);
 	}
 
 	async unblockContact(publicKey: string) {
 		await unblockContact(storage, publicKey);
 		this.version++;
+		this.backupSoon();
 		await this.refreshPhoto(publicKey);
 	}
 
-	renameContact(publicKey: string, localName: string) {
-		return renameContact(storage.contacts, publicKey, localName);
+	async renameContact(publicKey: string, localName: string) {
+		const contact = await renameContact(storage.contacts, publicKey, localName);
+		this.backupSoon();
+		return contact;
 	}
 
 	// ---------- cartão de perfil (Q-P5, RF-02) ----------
@@ -1099,6 +1229,7 @@ class Session {
 			void removeFromBlossom(old.urls, old.x, (template) => vault.sign(template)).catch(() => {});
 		}
 		this.version++;
+		this.backupSoon();
 		await this.refreshPhoto(me);
 		void this.sendProfile(await profileAudience(storage, me));
 	}
@@ -1157,8 +1288,10 @@ class Session {
 		return storage.settings.get<T>(key);
 	}
 
-	setSetting(key: string, value: unknown) {
-		return storage.settings.set(key, value);
+	async setSetting(key: string, value: unknown) {
+		await storage.settings.set(key, value);
+		// só alguns ajustes vão no backup (BACKUP_SETTINGS); publishBackup só publica se algo dele mudou
+		this.backupSoon();
 	}
 }
 

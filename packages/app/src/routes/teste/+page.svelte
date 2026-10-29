@@ -11,7 +11,7 @@
 		[m.guia_lim_fotos, m.guia_lim_fotos_texto],
 		[m.guia_lim_apagar, m.guia_lim_apagar_texto],
 		[m.guia_lim_spam, m.guia_lim_spam_texto],
-		[m.guia_lim_backup, m.guia_lim_backup_texto],
+		[m.guia_lim_troca, m.guia_lim_troca_texto],
 		[m.guia_lim_servidores, m.guia_lim_servidores_texto]
 	];
 </script>

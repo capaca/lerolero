@@ -1,7 +1,8 @@
 // Cofre da identidade. Roda dentro do Web Worker: a chave privada nasce, vive e
 // morre aqui, e a interface só recebe a chave pública e lacres já cifrados.
 
-import { finalizeEvent, getEventHash, getPublicKey, type EventTemplate, type NostrEvent } from 'nostr-tools/pure';
+import { finalizeEvent, getEventHash, getPublicKey, verifyEvent, type EventTemplate, type NostrEvent } from 'nostr-tools/pure';
+import { decrypt, encrypt, getConversationKey } from 'nostr-tools/nip44';
 import { privateKeyFromSeedWords } from 'nostr-tools/nip06';
 import { createRumor, createSeal, createWrap, unwrapEvent } from 'nostr-tools/nip59';
 import { DEFAULT_KDF, seal, unseal, type KdfParams, type Sealed } from '../crypto/seal.ts';
@@ -85,6 +86,10 @@ export const MAX_REACTION_LENGTH = 16;
 
 /** Tipos de rumor que o app escreve. */
 export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND | typeof PROFILE_KIND | typeof EDIT_KIND;
+
+/** Backup cifrado (RF-06, docs/06 §3.7): dado de aplicativo (NIP-78), um por pessoa, cifrado para mim mesmo. */
+export const BACKUP_KIND = 30078;
+export const BACKUP_D_TAG = 'lerolero/backup';
 
 /** Membros de grupo além de mim que recebem um embrulho; 20 cobre os 19 outros membros e alguém que acabou de sair (RF-30). */
 const MAX_GROUP_RECIPIENTS = 20;
@@ -271,6 +276,32 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 			}
 			if (!recipients.every(isPublicKey)) throw new Error('destinatários inválidos');
 			return recipients.map((recipient) => ({ recipient, wrap: createWrap(createSeal(rumor, secretKey!, recipient), recipient) }));
+		},
+
+		/**
+		 * Cifra o backup para a minha própria chave (NIP-44) e assina. Método próprio, e não um kind a mais em
+		 * SIGNABLE_KINDS: assim o cofre não assina um 30078 qualquer, só este, já cifrado.
+		 */
+		sealBackup(content: string, createdAt = Math.floor(Date.now() / 1000)): NostrEvent {
+			if (!secretKey) throw new LockedError();
+			const me = getPublicKey(secretKey);
+			const ciphertext = encrypt(content, getConversationKey(secretKey, me));
+			return finalizeEvent({ kind: BACKUP_KIND, created_at: createdAt, tags: [['d', BACKUP_D_TAG]], content: ciphertext }, secretKey);
+		},
+
+		/** Abre um backup que veio de um relay; só vale o assinado por mim (o relay pode inventar um). */
+		openBackup(event: NostrEvent): string {
+			if (!secretKey) throw new LockedError();
+			const me = getPublicKey(secretKey);
+			const ok =
+				event.kind === BACKUP_KIND &&
+				event.pubkey === me &&
+				event.tags.some((t) => t[0] === 'd' && t[1] === BACKUP_D_TAG) &&
+				// o id recalculado: o verifyEvent guarda no objeto que já conferiu, e uma cópia alterada herdaria isso
+				getEventHash(event) === event.id &&
+				verifyEvent(event);
+			if (!ok) throw new Error('backup inválido');
+			return decrypt(event.content, getConversationKey(secretKey, me));
 		},
 
 		/** Guarda a chave desbloqueada numa sessão (ver OpenSession). */

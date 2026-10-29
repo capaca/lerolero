@@ -265,7 +265,7 @@ function run(events: GroupEventRecord[], me: string, rejected: Set<string>): Rep
 	const older = ordered.filter((e) => e.createdAt < base.createdAt);
 	const newer = ordered.filter((e) => e.createdAt >= base.createdAt);
 	for (const e of [...older, ...newer]) {
-		if (e === base || e.action === 'criar' || e.action === 'apresentar') continue;
+		if (e === base || e.action === 'criar' || e.action === 'apresentar' || e.action === RESTORED_ACTION) continue;
 		// o nome que veio na lista de quem me adicionou é mais novo que qualquer renomear anterior
 		if (e.createdAt < base.createdAt && e.action === 'renomear') continue;
 		// fui readicionado: enquanto estava fora não recebi os avisos, então parto da lista que veio junto
@@ -286,10 +286,17 @@ function run(events: GroupEventRecord[], me: string, rejected: Set<string>): Rep
 	return { state, everMembers: [...ever], names, applied, losses };
 }
 
-/** Aviso que serve de ponto de partida: a criação, ou um aviso de um administrador que me adiciona. */
+/**
+ * Ponto de partida que veio do meu backup (RF-06, backup/backup.ts): o estado do grupo quando o backup foi feito.
+ * Não chega pela rede (parseControl não aceita esta ação) e o id não é de rumor, então ninguém o forja.
+ */
+export const RESTORED_ACTION = 'restaurar';
+
+/** Aviso que serve de ponto de partida: a criação, um aviso de um administrador que me adiciona, ou o backup. */
 function startsGroup(e: GroupEventRecord, me: string): boolean {
 	const state = e.state;
 	if (!state) return false;
+	if (e.action === RESTORED_ACTION) return e.author === me;
 	if (e.action === 'criar') return state.creator === e.author && state.members.every((m) => m.joinedAt === e.createdAt);
 	const mine = state.members.find((m) => m.publicKey === me);
 	return e.action === 'adicionar' && e.targets.includes(me) && mine?.joinedAt === e.createdAt && state.admins.includes(e.author);
@@ -385,7 +392,7 @@ async function requestOnJoin(storage: Storage, me: string, events: GroupEventRec
 async function syncNotices(storage: Storage, conversation: ConversationRecord, events: GroupEventRecord[], applied: Set<string>, me: string) {
 	let changed = false;
 	for (const e of events) {
-		if (e.action === 'apresentar') continue;
+		if (e.action === 'apresentar' || e.action === RESTORED_ACTION) continue;
 		const stored = await storage.messages.get(e.id);
 		if (!applied.has(e.id)) {
 			if (stored?.notice) {
@@ -443,7 +450,8 @@ async function adoptHeldMessages(storage: Storage, conversation: ConversationRec
 			await storage.messages.delete(message.id);
 			continue;
 		}
-		if (message.sender !== me) unread++;
+		// lida antes da restauração (messaging.ts, readBefore) não conta
+		if (message.sender !== me && message.ack !== 'lida') unread++;
 		latest = message;
 	}
 	if (!latest) return;
