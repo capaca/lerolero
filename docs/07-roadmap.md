@@ -36,14 +36,16 @@ Somando: **~31 semanas de desenvolvimento + 6 de beta** (eram 33 antes da reprio
 
 ### Ordem do restante do MVP (repriorizada em 2026-10-22)
 
+<!-- Item concluído termina com "✅ Feita em <data>": `scripts/situacao.sh` aponta o primeiro sem essa marca como o próximo. -->
+
 Critério escolhido pelo Pedro: **uso no dia a dia**, o que faz um grupo de amigos usar o app em vez do WhatsApp. A suíte e2e vem antes, para os bugs pararem de chegar ao celular. Ritmo real até aqui: de 16 a 22/10 saíram M0 (menos as esperas), M1, quase todo o M2 e os grupos, o equivalente a ~15 semanas das estimativas (Q-M1).
 
-1. Suíte de testes de ponta a ponta na CI (M2), e em seguida a homologação antes da produção ([ADR-0007](adr/0007-homologacao.md)).
+1. Suíte de testes de ponta a ponta na CI (M2), e em seguida a homologação antes da produção ([ADR-0007](adr/0007-homologacao.md)). ✅ Feita em 2026-10-22.
 2. Internacionalização: textos fora do código, ADR do mecanismo (M3; vem antes das telas novas, porque cada uma acrescenta texto fixo em português; ordem aprovada pelo Pedro). ✅ Feita em 2026-10-27 ([ADR-0008](adr/0008-internacionalizacao.md)).
-3. Fotos e encaminhar sem reenviar (M2).
-4. Responder e reagir (M3).
-5. Status de entrega e de leitura (M3).
-6. Seleção de várias mensagens: favoritar, excluir, copiar e encaminhar (M3; depende do encaminhar do item 3).
+3. Fotos e encaminhar sem reenviar (M2). ✅ Feita em 2026-10-27.
+4. Responder e reagir (M3). ✅ Feita em 2026-10-28.
+5. Status de entrega e de leitura (M3). ✅ Feita em 2026-10-28.
+6. Seleção de várias mensagens: favoritar, excluir, copiar e encaminhar (M3; depende do encaminhar do item 3). ✅ Feita em 2026-10-28.
 7. Etapa 3 de UX/UI: aviso de sem conexão, tamanho da letra, nível do microfone (M3). ✅ Feita em 2026-10-28.
 8. Cartão de perfil privado com nome e foto (M3).
 9. Editar mensagem e mencionar com `@` (M3).
