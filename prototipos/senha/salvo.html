@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#6d28d9" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="estilo.css" />
+    <title>Lero-lero · senha</title>
+  </head>
+  <body>
+    <main>
+      <h1>B · Página seguinte</h1>
+      <div id="out" class="out"></div>
+      <a class="button" href="./">Voltar aos testes</a>
+    </main>
+    <script type="module">
+      import { $, askOutcome } from './comum.js'
+      askOutcome($('#out'), 'B-navegacao')
+    </script>
+  </body>
+</html>
