@@ -7,6 +7,17 @@ conhecidos".
 
 ## 2026-10-29
 
+- **Detecção de perdas** (item 12, RF-53; testes `losses.test.ts` e e2e `perdas`), num PR só (escolha do Pedro).
+  Cada mensagem de texto ou arquivo leva o número `seq` na conversa; quem recebe e nota um buraco espera 30 s e pede
+  o reenvio (kind 4444, sem nada na tela), e quem enviou reenvia sozinho o mesmo rumor, com o mesmo id, a partir da
+  cópia local. Sem confirmação em 7 dias, a mensagem mostra "Talvez não tenha chegado" com o botão "Reenviar", que
+  nos grupos vai só a quem não confirmou. Escolhas do Pedro: reenviar sozinho em vez de esperar o toque, só a quem
+  não confirmou em vez de a todos, e nada na tela de quem recebe em vez de um aviso. Para reenviar o mesmo id, as
+  minhas mensagens passaram a guardar o rumor (as de antes não têm e nunca ficam perdidas); o `rewrapGroupControl`
+  do cofre virou `rewrap`, que também aceita mensagens, só para quem estava nelas. Geração da sincronização 8, para
+  quem atualiza reprocessar os pedidos que a versão antiga ignorou. O e2e perde um embrulho de verdade: desvia o
+  WebSocket do remetente e responde um OK falso. *Ficou de fora:* reenviar a edição junto.
+
 - **Retenção dos relays conferida** (Q-R1; `prototipos/relays`, `npm run testar -- retencao`, 7,7 dias depois de
   publicar). Toda a lista padrão guardou tudo, menos o Blossom cdn.hzrd149.com, que estava no ar e apagou o arquivo:
   saiu das reservas e entrou o blossom.jumble.social (escolha do Pedro). `relays.json` deixa de ser provisório; com a

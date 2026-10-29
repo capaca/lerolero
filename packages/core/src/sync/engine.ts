@@ -43,8 +43,9 @@ export const FLUSH_CONCURRENCY = 5;
  *   5: respostas, reações (kind 7) e confirmações de entrega e leitura (kind 4441)
  *   6: cartão de perfil (kind 4442)
  *   7: edição de mensagem (kind 4443)
+ *   8: numeração e pedido de reenvio (tag `seq`, kind 4444)
  */
-export const SYNC_GENERATION = 7;
+export const SYNC_GENERATION = 8;
 
 /**
  * Se o aparelho sincronizou com uma geração anterior, esquece cursores e embrulhos

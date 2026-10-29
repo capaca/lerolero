@@ -203,6 +203,13 @@
 				{/each}
 			</p>
 		{/if}
+		{#if mine && delivery === 'perdida' && !msg.deleted}
+			<!-- sem confirmação em 7 dias (RF-53): o mesmo rumor vai de novo, só a quem não confirmou -->
+			<p class="failed" role="status">{m.bolha_perdida()}</p>
+			<div class="failed-actions">
+				<button type="button" onclick={() => session.resend(msg.id)}>{m.bolha_reenviar()}</button>
+			</div>
+		{/if}
 		{#if reactions.length && !msg.deleted}
 			<div class="reactions">
 				{#each reactions as reaction (reaction.emoji)}
@@ -224,8 +231,8 @@
 			{#if msg.editedAt && !msg.deleted}<span class="edited">{m.bolha_editada()}</span>{/if}
 			{formatTime(msg.createdAt)}
 			{#if mine && !msg.upload?.failed}
-				{@const label = { pendente: m.bolha_enviando(), enviada: m.bolha_enviada(), entregue: m.bolha_entregue(), lida: m.bolha_lida() }[delivery]}
-				<span class="status" class:delivered={delivery === 'entregue'} class:read={delivery === 'lida'} title={label}>
+				{@const label = { pendente: m.bolha_enviando(), enviada: m.bolha_enviada(), entregue: m.bolha_entregue(), lida: m.bolha_lida(), perdida: m.bolha_perdida() }[delivery]}
+				<span class="status" class:delivered={delivery === 'entregue'} class:read={delivery === 'lida'} class:lost={delivery === 'perdida'} title={label}>
 					<Icon name={delivery === 'pendente' ? 'clock' : delivery === 'enviada' ? 'check' : 'check-check'} size={13} {label} />
 				</span>
 			{/if}
@@ -430,6 +437,9 @@
 	}
 	.status.read {
 		color: var(--read);
+	}
+	.status.lost {
+		color: var(--danger);
 	}
 	/* a mensagem citada: faixa colorida à esquerda, como nos outros apps */
 	.quote {
