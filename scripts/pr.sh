@@ -31,7 +31,16 @@ agora() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
 # PR só de documentação ou bastidores dispensa os testes sob demanda (o workflow já marca os dois status como
 # dispensados; mesma lista do testes-sob-demanda.yml).
-so_docs() { ! gh pr diff "$1" -R $repo --name-only | grep -qvE '^docs/|^scripts/|^\.claude/|\.md$'; }
+# Logo depois de criar o PR o GitHub ainda devolve a lista de arquivos vazia, e a lista vazia passava por "só docs"
+# (2026-10-29, #60 ficou sem testes): espera os arquivos aparecerem e, sem eles, pede os testes (o lado seguro).
+so_docs() {
+	local arquivos="" tentativa
+	for tentativa in 1 2 3 4 5 6 7 8 9 10; do
+		arquivos=$(gh pr diff "$1" -R $repo --name-only 2>/dev/null) && [ -n "$arquivos" ] && break
+		sleep 3
+	done
+	[ -n "$arquivos" ] && ! echo "$arquivos" | grep -qvE '^docs/|^scripts/|^\.claude/|\.md$'
+}
 
 # Os rótulos só disparam a rodada num evento novo: se já estiverem no PR, tira e põe de novo.
 rotular() {
