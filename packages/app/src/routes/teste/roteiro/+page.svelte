@@ -25,7 +25,8 @@
 		[m.roteiro_passo_17, m.roteiro_esperado_17],
 		[m.roteiro_passo_18, m.roteiro_esperado_18],
 		[m.roteiro_passo_19, m.roteiro_esperado_19],
-		[m.roteiro_passo_20, m.roteiro_esperado_20]
+		[m.roteiro_passo_20, m.roteiro_esperado_20],
+		[m.roteiro_passo_21, m.roteiro_esperado_21]
 	];
 </script>
 

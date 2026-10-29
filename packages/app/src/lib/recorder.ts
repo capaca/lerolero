@@ -20,6 +20,8 @@ export function opusRecordingType(): string | undefined {
 
 export type Recording = {
 	startedAt: number;
+	/** volume da voz agora, de 0 (silêncio) a 1, para o medidor na tela */
+	level(): number;
 	/** termina e devolve o arquivo, a duração e os segundos de silêncio do começo (0 se não há o que pular) */
 	stop(): Promise<{ file: Blob; duration: number; start: number }>;
 	cancel(): void;
@@ -45,6 +47,7 @@ export async function startRecording(): Promise<Recording> {
 	recorder.start(1000);
 	return {
 		startedAt,
+		level: watcher.level,
 		stop: () =>
 			new Promise((resolve) => {
 				recorder.onstop = () => {
@@ -73,6 +76,7 @@ function watchVoiceStart(stream: MediaStream, startedAt: number) {
 	const detector = new VoiceStartDetector();
 	let context: AudioContext | undefined;
 	let timer: ReturnType<typeof setInterval> | undefined;
+	let level = 0;
 	try {
 		context = new AudioContext();
 		const analyser = context.createAnalyser();
@@ -81,13 +85,17 @@ function watchVoiceStart(stream: MediaStream, startedAt: number) {
 		const samples = new Float32Array(analyser.fftSize);
 		timer = setInterval(() => {
 			analyser.getFloatTimeDomainData(samples);
-			detector.push(rms(samples), (performance.now() - startedAt) / 1000);
+			const volume = rms(samples);
+			detector.push(volume, (performance.now() - startedAt) / 1000);
+			// em decibéis, porque o ouvido não é linear: -60 dB (quase silêncio) a -10 dB (voz alta) viram 0 a 1
+			level = volume > 0 ? Math.min(1, Math.max(0, (20 * Math.log10(volume) + 60) / 50)) : 0;
 		}, 20);
 	} catch {
 		// sem análise: o áudio toca inteiro
 	}
 	return {
 		skip: () => detector.skip,
+		level: () => level,
 		close: () => {
 			clearInterval(timer);
 			void context?.close().catch(() => {});

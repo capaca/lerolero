@@ -8,6 +8,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { savePendingInvite } from '#lib/pending-invite.ts';
 	import { session, type Status } from '#lib/session.svelte.ts';
+	import { applyTextSize, readTextSize } from '#lib/text-size.ts';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
@@ -47,6 +48,7 @@
 	onMount(() => {
 		// o app.html nasce em pt-BR; a língua escolhida ou a do navegador vale a partir daqui (ADR-0008)
 		document.documentElement.lang = language.current;
+		applyTextSize(readTextSize());
 		void session.init();
 		// RF-80: ao voltar para o app ou quando a internet volta, reconecta e esvazia a fila
 		// a primeira troca de controle numa página sem worker é a instalação, não uma versão nova

@@ -44,7 +44,7 @@ Critério escolhido pelo Pedro: **uso no dia a dia**, o que faz um grupo de amig
 4. Responder e reagir (M3).
 5. Status de entrega e de leitura (M3).
 6. Seleção de várias mensagens: favoritar, excluir, copiar e encaminhar (M3; depende do encaminhar do item 3).
-7. Etapa 3 de UX/UI: aviso de sem conexão, tamanho da letra, nível do microfone (M3).
+7. Etapa 3 de UX/UI: aviso de sem conexão, tamanho da letra, nível do microfone (M3). ✅ Feita em 2026-10-28.
 8. Cartão de perfil privado com nome e foto (M3).
 9. Editar mensagem e mencionar com `@` (M3).
 10. Backup cifrado de contatos, grupos e configurações (M4).
@@ -129,7 +129,7 @@ Antes "Grupos e recursos de conversa"; os grupos foram adiantados para o M2 e o 
 - ~~Grupos de até 20 com tag `g` e eventos de controle; administrador; remover membro (RF-30..33).~~ Adiantado para o M2 (2026-10-22).
 - ✅ Responder e reagir (RF-22, 23), feito em 2026-10-28 (testes `interactions.test.ts` e e2e `responder-reagir`). Responder: item "Responder" no menu da mensagem; o campo mostra a citação e o balão sai com ela (toque leva à original, se está na tela). Vale só para texto; áudio e foto seguem como mensagem nova. Reagir: seis emojis no topo do menu (👍 ❤️ 😂 😮 😢 🙏); uma reação por pessoa e mensagem, a mais recente vale; chips sob o balão, e tocar no chip dá a mesma reação ou desfaz a minha. O "+" do menu abre o seletor com 48 emojis (lista só sugerida: o protocolo aceita qualquer reação curta). Entregue: dois tiques na cor do texto; lida: dois tiques azuis (`--read`), porque o cinza e o verde se perdiam no balão.
 - ✅ Status de entrega com confirmações agrupadas; confirmação de leitura desativável (RF-50, 51), feito em 2026-10-28 (e2e `entrega-leitura`). Um tique = enviada, dois = entregue, dois coloridos = lida; no grupo vale o do membro mais atrasado. Só confirmo a quem já é contato (ou grupo aceito): pedido de mensagem não ganha sinal de que estou aqui (RF-12); ao aceitar e abrir a conversa, sai a "lida". Ajustes › Privacidade liga e desliga a leitura. Não feito ainda: o estado "possivelmente perdida" (RF-53, item 12 da ordem).
-- Etapa 3 de UX/UI (veio do M2): ✅ aviso de "sem conexão" (2026-10-26: pílula acima do campo de mensagem quando o aparelho fica sem internet, na hora, ou sem nenhum relay conectado por 6 s; some sozinha quando volta; teste e2e `sem-conexao`); tamanho da letra em Ajustes (Normal, Grande, Muito grande; RNF-65); nível do microfone durante a gravação.
+- Etapa 3 de UX/UI (veio do M2): ✅ aviso de "sem conexão" (2026-10-26: pílula acima do campo de mensagem quando o aparelho fica sem internet, na hora, ou sem nenhum relay conectado por 6 s; some sozinha quando volta; teste e2e `sem-conexao`); ✅ tamanho da letra em Ajustes (2026-10-28: Normal 100%, Grande 120%, Muito grande 140% sobre o `html`, tudo em rem acompanha; preferência do aparelho em `localStorage`, não da conta, para valer já na tela do PIN; e2e `tamanho-da-letra`); ✅ nível do microfone durante a gravação (2026-10-28: barra ao lado do tempo, em decibéis de -60 a -10 dB, lida do mesmo analisador que acha o começo da voz; e2e `medidor-do-microfone`). Etapa 3 concluída.
 - Cartão de perfil privado com nome e foto (Q-P5, RF-02; veio do M2).
 - Editar mensagem (RF-24). ~~Apagar para todos (RF-25)~~ feito no M2.
 - Mencionar alguém no grupo com `@` (RF-35). Sem modo foco no MVP, não há exceção a avaliar por enquanto (RF-61, v1).

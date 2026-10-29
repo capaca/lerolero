@@ -451,6 +451,11 @@
 	"ajustes_conferir_frase": "Conferir minha frase de recuperação",
 	"ajustes_bloquear_agora": "Bloquear agora",
 	"ajustes_privacidade": "Privacidade",
+	"ajustes_letra": "Tamanho da letra",
+	"ajustes_letra_normal": "Normal",
+	"ajustes_letra_grande": "Grande",
+	"ajustes_letra_muito_grande": "Muito grande",
+	"ajustes_letra_dica": "Vale só neste aparelho.",
 	"ajustes_leitura": "Confirmação de leitura",
 	"ajustes_leitura_dica": "Quem escreve para você vê quando você leu, e você vê quando leram o que você escreveu. Desligando, nenhum dos dois lados vê. O “Entregue” continua.",
 	"ajustes_teste": "Teste",
@@ -691,5 +696,7 @@
 	"roteiro_passo_19": "Extra: A segura uma mensagem, toca em Selecionar, marca mais duas e favorita",
 	"roteiro_esperado_19": "A barra do topo mostra “3 selecionadas”; depois, as três aparecem em Favoritas (menu ⋮ da tela inicial) e, ao tocar em uma, a conversa abre nela",
 	"roteiro_passo_20": "Extra: B manda uma foto para A",
-	"roteiro_esperado_20": "A vê a prévia desfocada; o primeiro toque baixa e deixa a foto nítida no balão, o segundo abre em tela cheia; fechando e abrindo o app, ela continua nítida"
+	"roteiro_esperado_20": "A vê a prévia desfocada; o primeiro toque baixa e deixa a foto nítida no balão, o segundo abre em tela cheia; fechando e abrindo o app, ela continua nítida",
+	"roteiro_passo_21": "Extra: A escolhe Ajustes → Tamanho da letra → Muito grande e grava um áudio falando",
+	"roteiro_esperado_21": "As telas ficam com a letra maior e sem rolar para os lados; durante a gravação, a barra ao lado do tempo sobe e desce com a voz"
 }

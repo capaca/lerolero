@@ -9,6 +9,7 @@
 	import { relayList } from '#lib/relays.ts';
 	import { READ_RECEIPTS_KEY, session } from '#lib/session.svelte.ts';
 	import { FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
+	import { readTextSize, saveTextSize, type TextSize } from '#lib/text-size.ts';
 
 	const npub = $derived(session.identity ? toNpub(session.identity.publicKey) : '');
 	let copied = $state(false);
@@ -23,6 +24,14 @@
 	function toggleReceipts() {
 		void session.setSetting(READ_RECEIPTS_KEY, readReceipts);
 	}
+
+	// tamanho da letra (RNF-65): só deste aparelho
+	let textSize = $state<TextSize>(readTextSize());
+	const sizeOptions: { value: TextSize; label: () => string }[] = [
+		{ value: 'normal', label: () => m.ajustes_letra_normal() },
+		{ value: 'grande', label: () => m.ajustes_letra_grande() },
+		{ value: 'muito_grande', label: () => m.ajustes_letra_muito_grande() }
+	];
 
 	// estado da rede, atualizado a cada 2 s enquanto a tela está aberta
 	let connected = $state<string[]>([]);
@@ -55,6 +64,25 @@
 		<p class="hint">{m.ajustes_chave_dica()}</p>
 		<p class="key">{npub}</p>
 		<button onclick={copy}>{copied ? m.ajustes_chave_copiada() : m.ajustes_copiar_chave()}</button>
+	</section>
+
+	<section class="card">
+		<h2>{m.ajustes_letra()}</h2>
+		<div class="sizes" role="radiogroup" aria-label={m.ajustes_letra()}>
+			{#each sizeOptions as option (option.value)}
+				<label class="size" class:on={textSize === option.value}>
+					<input
+						type="radio"
+						name="tamanho-da-letra"
+						value={option.value}
+						bind:group={textSize}
+						onchange={() => saveTextSize(textSize)}
+					/>
+					<span>{option.label()}</span>
+				</label>
+			{/each}
+		</div>
+		<p class="hint">{m.ajustes_letra_dica()}</p>
 	</section>
 
 	<section class="card">
@@ -121,6 +149,39 @@
 	.check input {
 		width: auto;
 		transform: scale(1.3);
+	}
+	.sizes {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+	.size {
+		flex: 1;
+		margin: 0;
+		min-width: 6rem;
+		position: relative; /* âncora do rádio escondido, que senão alarga a página */
+		padding: 0.6rem 0.5rem;
+		text-align: center;
+		border: 1px solid var(--line);
+		border-radius: 10px;
+		cursor: pointer;
+	}
+	.size.on {
+		border-color: var(--accent);
+		box-shadow: inset 0 0 0 1px var(--accent);
+	}
+	.size input {
+		position: absolute;
+		opacity: 0;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		pointer-events: none;
+	}
+	.size:has(input:focus-visible) {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 	.release {
 		text-align: center;
