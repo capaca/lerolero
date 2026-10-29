@@ -142,7 +142,7 @@
 	</section>
 
 	<p class="hint release">
-		{(__APP_HOMOLOG__ ? m.ajustes_versao_homologacao : m.ajustes_versao)({ versao: __APP_RELEASE__ })}
+		{(__APP_HOMOLOG__ ? m.ajustes_versao_homologacao : __APP_LOCAL__ ? m.ajustes_versao_local : m.ajustes_versao)({ versao: __APP_RELEASE__ })}
 	</p>
 </main>
 
