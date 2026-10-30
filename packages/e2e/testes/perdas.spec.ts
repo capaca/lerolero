@@ -47,9 +47,13 @@ const minhaChave = (pessoa: Pessoa) =>
 	});
 
 test('a mensagem que se perdeu no caminho chega sozinha depois, quando a seguinte mostra o buraco', async ({ novaPessoa }) => {
-	test.setTimeout(150_000);
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
 	await adicionarUmAoOutro(maria, joao);
+	// o relógio da Maria passa a ser do teste (só vale para o que o app agenda depois de recarregar), para não esperar
+	// de verdade a janela antes de pedir (GAP_WAIT_S, 30 s) mais a volta que confere (GAP_CHECK_MS, 15 s)
+	await maria.page.clock.install();
+	await maria.page.reload();
+	await expect(maria.page.getByRole('heading', { name: 'Meu convite' })).toBeVisible();
 	const perder = await perderOProximo(joao.page, await minhaChave(maria));
 
 	await enviarTexto(joao.page, 'primeira');
@@ -62,7 +66,8 @@ test('a mensagem que se perdeu no caminho chega sozinha depois, quando a seguint
 	await expect(maria.page.locator('.row', { hasText: 'segunda' })).toHaveCount(0);
 
 	// a Maria nota que falta a 2, espera a janela e pede; o João reenvia sozinho, sem aviso para ninguém
-	await expect(maria.page.locator('.row', { hasText: 'segunda, que se perde' })).toBeVisible({ timeout: 90_000 });
+	await maria.page.clock.fastForward(45_000);
+	await expect(maria.page.locator('.row', { hasText: 'segunda, que se perde' })).toBeVisible({ timeout: 30_000 });
 	await expect(maria.page.locator('.row:not(.mine)')).toHaveText([/primeira/, /segunda, que se perde/, /terceira/]);
 	await expect(joao.page.locator('.row.mine', { hasText: 'segunda' }).getByLabel('enviada e lida')).toBeVisible({ timeout: 30_000 });
 });
