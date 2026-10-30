@@ -62,7 +62,7 @@ do WhatsApp.
 14. Frase no gerenciador de senhas (M4; D1, RF-09 b). **Começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra. Protótipo ([prototipos/senha](../prototipos/senha/README.md)) medido em 2026-10-29: no Motorola, no PWA instalado, o Chrome oferece salvar e a frase volta inteira; **a D1 entra no Android**, salvando por `PasswordCredential` e, onde ele não existir, pelo formulário que some. No app: "Guardar no gerenciador de senhas" em "Proteção da conta" e em "Guarde seu código", e "Usar o código salvo no navegador" na restauração; e2e `protecao`. Falta: medir no iPhone, quando houver um aparelho. ✅ Feita em 2026-10-29.
 15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).** ➡️ Adiada em 2026-10-29 para depois do beta: o Pedro preferiu seguir para o polimento; o domínio é decidido na revisão de prontidão (item 23).
 16. Velocidade da suíte e2e (M5): sem esperas fixas grandes; ~4 min na CI com 2 workers, que deram o mesmo tempo que 4 com menos risco de falha sem bug. ✅ Feita em 2026-10-30.
-17. Aviso de versão nova mais rápido (M5): procurar versão nova a cada poucos minutos com o app aberto, para as correções chegarem logo a quem testa o beta. O cache de até 10 minutos do Pages continua até haver domínio próprio (Q-N1).
+17. Aviso de versão nova mais rápido (M5): procurar versão nova a cada poucos minutos com o app aberto, para as correções chegarem logo a quem testa o beta. O cache de até 10 minutos do Pages continua até haver domínio próprio (Q-N1). ✅ Feita em 2026-10-30: a cada 5 minutos, só com o app na tela.
 18. Arquivos além de fotos e "Salvar" no aparelho (M3; RF-44, 45): PDF e outros tipos pelo caminho das fotos (cifra, Blossom, envio com repetição, hash único do RF-70, encaminhar sem reenviar), com balão de nome, tipo e tamanho e download sob demanda; "Salvar" no menu da mensagem para foto e arquivo. Decidir antes: limite de tamanho por arquivo, tipos bloqueados (executáveis; o app nunca abre o arquivo sozinho, T a registrar) e como salvar no Android e no iOS pelo PWA (Web Share com arquivos ou `<a download>`).
 19. Botão de emojis no campo de mensagem (M3; RF-29). Decidir antes: lista própria ou biblioteca (peso no app), busca por nome em português e se "Mais reações" passa a usar o mesmo seletor.
 20. Medição no aparelho de referência de 2 GB (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Depende de haver o aparelho.
@@ -157,7 +157,7 @@ de referência; uma mensagem apagada propositalmente de um relay de teste é det
 - ✅ Velocidade da suíte e2e (medida em 2026-10-26: ~99 s na CI com 2 workers). Caminhos, do que mais rende: subir os
   workers da CI para 3 ou 4, repetindo a suíte antes de adotar (a carga já expôs corridas); encurtar o
   `envio-sem-rede` (35 s, o mais longo); dividir em dois jobs (`--shard`). Item 16, feito em 2026-10-30.
-- ⬜ Aviso de versão nova mais rápido. Item 17.
+- ✅ Aviso de versão nova mais rápido (2026-10-30). Item 17.
 - ⬜ Medição de todas as metas de desempenho e dados no aparelho de referência (seções 2 e 3 do
   [04](04-requisitos-nao-funcionais.md)). Item 20.
 - ⬜ Revisão de textos para linguagem simples (RNF-64). Item 21.
