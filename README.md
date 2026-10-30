@@ -31,10 +31,41 @@ A especificação completa (visão, modelo de ameaças, requisitos, arquitetura,
 
 ## Desenvolver
 
-Requer Node 24 e pnpm 12 (via corepack).
+### Montar o ambiente
+
+No macOS (com [Homebrew](https://brew.sh)) ou no Debian/Ubuntu (com `apt` e `sudo`), um comando instala tudo o que
+falta e pode ser repetido sem risco:
 
 ```bash
-pnpm install
+scripts/preparar.sh
+```
+
+| Ferramenta | Para quê |
+|---|---|
+| git e [gh](https://cli.github.com) | Código e ciclo de PR e release (`scripts/situacao.sh`, `pr.sh`, `release.sh`) |
+| [fnm](https://github.com/Schniz/fnm) e Node 24 | A versão vem do `.node-version`, a mesma da CI; o Node global do sistema não serve |
+| pnpm 12, via corepack | A versão vem do `packageManager` do `package.json` |
+| Google Chrome | Suíte e2e, que usa o Chrome instalado, com relays e Blossom locais (sem Docker) |
+| Dependências do projeto | `pnpm install --frozen-lockfile` |
+
+Duas coisas ficam com você, e o script avisa se faltarem:
+
+- `gh auth login`, para entrar no GitHub.
+- No perfil do shell, a linha abaixo, para ter `node` e `pnpm` no terminal (o script mostra a versão certa para o seu
+  shell; no Linux ela vem com o `~/.local/bin` no `PATH`, onde o fnm fica). Os scripts em `scripts/` não precisam dela.
+
+  ```bash
+  eval "$(fnm env --use-on-cd --version-file-strategy=recursive --shell zsh)"
+  ```
+
+Para conferir, `scripts/verificar.sh check test build e2e` roda tudo como a CI.
+
+Em outra distribuição Linux, instale as ferramentas da tabela e rode `corepack enable` e
+`pnpm install --frozen-lockfile`. O Google só publica o Chrome para Linux em amd64; em ARM a suíte e2e não roda.
+
+### Comandos
+
+```bash
 pnpm check      # tipos (tsc + svelte-check)
 pnpm test       # testes (vitest)
 pnpm build      # site estático em packages/app/build
@@ -70,8 +101,7 @@ Bom saber:
   sem internet) se confere na homologação.
 - Se o IP do computador mudar, troque o endereço na flag. O script sempre mostra o atual.
 - A porta 5180 não colide com a do e2e (4190), então dá para rodar os dois ao mesmo tempo.
-- O script é para macOS (pega o IP com `ipconfig getifaddr`). Em outro sistema, rode
-  `pnpm --filter @lerolero/app exec vite dev --host 0.0.0.0 --port 5180` e use o IP da máquina.
+- No Linux, o script usa o primeiro IP de `hostname -I`. Se houver VPN ou contêiner, confira se é o do Wi-Fi.
 
 Tudo entra na `main` por pull request, com testes unitários a cada commit e testes com a rede real pedidos por rótulo.
 O app vai para o GitHub Pages só numa release ([ADR-0006](docs/adr/0006-fluxo-de-trabalho-e-releases.md)).

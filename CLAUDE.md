@@ -10,6 +10,8 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
 - Node 24 via fnm (o Node global do Homebrew não serve). Prefixe os comandos com
   `eval "$(fnm env --version-file-strategy=recursive --shell bash)" && fnm use`.
 - pnpm 12 via corepack. `gh` já está logado.
+- Máquina nova ou erro de ferramenta faltando (`fnm`, `pnpm`, `node_modules`): `scripts/preparar.sh` instala o que
+  falta e pode ser repetido. O que ele cobre está em "Montar o ambiente" no README.
 
 ## Comandos (na raiz)
 

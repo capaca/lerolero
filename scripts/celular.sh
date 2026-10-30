@@ -5,7 +5,7 @@
 #
 # O cofre (Web Worker + crypto) e o service worker exigem contexto seguro, e http://IP não é. No Chrome do
 # celular, uma vez só: chrome://flags/#unsafely-treat-insecure-origin-as-secure, colar o endereço que este
-# script mostra, Enabled e Relaunch. Se o IP do Mac mudar, o endereço da flag precisa mudar junto.
+# script mostra, Enabled e Relaunch. Se o IP do computador mudar, o endereço da flag precisa mudar junto.
 # A origem é outra que a da produção e a da homologação: os dados de lá não são tocados.
 # Instalado (menu do Chrome → Instalar app ou Adicionar à tela inicial), aparece como "Lero local", com a barra e a
 # moldura roxas (vite.config.ts), para não confundir com o da produção nem com o da homologação.
@@ -16,9 +16,13 @@ eval "$(fnm env --version-file-strategy=recursive --shell bash)" && fnm use --si
 
 # porta fixa para a flag do Chrome continuar valendo; fora da 4190 do e2e e da 5173 padrão do vite
 porta=5180
-ip=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null)
+if [ "$(uname)" = Darwin ]; then
+	ip=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null)
+else
+	ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+fi
 if [ -z "$ip" ]; then
-	echo "Não achei o IP do Wi-Fi deste Mac. Ele está conectado?"
+	echo "Não achei o IP desta máquina na rede. Ela está conectada?"
 	exit 1
 fi
 url="http://$ip:$porta/"
