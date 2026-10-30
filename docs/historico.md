@@ -7,6 +7,10 @@ conhecidos".
 
 ## 2026-10-29
 
+- **Bug: sem internet, cada mensagem levava ~10 s para aparecer** (RNF-12; e2e `envio-sem-rede`). Achado ao medir a
+  suíte e2e (item 16): os envios iam numa fila só, e a mensagem seguinte esperava a anterior buscar os relays do
+  contato, que sem rede espera o prazo inteiro. Agora guardar e mostrar seguem numa fila, e a busca dos relays e a
+  prova de trabalho noutra, na mesma ordem. O teste passa a exigir cada uma na tela em 3 s e caiu de 37 s para 6 s.
 - **Código de recuperação no gerenciador de senhas** (item 14, RF-09 b, D1 do ADR-0009; e2e `protecao` e
   `textos`). Em "Proteção da conta" e em "Guarde seu código", depois do PIN, "Guardar no gerenciador de senhas" vem
   antes do arquivo: no Chrome, pelo `PasswordCredential`, com a conta "<nome> · Lero-lero"; sem ele (Safari,

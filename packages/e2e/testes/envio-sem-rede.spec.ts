@@ -32,7 +32,8 @@ test('mensagens escritas sem internet saem juntas, na ordem, assim que ela volta
 	for (const texto of textos) {
 		await joao.page.getByLabel('Mensagem').fill(texto);
 		await joao.page.getByRole('button', { name: 'Enviar', exact: true }).click();
-		await expect(joao.page.locator('.row.mine', { hasText: texto }).getByLabel('enviando')).toBeVisible();
+		// cada uma aparece na hora: antes, a seguinte esperava a anterior buscar os relays da Maria (~10 s sem rede)
+		await expect(joao.page.locator('.row.mine', { hasText: texto }).getByLabel('enviando')).toBeVisible({ timeout: 3_000 });
 	}
 
 	// a primeira não pode ficar para trás: antes, a que falhou primeiro tinha a espera mais longa e saía por último

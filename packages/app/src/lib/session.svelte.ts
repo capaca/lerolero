@@ -190,6 +190,8 @@ class Session {
 	private savingSession?: Promise<void>;
 	/** fila de envios (sendTo) */
 	private sending: Promise<unknown> = Promise.resolve();
+	/** fila da entrega de cada envio 1:1, depois de guardado (sendTo) */
+	private delivering: Promise<unknown> = Promise.resolve();
 	/** sem internet, ou sem nenhum relay conectado há alguns segundos: a tela avisa que as mensagens ficam na fila */
 	offline = $state(false);
 	private noRelaysSince?: number;
@@ -796,12 +798,22 @@ class Session {
 		// Em fila: o horário de cada mensagem sai depois da anterior (sendTime), e a primeira para
 		// alguém espera a busca dos relays dele; sem a fila, a segunda pegava o mesmo segundo e
 		// chegava trocada (2026-10-22).
-		const run = this.sending.then(() => this.sendNow(conversationId, content, tags, kind, store, at));
-		this.sending = run.catch(() => {});
-		return run;
+		const prepared = this.sending.then(() => this.sendNow(conversationId, content, tags, kind, store, at));
+		this.sending = prepared.catch(() => {});
+		// a busca dos relays vai numa segunda fila, na mesma ordem: a mensagem seguinte já aparece sem esperar a
+		// anterior achar os relays do contato, que sem rede leva ~10 s (RNF-12)
+		return prepared.then(({ rumor, deliver }) => {
+			if (!deliver) return rumor;
+			const delivered = this.delivering.then(deliver);
+			this.delivering = delivered.catch(() => {});
+			return delivered.then(() => rumor);
+		});
 	}
 
-	/** `at`: horário fixo do rumor (a edição leva o da edição, não o da próxima mensagem) */
+	/**
+	 * Cifra e guarda a mensagem; no 1:1, devolve em `deliver` o envio, que espera os relays do contato.
+	 * `at`: horário fixo do rumor (a edição leva o da edição, não o da próxima mensagem).
+	 */
 	private async sendNow(conversationId: string, content: string, tags: string[][], kind: MessageKind, store: boolean, at?: number) {
 		const network = this.requireNetwork();
 		if (conversationId.startsWith('grupo:')) {
@@ -824,7 +836,7 @@ class Session {
 			for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap, store ? wrapped.rumor.id : undefined);
 			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
 			if (store) void this.sendProfile(conversation.members);
-			return wrapped.rumor;
+			return { rumor: wrapped.rumor };
 		}
 		const recipient = conversationId.slice('direta:'.length);
 		const nameTags = kind !== 14 && kind !== 15 ? [] : await nameTagFor(storage, recipient, this.current.displayName);
@@ -838,24 +850,26 @@ class Session {
 			await storeOutgoing(storage, wrapped.rumor, recipient);
 			this.version++;
 		}
-		let relays: string[];
-		try {
-			relays = await this.deliveryRelays(recipient);
-		} catch (err) {
-			// sem para onde enviar: não deixa uma "pendente" eterna, o texto volta para o campo
-			if (store) {
-				await deleteForMe(storage, wrapped.rumor.id);
-				this.version++;
+		const deliver = async () => {
+			let relays: string[];
+			try {
+				relays = await this.deliveryRelays(recipient);
+			} catch (err) {
+				// sem para onde enviar: não deixa uma "pendente" eterna, o texto volta para o campo
+				if (store) {
+					await deleteForMe(storage, wrapped.rumor.id);
+					this.version++;
+				}
+				throw err;
 			}
-			throw err;
-		}
-		// quem nunca me escreveu recebe com prova de trabalho (RF-90); a mensagem já está na tela enquanto ela é feita
-		const toRecipient = (await needsProof(storage, recipient)) ? await vault.proveWrap(wrapped.rumor, recipient, POW_DIFFICULTY) : wrapped.toRecipient;
-		// a fila guarda e tenta de novo sozinha: a tela não espera a rede
-		void network.engine.enqueue(toRecipient, relays, store ? wrapped.rumor.id : undefined);
-		void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
-		if (store) void this.sendProfile([recipient]);
-		return wrapped.rumor;
+			// quem nunca me escreveu recebe com prova de trabalho (RF-90); a mensagem já está na tela enquanto ela é feita
+			const toRecipient = (await needsProof(storage, recipient)) ? await vault.proveWrap(wrapped.rumor, recipient, POW_DIFFICULTY) : wrapped.toRecipient;
+			// a fila guarda e tenta de novo sozinha: a tela não espera a rede
+			void network.engine.enqueue(toRecipient, relays, store ? wrapped.rumor.id : undefined);
+			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+			if (store) void this.sendProfile([recipient]);
+		};
+		return { rumor: wrapped.rumor, deliver };
 	}
 
 	/**
