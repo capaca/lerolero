@@ -28,8 +28,8 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
 - `BASE_PATH=/lerolero pnpm build`: build igual ao do GitHub Pages.
 - Textos da interface (ADR-0008): em `packages/app/messages/pt-BR.json`, usados como `m.chave()` (Paraglide); nenhum
   texto fixo nos componentes; negrito, ícone ou link no meio da frase vão pelo componente `Rich`. O e2e `textos`
-  confere todas as telas no build da pseudolíngua (`pnpm build:pseudo`, que o `verificar.sh build` já roda); tela
-  nova entra nele.
+  confere todas as telas no build da pseudolíngua (`pnpm build:pseudo`, que o `verificar.sh build` já roda) e, em
+  cada uma, a acessibilidade com o axe-core (RNF-60); tela nova entra nele.
 - Suíte e2e (`packages/e2e`, Playwright no Chrome instalado, relays e Blossom locais): `scripts/verificar.sh build e2e`.
   Funcionalidade nova entra com o seu teste em `packages/e2e/testes/`.
 - `pnpm test:rede` em `packages/core`: relays e Blossom reais (lento, só sob demanda).

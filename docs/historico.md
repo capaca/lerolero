@@ -7,6 +7,15 @@ conhecidos".
 
 ## 2026-10-30
 
+- **Acessibilidade automática** (item 22, parte automática, escolhida pelo Pedro; RNF-60). O e2e `textos`, que já passa
+  por todas as telas, roda também o axe-core (regras WCAG 2.0 a 2.2 A e AA) em cada uma, e de novo só o contraste no
+  tema escuro; qualquer achado faz o teste falhar, então tela nova entra coberta. Achados e correções: texto cinza
+  (`--muted`) abaixo de 4,5:1 no balão verde e na citação (escurecido no claro, clareado no escuro); nome na citação
+  em verde puro sobre o fundo dela (puxado para a cor do texto); no tema escuro, botões vermelhos com texto branco a
+  2,3:1 (novo `--danger-fg`, escuro); iniciais do avatar e nome de quem escreveu no grupo, que vêm de uma cor tirada
+  da chave e falhavam em alguns matizes (mais escuros, passam em todos); o botão da citação e o da velocidade do
+  áudio tinham um nome para o leitor diferente do que aparece (WCAG 2.5.3, quem comanda por voz diz o que vê). Fica
+  para a revisão manual: TalkBack, fonte a 200% e alvos de 48 dp.
 - **Velocidade da suíte e2e** (item 16, primeira etapa, escolhida pelo Pedro; #77 e #78). O teste `perdas` esperava de
   verdade a janela antes de pedir o reenvio (`GAP_WAIT_S`, 30 s) mais a volta que confere (`GAP_CHECK_MS`, 15 s);
   agora adianta o relógio da página com `clock.fastForward` e caiu de ~38 s para ~5 s. Junto com o bug do envio sem
