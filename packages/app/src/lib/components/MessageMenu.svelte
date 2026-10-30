@@ -132,6 +132,6 @@
 	.danger {
 		background: var(--danger);
 		border-color: var(--danger);
-		color: white;
+		color: var(--danger-fg);
 	}
 </style>

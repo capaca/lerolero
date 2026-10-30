@@ -250,7 +250,7 @@
 	.danger {
 		background: var(--danger);
 		border-color: var(--danger);
-		color: white;
+		color: var(--danger-fg);
 	}
 	.home {
 		/* espaço para o botão flutuante não cobrir a última conversa */

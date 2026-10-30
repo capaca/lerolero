@@ -100,7 +100,7 @@
 	.danger {
 		background: var(--danger);
 		border-color: var(--danger);
-		color: white;
+		color: var(--danger-fg);
 	}
 	.notice {
 		margin: 0.6rem 1rem 0;

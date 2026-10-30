@@ -35,6 +35,7 @@
 	let loadedDuration = $state<number>();
 	const total = $derived(loadedDuration ?? media.duration ?? 0);
 	let speedIndex = $state(0);
+	const speedText = $derived(`${new Intl.NumberFormat(intlLocale()).format(SPEEDS[speedIndex]!)}x`);
 
 	const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -113,7 +114,8 @@
 		style:--progress="{progress}%"
 	/>
 	<span class="time">{fmt(phase === 'parado' ? Math.max(0, total - skip) : Math.max(0, current - skip))}</span>
-	<button class="speed" onclick={cycleSpeed} aria-label={m.audio_velocidade()}>{new Intl.NumberFormat(intlLocale()).format(SPEEDS[speedIndex]!)}x</button>
+	<!-- o nome contém o que aparece ("1,5x"), para quem comanda por voz (WCAG 2.5.3) -->
+	<button class="speed" onclick={cycleSpeed} aria-label={m.audio_velocidade({ velocidade: speedText })}>{speedText}</button>
 	<audio
 		bind:this={audio}
 		onplay={() => (claimPlayback(audio!), (phase = 'tocando'), followPlayback())}

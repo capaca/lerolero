@@ -1,7 +1,9 @@
 // Textos fora do código (RNF-71, ADR-0008): o app montado com a pseudolíngua, em que todo texto traduzido
 // aparece "[Àššîɱ···]". Texto sem colchetes na tela ficou fixo no código e não seria traduzido.
-// Cobre todas as telas: uma tela nova entra aqui junto com ela.
+// Cobre todas as telas: uma tela nova entra aqui junto com ela. Em cada tela confere também a acessibilidade
+// (RNF-60) com o axe-core.
 import type { Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import {
 	abrirPedido,
 	adicionarPeloConvite,
@@ -63,7 +65,27 @@ function textosFixos(page: Page, permitidos: string[] = []) {
 	}, permitidos);
 }
 
-const semTextoFixo = async (page: Page, permitidos?: string[]) => expect(await textosFixos(page, permitidos)).toEqual([]);
+/**
+ * Falhas de acessibilidade (RNF-60, WCAG 2.2 AA) que o axe-core acha sozinho: contraste, nomes de botões e campos,
+ * papéis ARIA, idioma. O contraste é conferido também no tema escuro. Leitor de tela, fonte a 200% e o resto que
+ * pede olho humano ficam para a revisão manual (docs/07, M5).
+ */
+async function falhasDeAcessibilidade(page: Page) {
+	const falhas = async (axe: AxeBuilder) =>
+		(await axe.analyze()).violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.target.join(' ')} (${n.failureSummary?.replace(/\s+/g, ' ')})`));
+	const claro = await falhas(new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']));
+	await page.emulateMedia({ colorScheme: 'dark' });
+	const escuro = (await falhas(new AxeBuilder({ page }).withRules(['color-contrast']))).map((f) => `tema escuro, ${f}`);
+	await page.emulateMedia({ colorScheme: 'light' });
+	return [...claro, ...escuro];
+}
+
+/** A tela não tem texto fixo nem falha de acessibilidade. */
+const semTextoFixo = async (page: Page, permitidos?: string[]) => {
+	expect(await textosFixos(page, permitidos)).toEqual([]);
+	// soft: mostra as falhas de todas as telas numa rodada só
+	expect.soft(await falhasDeAcessibilidade(page)).toEqual([]);
+};
 
 /**
  * A mesma tela no build da pseudolíngua. Os dois builds têm a mesma origem e o mesmo banco: o que foi montado
