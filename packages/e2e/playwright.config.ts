@@ -13,7 +13,7 @@ export default defineConfig({
 	// relay local é estável: falha de verdade não deve passar escondida numa segunda tentativa
 	retries: 0,
 	// a máquina da CI (ubuntu-latest) tem 4 núcleos: um worker por núcleo (item 16, velocidade da suíte)
-	workers: ci ? 4 : undefined,
+	workers: ci ? 3 : undefined,
 	reporter: ci ? [['list'], ['github']] : 'list',
 	outputDir: 'resultados',
 	use: {
