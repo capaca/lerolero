@@ -1,5 +1,5 @@
-// Proteção da conta pelo arquivo ou cartão (RF-09 a, ADR-0009 D2): guardar sem copiar à mão e restaurar pelo
-// link ou pelo arquivo. O menu de compartilhar do sistema não existe no Chrome da suíte: o teste o simula.
+// Proteção da conta pelo arquivo ou cartão (RF-09 a, ADR-0009 D2) e pelo gerenciador de senhas (RF-09 b, D1): guardar
+// sem copiar à mão e restaurar pelo link, pelo arquivo ou pela frase salva. O menu de compartilhar do sistema não existe no Chrome da suíte: o teste o simula.
 import type { Page } from '@playwright/test';
 import { abrirAjustes, digitarPin, expect, meuConvite, noInicio, PIN, test } from '../ajudantes.ts';
 
@@ -145,4 +145,87 @@ test('Proteção da conta: cancelar não protege; o cartão sai na impressão; o
 	await criarPinERecuperar(outro);
 	await abrirAjustes(outro);
 	await expect(outro.locator('.key')).toHaveText(chave!);
+});
+
+type Guardado = { id: string; password: string; name?: string };
+type ComCredencial = Window & { guardado?: Guardado };
+
+/** O gerenciador de senhas do Chrome: `store` guarda o que recebeu; `get` devolve a frase dada (ou nada). */
+const simularGerenciador = (page: Page, frase?: string) =>
+	page.addInitScript((frase) => {
+		Object.defineProperty(navigator.credentials, 'store', {
+			configurable: true,
+			value: async (c: Guardado) => void ((window as ComCredencial).guardado = { id: c.id, password: c.password, name: c.name })
+		});
+		Object.defineProperty(navigator.credentials, 'get', {
+			configurable: true,
+			value: async () => (frase ? { id: 'Maria · Lero-lero', type: 'password', password: frase } : null)
+		});
+	}, frase);
+
+test('gerenciador de senhas: guardar protege a conta, e a frase salva restaura em outro aparelho', async ({ novaPessoa, novoAparelho }) => {
+	const { page } = await novaPessoa('Maria');
+	// o script só vale a partir da próxima página carregada
+	await simularGerenciador(page);
+	await page.goto('./');
+	await noInicio(page);
+	await abrirAjustes(page);
+	const chave = await page.locator('.key').textContent();
+	await page.getByRole('link', { name: /Proteção da conta/ }).click();
+	await digitarPin(page, 'pin', PIN);
+	await page.getByRole('button', { name: 'Guardar no gerenciador de senhas' }).click({ timeout: 20_000 });
+
+	// o app pede ao navegador para salvar, pelo PasswordCredential, com um nome legível e as 12 palavras
+	const guardado = (await page.evaluate(() => (window as ComCredencial).guardado))!;
+	expect(guardado.id).toBe('Maria · Lero-lero');
+	expect(guardado.password).toMatch(/^(\p{L}+ ){11}\p{L}+$/u);
+
+	// sem saber se a pessoa aceitou, só protege quando ela confirma; "Não apareceu nada" volta ao botão
+	await expect(page.getByRole('button', { name: 'Salvei no gerenciador' })).toBeVisible();
+	await page.getByRole('button', { name: 'Não apareceu nada' }).click();
+	await page.getByRole('button', { name: 'Guardar no gerenciador de senhas' }).click();
+	await page.getByRole('button', { name: 'Salvei no gerenciador' }).click();
+	await expect(page.getByText('Pronto, conta protegida.', { exact: false })).toBeVisible();
+	await page.reload();
+	await expect(page.getByText('Conta protegida.', { exact: false })).toBeVisible({ timeout: 20_000 });
+
+	// aparelho novo sem nada salvo: avisa e deixa os outros caminhos
+	const vazio = await novoAparelho();
+	await simularGerenciador(vazio);
+	await vazio.goto('./restaurar');
+	await vazio.getByRole('button', { name: 'Usar o código salvo no navegador' }).click();
+	await expect(vazio.getByText('Não achei um código salvo neste navegador.', { exact: false })).toBeVisible();
+
+	// aparelho novo com a frase sincronizada pela conta Google: ela chega pronta, falta o PIN
+	const outro = await novoAparelho();
+	await simularGerenciador(outro, guardado.password);
+	await outro.goto('./restaurar');
+	await outro.getByRole('button', { name: 'Usar o código salvo no navegador' }).click();
+	await expect(outro.locator('#frase')).toHaveValue(guardado.password);
+	await criarPinERecuperar(outro);
+	await abrirAjustes(outro);
+	await expect(outro.locator('.key')).toHaveText(chave!);
+});
+
+test('gerenciador de senhas sem PasswordCredential: o formulário é enviado e some, e a restauração não oferece o botão', async ({ novaPessoa, novoAparelho }) => {
+	const { page } = await novaPessoa('Maria');
+	await page.addInitScript(() => delete (window as { PasswordCredential?: unknown }).PasswordCredential);
+	await page.goto('./ajustes/protecao');
+	await digitarPin(page, 'pin', PIN);
+
+	// os campos que o navegador reconhece: nome da conta e a frase num campo de senha nova
+	await expect(page.locator('#senha-conta')).toHaveValue('Maria · Lero-lero', { timeout: 20_000 });
+	await expect(page.locator('#senha-conta')).toHaveAttribute('autocomplete', 'username');
+	await expect(page.locator('#senha-codigo')).toHaveAttribute('autocomplete', 'new-password');
+	await expect(page.locator('#senha-codigo')).toHaveValue(/^(\p{L}+ ){11}\p{L}+$/u);
+	await page.getByRole('button', { name: 'Guardar no gerenciador de senhas' }).click();
+	await expect(page.locator('#senha-codigo')).toHaveCount(0);
+	await page.getByRole('button', { name: 'Salvei no gerenciador' }).click();
+	await expect(page.getByText('Pronto, conta protegida.', { exact: false })).toBeVisible();
+
+	const outro = await novoAparelho();
+	await outro.addInitScript(() => delete (window as { PasswordCredential?: unknown }).PasswordCredential);
+	await outro.goto('./restaurar');
+	await expect(outro.getByRole('button', { name: 'Abrir o arquivo de recuperação' })).toBeVisible();
+	await expect(outro.getByRole('button', { name: 'Usar o código salvo no navegador' })).toHaveCount(0);
 });

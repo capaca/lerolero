@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { phraseFromFragment, phraseFromRecoveryText } from '@lerolero/core';
 	import { onMount, tick } from 'svelte';
+	import { canReadSavedPhrase, savedPhrase } from '#lib/components/PasswordSave.svelte';
 	import PhraseInput from '#lib/components/PhraseInput.svelte';
 	import PinInput from '#lib/components/PinInput.svelte';
 	import { friendlyError } from '#lib/errors.ts';
@@ -24,6 +25,7 @@
 	let fileInput = $state<HTMLInputElement>();
 	function fill(words: string[] | undefined) {
 		fileError = !words;
+		savedMissing = false;
 		if (!words) return;
 		phrase = words.join(' ');
 		fromFile = true;
@@ -44,6 +46,17 @@
 		input.value = '';
 		// um arquivo de recuperação tem menos de 2 KB; não lê nada muito maior
 		if (file) fill(file.size < 64_000 ? phraseFromRecoveryText(await file.text()) : undefined);
+	}
+
+	// o código salvo no gerenciador de senhas (RF-09 b, ADR-0009 D1): o Chrome o entrega por credentials.get, também
+	// quando foi salvo em outro aparelho da mesma conta Google
+	const canUseSaved = canReadSavedPhrase();
+	let savedMissing = $state(false);
+	async function useSaved() {
+		fileError = false;
+		const saved = await savedPhrase().catch(() => undefined);
+		savedMissing = !saved;
+		if (saved) fill(saved.trim().split(/\s+/));
 	}
 
 	// PIN em dois campos: completar o 1º pula para o 2º; se não bater, treme e apaga o 2º
@@ -111,10 +124,12 @@
 			<p class="hint">{m.restaurar_dica()}</p>
 		{/if}
 		<div class="actions file">
+			{#if canUseSaved}<button type="button" onclick={useSaved}>{m.restaurar_usar_senha()}</button>{/if}
 			<button type="button" onclick={() => fileInput?.click()}>{m.restaurar_abrir_arquivo()}</button>
 			<input bind:this={fileInput} type="file" accept=".txt,text/plain" hidden onchange={openFile} />
 		</div>
 		{#if fileError}<p class="error" role="alert">{m.restaurar_arquivo_invalido()}</p>{/if}
+		{#if savedMissing}<p class="error" role="alert">{m.restaurar_senha_nada()}</p>{/if}
 		<form onsubmit={submit}>
 			<PhraseInput id="frase" bind:value={phrase} />
 			<PinInput id="pin" label={m.restaurar_pin_rotulo()} bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />

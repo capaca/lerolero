@@ -262,10 +262,12 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('button.primary').click();
 	await semTextoFixo(page);
 	await digitarPin(page, 'pin', PIN);
-	// o arquivo (RF-09 a), já com o "Guardei o arquivo" do depois de baixar
+	// o gerenciador de senhas (RF-09 b) vem antes; depois o arquivo (RF-09 a), já com o "Guardei o arquivo" do
+	// depois de baixar
 	await expect(page.locator('.actions button.link')).toBeVisible({ timeout: 20_000 });
+	await expect(page.locator('.password button.primary')).toBeVisible();
 	const baixado = page.waitForEvent('download');
-	await page.locator('.actions button').first().click();
+	await page.locator('.password ~ .actions button').first().click();
 	await baixado;
 	await expect(page.locator('.done')).toBeVisible();
 	await semTextoFixo(page);
@@ -398,6 +400,10 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await semTextoFixo(page);
 	await digitarPin(page, 'pin', PIN);
 	await expect(page.locator('.actions button').first()).toBeVisible({ timeout: 20_000 });
+	await semTextoFixo(page);
+	// depois de pedir ao gerenciador de senhas para salvar (RF-09 b)
+	await page.locator('.password button.primary').click();
+	await expect(page.locator('.password [role="status"]')).toBeVisible();
 	await semTextoFixo(page);
 	await page.goto(PSEUDO_URL + 'favoritas');
 	await expect(page.locator('main .hint')).toBeVisible();

@@ -7,6 +7,25 @@ conhecidos".
 
 ## 2026-10-29
 
+- **Código de recuperação no gerenciador de senhas** (item 14, RF-09 b, D1 do ADR-0009; e2e `protecao` e
+  `textos`). Em "Proteção da conta" e em "Guarde seu código", depois do PIN, "Guardar no gerenciador de senhas" vem
+  antes do arquivo: no Chrome, pelo `PasswordCredential`, com a conta "<nome> · Lero-lero"; sem ele (Safari,
+  Firefox), um formulário de conta e código que é enviado por `fetch` e some. Como no arquivo, a conta só fica
+  protegida quando a pessoa toca em "Salvei no gerenciador", porque o app não sabe se ela aceitou o aviso; "Não
+  apareceu nada" volta ao botão. Na restauração, "Usar o código salvo no navegador" (só onde há `PasswordCredential`)
+  preenche as palavras pelo `credentials.get`, também as salvas em outro aparelho da mesma conta; sem nada salvo,
+  avisa. Revisado pelo Pedro no Motorola (o aviso do Chrome apareceu). Fica de fora: o preenchimento automático no
+  formulário da restauração para Safari e Firefox, e a medição no iPhone.
+
+- **Medição da frase no gerenciador de senhas** (item 14, primeira etapa; D1 do ADR-0009; #72). Protótipo
+  `prototipos/senha` (HTML puro), publicado só na homologação em `/lerolero/senha/` para medir sem release, com três
+  jeitos de salvar: A, formulário enviado por `fetch` que some; B, formulário seguido de troca de página; C,
+  `PasswordCredential`. No Chrome do Mac, os três ofereceram salvar. No Motorola, no PWA instalado, o B ofereceu
+  salvar, o C salvou (a restauração achou a conta dele) e o A ficou sem resposta; a frase voltou inteira, com as 12
+  palavras, pelo preenchimento automático e pelo `credentials.get`, que também trouxe uma frase que o aparelho não
+  tinha criado, provavelmente a salva no Mac pela conta Google (não confirmado). Escolha do Pedro: a D1 entra no
+  Android, com o C e o A de reserva. iPhone pendente, por não haver um aparelho.
+
 - **Arquivo ou cartão de recuperação** (item 13, RF-09 a, D2 do ADR-0009; testes `identity.test.ts` e e2e
   `protecao`), num PR só (escolha do Pedro). Nova tela "Proteção da conta" (Ajustes › Proteção da conta, com o
   estado), que pede o PIN e oferece "Salvar no celular" (baixa o arquivo), "Mandar para o Drive ou outro app" (o menu de
