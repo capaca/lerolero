@@ -21,6 +21,8 @@
 	let updateReady = $state(false);
 	const showOffline = $derived(session.status === 'desbloqueado' && session.offline);
 
+	const UPDATE_CHECK_MS = 5 * 60_000;
+
 	// rotas permitidas em cada estado; fora delas, vai para a primeira
 	const ALLOWED: Record<Exclude<Status, 'carregando'>, string[]> = {
 		'sem-identidade': ['/bem-vindo', '/cadastro', '/restaurar'],
@@ -74,11 +76,16 @@
 		const touch = () => void session.touchSession();
 		const onVisibility = () => (document.visibilityState === 'visible' ? resume() : touch());
 		const touchTimer = setInterval(touch, 60_000);
+		// com o app sempre aberto, as correções não esperariam a pessoa sair e voltar; fora da tela não gasta franquia
+		const updateTimer = setInterval(() => {
+			if (document.visibilityState === 'visible') checkForUpdate();
+		}, UPDATE_CHECK_MS);
 		document.addEventListener('visibilitychange', onVisibility);
 		addEventListener('pagehide', touch);
 		addEventListener('online', resume);
 		return () => {
 			clearInterval(touchTimer);
+			clearInterval(updateTimer);
 			removeEventListener('pagehide', touch);
 			navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
 			document.removeEventListener('visibilitychange', onVisibility);

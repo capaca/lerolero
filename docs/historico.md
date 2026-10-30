@@ -7,6 +7,10 @@ conhecidos".
 
 ## 2026-10-30
 
+- **Aviso de versão nova mais rápido** (item 17). Com o app aberto, a busca por versão nova, que só rodava ao voltar para
+  ele, passa a rodar também a cada 5 minutos, só com o app na tela, para não gastar franquia em segundo plano. Cada busca
+  é uma consulta pequena ao service worker. O cache de até 10 minutos do Pages continua até haver domínio próprio
+  (Q-N1). O e2e `atualizacao` cobre os dois caminhos, o da volta ao app e o do relógio adiantado em 5 minutos.
 - **Acessibilidade automática** (item 22, parte automática, escolhida pelo Pedro; RNF-60). O e2e `textos`, que já passa
   por todas as telas, roda também o axe-core (regras WCAG 2.0 a 2.2 A e AA) em cada uma, e de novo só o contraste no
   tema escuro; qualquer achado faz o teste falhar, então tela nova entra coberta. Achados e correções: texto cinza
