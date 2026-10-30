@@ -9,8 +9,8 @@ caminho) está no [histórico de entregas](historico.md).
 ## Onde estamos
 
 - **Feito:** M0 (menos uma espera: o aparelho de 2 GB), M1, M2 e M3 inteiros; do M4,
-  pedidos de mensagem e bloqueio, o backup cifrado e a prova de trabalho.
-- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 12).
+  tudo menos a passkey, adiada para depois do beta.
+- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 16).
 - **Em produção:** https://capaca.github.io/lerolero/; homologação em https://lerolero-app.github.io/lerolero/.
 
 ## Premissas
@@ -29,7 +29,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29 |
-| M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo de recuperação feitos; itens 14 e 15 da ordem |
+| M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo e gerenciador de senhas feitos; passkey (item 15) adiada para depois do beta |
 | M5 Polimento | 4 sem | A fazer: item 16 |
 | Revisão de prontidão | — | A fazer, antes do beta |
 | Beta fechado | 6 sem de uso | A fazer |
@@ -40,8 +40,8 @@ original (MVP público no 3º trimestre de 2027, v1 no 1º de 2028) precisa ser 
 
 ## Ordem do restante do MVP
 
-<!-- Item concluído termina com "✅ Feita em <data>": `scripts/situacao.sh` aponta o primeiro sem essa marca como o
-próximo. Os números são citados em outros docs: não renumerar. -->
+<!-- Item concluído termina com "✅ Feita em <data>", e item adiado com "➡️ Adiada em <data>": `scripts/situacao.sh` aponta
+o primeiro sem essas marcas como o próximo. Os números são citados em outros docs: não renumerar. -->
 
 Repriorizada em 2026-10-22 pelo critério do Pedro: **uso no dia a dia**, o que faz um grupo de amigos usar o app em vez
 do WhatsApp.
@@ -60,7 +60,7 @@ do WhatsApp.
 12. Detecção de perdas (M4; RF-53): numeração por conversa, pedido de reenvio e prazo de 7 dias. ✅ Feita em 2026-10-29.
 13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): compartilhar um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), imprimir o cartão, restaurar pelo arquivo ou pelo link, e a tela "Proteção da conta". Sem dependências; entra com e2e. ✅ Feita em 2026-10-29.
 14. Frase no gerenciador de senhas (M4; D1, RF-09 b). **Começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra. Protótipo ([prototipos/senha](../prototipos/senha/README.md)) medido em 2026-10-29: no Motorola, no PWA instalado, o Chrome oferece salvar e a frase volta inteira; **a D1 entra no Android**, salvando por `PasswordCredential` e, onde ele não existir, pelo formulário que some. No app: "Guardar no gerenciador de senhas" em "Proteção da conta" e em "Guarde seu código", e "Usar o código salvo no navegador" na restauração; e2e `protecao`. Falta: medir no iPhone, quando houver um aparelho. ✅ Feita em 2026-10-29.
-15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).**
+15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).** ➡️ Adiada em 2026-10-29 para depois do beta: o Pedro preferiu seguir para o polimento; o domínio é decidido na revisão de prontidão (item 16).
 16. Polimento (M5), com a velocidade da suíte e2e, revisão de prontidão e beta.
 
 ## MVP (PWA) por marco
@@ -179,7 +179,7 @@ resolvidos.
 - nenhuma perda de mensagem sem detecção;
 - todos os participantes conseguiram cadastrar, adicionar contatos e mandar áudio sem ajuda;
 - orientação jurídica obtida (Q-N3);
-- decisão sobre domínio próprio (Q-N1);
+- decisão sobre domínio próprio (Q-N1), que destrava a passkey (item 15);
 - guia publicado para voluntários rodarem relays e servidores Blossom (Q8 da Visão).
 
 ## Pedidos e ideias ainda fora da ordem
