@@ -5,6 +5,17 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-10-30
+
+- **Velocidade da suíte e2e** (item 16, primeira etapa, escolhida pelo Pedro; #77 e #78). O teste `perdas` esperava de
+  verdade a janela antes de pedir o reenvio (`GAP_WAIT_S`, 30 s) mais a volta que confere (`GAP_CHECK_MS`, 15 s);
+  agora adianta o relógio da página com `clock.fastForward` e caiu de ~38 s para ~5 s. Junto com o bug do envio sem
+  rede (2026-10-29), a suíte da CI saiu de 4,7 min para ~4 min e não tem mais espera fixa grande. Mais workers não
+  ajudaram: num PR só de medição, na mesma `main`, 2 workers levaram 4,1 min, 3 levaram 4,3 e 4 levaram 4,4, com cada
+  teste até 3 vezes mais lento (cada um abre 2 ou 3 Chromes); a CI ficou com 2 (escolha do Pedro, depois de ir para 4
+  no #78). A variação entre máquinas da CI é grande: a mesma suíte com 2 workers já deu 3,3 e 4,1 min. Rejeitado por
+  ora: dividir em dois jobs (`--shard`), que gasta o dobro de minutos.
+
 ## 2026-10-29
 
 - **Bug: sem internet, cada mensagem levava ~10 s para aparecer** (RNF-12; e2e `envio-sem-rede`). Achado ao medir a
