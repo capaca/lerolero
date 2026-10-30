@@ -1,8 +1,9 @@
 <script lang="ts">
 	// "Proteção da conta" (RF-09, ADR-0009): o estado numa tela só e as camadas para proteger. Uma camada concluída
-	// basta para o lembrete do RF-04 parar; por enquanto há o arquivo ou cartão (D2) e as palavras anotadas à mão.
+	// basta para o lembrete do RF-04 parar: o gerenciador de senhas (D1), o arquivo ou cartão (D2) e as palavras anotadas à mão.
 	import BackLink from '#lib/components/BackLink.svelte';
 	import { resolve } from '$app/paths';
+	import PasswordSave from '#lib/components/PasswordSave.svelte';
 	import PhraseReveal from '#lib/components/PhraseReveal.svelte';
 	import RecoveryFile from '#lib/components/RecoveryFile.svelte';
 	import Rich from '#lib/components/Rich.svelte';
@@ -38,6 +39,7 @@
 	{#if words.length === 0}
 		{#if !done}<PhraseReveal label={m.protecao_pin_rotulo()} action={m.comum_continuar()} onrevealed={(w) => (words = w)} />{/if}
 	{:else}
+		<PasswordSave {words} onsaved={saved} />
 		<RecoveryFile {words} onsaved={saved} />
 	{/if}
 
