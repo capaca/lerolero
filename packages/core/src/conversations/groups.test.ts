@@ -570,7 +570,8 @@ describe('avisos de grupo ao mesmo tempo', () => {
 				expect(conversation.group!.names[carol.publicKey], `minha ação primeiro=${mineFirst}, atraso=${delay}`).toBe('Carol');
 			}
 		}
-	});
+		// 14 cenários com criptografia real: passa dos 5 s padrão em máquina mais lenta, como a CI
+	}, 30_000);
 });
 
 describe('pedidos de grupo (RF-12, T7)', () => {

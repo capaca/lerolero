@@ -14,7 +14,8 @@ export default defineConfig({
 	retries: 0,
 	// cada teste abre 2 ou 3 Chromes: na CI, 3 e 4 workers deram o mesmo tempo que 2, com cada teste até 3 vezes mais
 	// lento e menos folga nas esperas (medido em 2026-10-30, item 16)
-	workers: ci ? 2 : undefined,
+	// fora da CI o padrão seria metade dos núcleos: com 8, cada rodada derrubava um teste diferente
+	workers: ci ? 2 : 4,
 	reporter: ci ? [['list'], ['github']] : 'list',
 	outputDir: 'resultados',
 	use: {
