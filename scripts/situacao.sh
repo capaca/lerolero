@@ -55,6 +55,6 @@ for porta in 4190 5180; do
 	lsof -iTCP:$porta -sTCP:LISTEN -t >/dev/null 2>&1 && echo "Porta $porta ocupada (outra sessão?)"
 done
 
-# Item concluído termina com "✅ Feita em": o primeiro sem a marca é o próximo.
+# Item concluído termina com "✅ Feita em" e adiado com "➡️ Adiada em": o primeiro sem as marcas é o próximo.
 echo "Próximos itens do roadmap (docs/07-roadmap.md):"
-sed -n '/^#* *Ordem do restante do MVP/,/^## /p' docs/07-roadmap.md | grep -E '^[0-9]+\. ' | grep -v '✅ Feit' | head -3 | cut -c1-140 | sed 's/^/  /'
+sed -n '/^#* *Ordem do restante do MVP/,/^## /p' docs/07-roadmap.md | grep -E '^[0-9]+\. ' | grep -vE '✅ Feit|➡️ Adiad' | head -3 | cut -c1-140 | sed 's/^/  /'

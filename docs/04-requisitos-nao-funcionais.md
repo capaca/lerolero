@@ -135,7 +135,7 @@ Metas de qualidade que valem para todo o app. Os números são propostas iniciai
 
 | # | Questão | Responsável |
 |---|---|---|
-| Q-N1 | **Domínio próprio:** um domínio `.br` custa ~R$ 40/ano, o que conflita com o orçamento zero. Sem ele, o PWA fica num endereço como `usuario.github.io/app`. O link de convite (RF-11) e a confiança do público leigo dependem disso. **Decidir antes do beta:** os convites criados até lá usam o endereço do GitHub Pages e quebram quando o domínio mudar | Pedro (antes do beta) |
+| Q-N1 | **Domínio próprio:** um domínio `.br` custa ~R$ 40/ano, o que conflita com o orçamento zero. Sem ele, o PWA fica num endereço como `usuario.github.io/app`. O link de convite (RF-11) e a confiança do público leigo dependem disso. **Decidir antes do beta:** os convites criados até lá usam o endereço do GitHub Pages e quebram quando o domínio mudar. Também destrava a passkey (RF-08), adiada em 2026-10-29 para depois do beta; a decisão entra na revisão de prontidão | Pedro (antes do beta) |
 | Q-N2 | Google Play custa US$ 25 uma vez: aceitar esse custo quando chegar a hora (Q3 da Visão)? | Pedro |
 | Q-N3 | Buscar orientação jurídica antes do lançamento público (Marco Civil, ordens judiciais, LGPD) | Pedro (antes do lançamento) |
 | Q-N4 | Validar as metas numéricas com medições reais no aparelho de referência, depois do primeiro protótipo | Pedro + implementação |

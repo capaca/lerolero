@@ -11,6 +11,10 @@ conhecidos".
   suíte e2e (item 16): os envios iam numa fila só, e a mensagem seguinte esperava a anterior buscar os relays do
   contato, que sem rede espera o prazo inteiro. Agora guardar e mostrar seguem numa fila, e a busca dos relays e a
   prova de trabalho noutra, na mesma ordem. O teste passa a exigir cada uma na tela em 3 s e caiu de 37 s para 6 s.
+- **Passkey adiada** (item 15, RF-08). Como ela só começa depois da decisão do domínio (Q-N1), o Pedro preferiu
+  seguir para o polimento (item 16) e deixar a passkey para depois do beta. O domínio passa a ser decidido na revisão
+  de prontidão. Rejeitadas por ora: ficar no `github.io` já para a passkey (ela nasceria presa a `capaca.github.io`) e
+  comprar um `.br` agora (quebra o orçamento zero). O `situacao.sh` passa a pular os itens marcados "➡️ Adiada em".
 - **Código de recuperação no gerenciador de senhas** (item 14, RF-09 b, D1 do ADR-0009; e2e `protecao` e
   `textos`). Em "Proteção da conta" e em "Guarde seu código", depois do PIN, "Guardar no gerenciador de senhas" vem
   antes do arquivo: no Chrome, pelo `PasswordCredential`, com a conta "<nome> · Lero-lero"; sem ele (Safari,
