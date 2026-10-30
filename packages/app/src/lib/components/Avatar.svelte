@@ -51,7 +51,8 @@
 		width: var(--size);
 		height: var(--size);
 		border-radius: 50%;
-		background: hsl(var(--h) 38% 44%);
+		/* escuro o bastante para o branco dar 4,5:1 em qualquer matiz (WCAG 1.4.3); o escuro já dá */
+		background: hsl(var(--h) 38% 34%);
 		color: #fff;
 		font-weight: 700;
 		font-size: calc(var(--size) * 0.38);

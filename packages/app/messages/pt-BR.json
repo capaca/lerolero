@@ -330,7 +330,7 @@
 	"audio_tocar": "Tocar",
 	"audio_pausar": "Pausar",
 	"audio_posicao": "Posição do áudio",
-	"audio_velocidade": "Velocidade",
+	"audio_velocidade": "Velocidade {velocidade}",
 	"audio_erro_baixar": "Não foi possível baixar o áudio.",
 	"audio_erro_formato": "Este aparelho não toca este áudio. No iPhone, é preciso o iOS 18.4 ou mais novo.",
 	"data_hoje": "Hoje",

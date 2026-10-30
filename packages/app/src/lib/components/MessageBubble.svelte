@@ -132,7 +132,9 @@
 			<span class="sender" style:--h={hue(msg.sender)}>{senderName}</span>
 		{/if}
 		{#if quote && !msg.deleted}
-			<button type="button" class="quote" onclick={onquote} aria-label={m.citada_ir()}>
+			<!-- sem aria-label: o nome do botão é o que aparece, com o propósito antes, só para o leitor (WCAG 2.5.3) -->
+			<button type="button" class="quote" onclick={onquote}>
+				<span class="sr-only">{m.citada_ir()}:</span>
 				<span class="quote-name">{quote.name}</span>
 				<span class="quote-text">
 					{#if !quote.message}
@@ -258,7 +260,8 @@
 		display: block;
 		font-size: 0.8rem;
 		font-weight: 700;
-		color: hsl(var(--h) 55% 38%);
+		/* 4,5:1 no balão branco em qualquer matiz (WCAG 1.4.3) */
+		color: hsl(var(--h) 55% 30%);
 	}
 	@media (prefers-color-scheme: dark) {
 		.sender {
@@ -459,7 +462,8 @@
 	.quote-name {
 		display: block;
 		font-weight: 700;
-		color: var(--accent);
+		/* o fundo da citação escurece o balão: o verde puro não chega a 4,5:1 (WCAG 1.4.3) */
+		color: color-mix(in srgb, var(--accent) 80%, var(--fg));
 	}
 	.quote-text {
 		display: -webkit-box;

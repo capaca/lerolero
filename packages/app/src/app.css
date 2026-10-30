@@ -2,7 +2,8 @@
 	--bg: #fafaf7;
 	--surface: #ffffff;
 	--fg: #1d1d1b;
-	--muted: #6b6b66;
+	/* contraste de 4,5:1 também no balão verde e na citação dentro dele (WCAG 1.4.3) */
+	--muted: #5a5a55;
 	--line: #deded8;
 	--accent: #1f6f5c;
 	--accent-fg: #ffffff;
@@ -11,6 +12,7 @@
 	--warn-bg: #fff4d6;
 	--warn-fg: #6b4e00;
 	--danger: #b3261e;
+	--danger-fg: #ffffff;
 	font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 	line-height: 1.5;
 	color-scheme: light dark;
@@ -20,7 +22,7 @@
 		--bg: #161615;
 		--surface: #1f1f1d;
 		--fg: #ececea;
-		--muted: #a0a09a;
+		--muted: #b4b4ae;
 		--line: #34342f;
 		--accent: #5cc2a6;
 		--accent-fg: #0f2a23;
@@ -28,10 +30,21 @@
 		--warn-bg: #3a3014;
 		--warn-fg: #f3d98a;
 		--danger: #ff8a80;
+		/* branco no vermelho claro do tema escuro dá 2,3:1 (WCAG 1.4.3) */
+		--danger-fg: #2b0a07;
 	}
 }
 * {
 	box-sizing: border-box;
+}
+/* só para o leitor de tela: fora da vista, mas no nome acessível */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
 }
 body {
 	margin: 0;
