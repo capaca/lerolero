@@ -113,5 +113,6 @@ describe('possível spam (RF-90)', () => {
 		expect(requests.filter((r) => !r.suspect)).toHaveLength(1);
 		const times = requests.filter((r) => r.suspect).map((r) => r.conversation.lastMessageAt);
 		expect(Math.min(...times)).toBe(1_002);
-	});
+		// cria um cofre por remetente: passa dos 5 s padrão em máquina mais lenta, como a CI
+	}, 30_000);
 });
