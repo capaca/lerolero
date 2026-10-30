@@ -1,7 +1,7 @@
 # 07 — Roadmap
 
 - **Status:** ✅ aprovado
-- **Última atualização:** 2026-10-29
+- **Última atualização:** 2026-10-30
 
 Aqui ficam o plano e o estado de cada item. Como cada coisa ficou pronta (escolhas, alternativas, bugs achados no
 caminho) está no [histórico de entregas](historico.md).
@@ -10,7 +10,7 @@ caminho) está no [histórico de entregas](historico.md).
 
 - **Feito:** M0 (menos uma espera: o aparelho de 2 GB), M1, M2 e M3 inteiros; do M4,
   tudo menos a passkey, adiada para depois do beta.
-- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 16).
+- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 17).
 - **Em produção:** https://capaca.github.io/lerolero/; homologação em https://lerolero-app.github.io/lerolero/.
 
 ## Premissas
@@ -28,11 +28,11 @@ caminho) está no [histórico de entregas](historico.md).
 | M0 Fundação | 3 sem | ✅ 2026-10-16 a 22; falta medir no aparelho de 2 GB (retenção dos relays confirmada em 2026-10-29) |
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
-| M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29 |
+| M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; voltam arquivos e emojis (itens 18 e 19) |
 | M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo e gerenciador de senhas feitos; passkey (item 15) adiada para depois do beta |
-| M5 Polimento | 4 sem | A fazer: item 16 |
-| Revisão de prontidão | — | A fazer, antes do beta |
-| Beta fechado | 6 sem de uso | A fazer |
+| M5 Polimento | 4 sem | Velocidade da suíte e2e feita (item 16); a fazer: itens 17 e 20 a 22 |
+| Revisão de prontidão | — | A fazer, antes do beta: item 23 |
+| Beta fechado | 6 sem de uso | A fazer: item 24 |
 | v1 Android + desktop | 26 sem | Depois do beta |
 
 O ritmo real ficou muito acima das estimativas: de 16 a 22/10 saíram o equivalente a ~15 semanas delas. A projeção
@@ -60,8 +60,20 @@ do WhatsApp.
 12. Detecção de perdas (M4; RF-53): numeração por conversa, pedido de reenvio e prazo de 7 dias. ✅ Feita em 2026-10-29.
 13. Guardar o código de recuperação em arquivo ou cartão (M4; D2 do [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md), RF-09 a): compartilhar um arquivo autoexplicativo (explicação, link de restauração e as 12 palavras), imprimir o cartão, restaurar pelo arquivo ou pelo link, e a tela "Proteção da conta". Sem dependências; entra com e2e. ✅ Feita em 2026-10-29.
 14. Frase no gerenciador de senhas (M4; D1, RF-09 b). **Começa por um protótipo que mede, no Motorola Edge 60 e num iPhone, se o navegador oferece "Salvar senha?" no PWA instalado**; o resultado decide se a camada entra. Protótipo ([prototipos/senha](../prototipos/senha/README.md)) medido em 2026-10-29: no Motorola, no PWA instalado, o Chrome oferece salvar e a frase volta inteira; **a D1 entra no Android**, salvando por `PasswordCredential` e, onde ele não existir, pelo formulário que some. No app: "Guardar no gerenciador de senhas" em "Proteção da conta" e em "Guarde seu código", e "Usar o código salvo no navegador" na restauração; e2e `protecao`. Falta: medir no iPhone, quando houver um aparelho. ✅ Feita em 2026-10-29.
-15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).** ➡️ Adiada em 2026-10-29 para depois do beta: o Pedro preferiu seguir para o polimento; o domínio é decidido na revisão de prontidão (item 16).
-16. Polimento (M5), com a velocidade da suíte e2e, revisão de prontidão e beta. Em andamento: a velocidade da suíte ficou pronta em 2026-10-30 (sem esperas fixas grandes; ~4 min na CI com 2 workers); falta o resto do M5, a revisão de prontidão e o beta.
+15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).** ➡️ Adiada em 2026-10-29 para depois do beta: o Pedro preferiu seguir para o polimento; o domínio é decidido na revisão de prontidão (item 23).
+16. Velocidade da suíte e2e (M5): sem esperas fixas grandes; ~4 min na CI com 2 workers, que deram o mesmo tempo que 4 com menos risco de falha sem bug. ✅ Feita em 2026-10-30.
+17. Aviso de versão nova mais rápido (M5): procurar versão nova a cada poucos minutos com o app aberto, para as correções chegarem logo a quem testa o beta. O cache de até 10 minutos do Pages continua até haver domínio próprio (Q-N1).
+18. Arquivos além de fotos e "Salvar" no aparelho (M3; RF-44, 45): PDF e outros tipos pelo caminho das fotos (cifra, Blossom, envio com repetição, hash único do RF-70, encaminhar sem reenviar), com balão de nome, tipo e tamanho e download sob demanda; "Salvar" no menu da mensagem para foto e arquivo. Decidir antes: limite de tamanho por arquivo, tipos bloqueados (executáveis; o app nunca abre o arquivo sozinho, T a registrar) e como salvar no Android e no iOS pelo PWA (Web Share com arquivos ou `<a download>`).
+19. Botão de emojis no campo de mensagem (M3; RF-29). Decidir antes: lista própria ou biblioteca (peso no app), busca por nome em português e se "Mais reações" passa a usar o mesmo seletor.
+20. Medição no aparelho de referência de 2 GB (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Depende de haver o aparelho.
+21. Revisão dos textos para linguagem simples (M5; RNF-64).
+22. Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (M5; RNF-60..63).
+23. Revisão de prontidão para produção, com os seis temas, os [limites conhecidos](#limites-conhecidos) e a decisão do domínio (Q-N1).
+24. Beta fechado.
+
+Organizada em 2026-10-30 pelo Pedro: as funcionalidades novas (17 a 19) vêm antes das revisões, para que a medição,
+a linguagem e a acessibilidade já as cubram; o polimento vem antes da prontidão. Os outros pedidos ficam fora da ordem
+e voltam a ser avaliados com o retorno do beta.
 
 ## MVP (PWA) por marco
 
@@ -118,7 +130,8 @@ uma foto em até 200 KB.
 - ✅ Cartão de perfil privado com nome e foto (Q-P5, RF-02).
 - ✅ Editar mensagem (RF-24).
 - ✅ Mencionar alguém no grupo com `@` (RF-35).
-- ⬜ Arquivos além de fotos e "Salvar" no aparelho (RF-44, 45). **Ainda fora da ordem**; ver "Pedidos e ideias".
+- ⬜ Arquivos além de fotos e "Salvar" no aparelho (RF-44, 45). Item 18.
+- ⬜ Botão de emojis no campo de mensagem (RF-29). Item 19.
 
 **Pronto quando:** um grupo de 5 pessoas conversa com respostas, reações e menções; os status aparecem corretamente;
 dá para selecionar várias mensagens e agir de uma vez; os textos da interface estão fora do código, com português
@@ -141,13 +154,14 @@ de referência; uma mensagem apagada propositalmente de um relay de teste é det
 
 ### M5 — Polimento
 
-- ⬜ Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (RNF-60..63).
-- ⬜ Revisão de textos para linguagem simples (RNF-64).
-- ⬜ Medição de todas as metas de desempenho e dados no aparelho de referência (seções 2 e 3 do
-  [04](04-requisitos-nao-funcionais.md)).
-- ⬜ Velocidade da suíte e2e (medida em 2026-10-26: ~99 s na CI com 2 workers). Caminhos, do que mais rende: subir os
+- ✅ Velocidade da suíte e2e (medida em 2026-10-26: ~99 s na CI com 2 workers). Caminhos, do que mais rende: subir os
   workers da CI para 3 ou 4, repetindo a suíte antes de adotar (a carga já expôs corridas); encurtar o
-  `envio-sem-rede` (35 s, o mais longo); dividir em dois jobs (`--shard`). Vale quando a suíte crescer.
+  `envio-sem-rede` (35 s, o mais longo); dividir em dois jobs (`--shard`). Item 16, feito em 2026-10-30.
+- ⬜ Aviso de versão nova mais rápido. Item 17.
+- ⬜ Medição de todas as metas de desempenho e dados no aparelho de referência (seções 2 e 3 do
+  [04](04-requisitos-nao-funcionais.md)). Item 20.
+- ⬜ Revisão de textos para linguagem simples (RNF-64). Item 21.
+- ⬜ Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (RNF-60..63). Item 22.
 - ⬜ Correção dos problemas encontrados; *Could* (RF-02, 26) só se sobrar tempo.
 
 **Pronto quando:** as metas de desempenho são atingidas ou têm justificativa documentada; o fluxo de primeiro uso leva
@@ -186,11 +200,6 @@ resolvidos.
 
 Registrados a pedido do Pedro; entram na ordem quando ele decidir.
 
-- **Arquivos além de fotos e "Salvar" no aparelho** (RF-44, 45; 2026-10-27). PDF, documentos e outros tipos pelo mesmo
-  caminho das fotos (cifra, Blossom, envio com repetição, hash único do RF-70, encaminhar sem reenviar), com balão de
-  nome, tipo e tamanho e download sob demanda; "Salvar" no menu da mensagem para foto e arquivo. Decidir antes: limite
-  de tamanho por arquivo, tipos bloqueados (executáveis; o app nunca abre o arquivo sozinho, T a registrar) e como
-  salvar no Android e no iOS pelo PWA (Web Share com arquivos ou `<a download>`).
 - **Baixar a foto sozinha** (2026-10-28). A prévia de 96 px esticada no balão ainda fica borrada; o que resolve de vez
   é baixar a foto sem toque, como o WhatsApp, mas isso gasta dados e mostra o IP a quem não é contato (T7). Proposta:
   só de contatos aceitos e talvez só no Wi-Fi.
@@ -201,9 +210,6 @@ Registrados a pedido do Pedro; entram na ordem quando ele decidir.
   navegador: sem cortes, mas ainda "um pouco feio" em lugar barulhento. Testar, comparando gravações no Motorola do
   Pedro: subir a taxa (36 a 48 kbps); desligar o cancelamento de eco; modo de voz do Opus; RNNoise em WebAssembly
   (~150 KB a mais no app); conferir se grava em 48 kHz mono. Decidir pela escuta, não por número.
-- **Aviso de versão nova mais rápido** (2026-10-22). Hoje pode levar 10 minutos ou mais: o Pages guarda os arquivos em
-  cache por até 10 minutos e o app só procura versão nova quando volta para a tela. Possível: procurar a cada poucos
-  minutos com o app aberto. O cache só encurta com domínio próprio (Q-N1) e outro hospedeiro.
 - **Favoritar ainda vale a pena?** (2026-10-29). As favoritas ficam só no aparelho e não entram no backup (RF-06,
   decidido em 2026-10-29), então somem na troca de celular. Rever se a função continua útil assim, se muda (ex.: só
   como atalho para achar a mensagem) ou se sai.

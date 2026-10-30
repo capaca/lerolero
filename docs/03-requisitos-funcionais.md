@@ -55,6 +55,7 @@
 | RF-26 | Busca local nas conversas | Could | MVP |
 | RF-27 | Mensagens temporárias (somem após 24 h, 7 dias etc.) | — | v1 |
 | RF-28 | **Selecionar várias mensagens** e agir de uma vez: favoritar, excluir (para mim ou para todos, RF-25), copiar e encaminhar. Favoritar é local. Pedido do Pedro em 2026-10-26 | Should | M3 ✅ (2026-10-28) |
+| RF-29 | **Botão de emojis** no campo de mensagem, para inserir emojis no texto sem depender do teclado do celular. Pedido do Pedro em 2026-10-30 | Should | M3 |
 
 ## 4. Grupos
 
