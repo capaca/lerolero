@@ -114,6 +114,8 @@ export type MessageMedia = {
 	urls: string[];
 	key: string;
 	nonce: string;
+	/** nome do arquivo (RF-44); foto e áudio não têm */
+	name?: string;
 	/** duração em segundos (áudio) */
 	duration?: number;
 	/** segundos de silêncio no começo do áudio, que o player pula (media/voice-start.ts) */

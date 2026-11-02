@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Conversa (1:1 ou grupo): mensagens, avisos de grupo, menu da mensagem e campo de envio.
 	// O topo e os avisos de cima ficam com a tela que usa o componente.
-	import { canEdit, contactName, deliveryOf, forwardOf, withMentionLabels, type MessageRecord, type ReactionRecord } from '@lerolero/core';
+	import { canEdit, contactName, deliveryOf, forwardOf, isBlockedFile, saveName, withMentionLabels, type MessageRecord, type ReactionRecord } from '@lerolero/core';
 	import { page } from '$app/state';
 	import { onDestroy, tick, type Snippet } from 'svelte';
 	import Composer from './Composer.svelte';
@@ -14,6 +14,7 @@
 	import { friendlyError } from '#lib/errors.ts';
 	import { memberName, noticeText, type NameOf } from '#lib/notices.ts';
 	import { m } from '#lib/paraglide/messages.js';
+	import { saveFile } from '#lib/save-file.ts';
 	import { session } from '#lib/session.svelte.ts';
 
 	let {
@@ -214,6 +215,26 @@
 	}
 	onDestroy(() => clearTimeout(copiedTimer));
 
+
+	// salvar no aparelho (RF-45): voz fica de fora, e o pedido de quem não é contato só abre depois de aceitar (RF-12)
+	const canSave = (message: MessageRecord) =>
+		!!message.media &&
+		!message.deleted &&
+		!message.media.type.startsWith('audio/') &&
+		!isBlockedFile(message.media) &&
+		(message.sender === me || linkMode?.(message.sender) !== 'texto');
+	async function saveMessage() {
+		const media = menuFor?.media;
+		menuFor = undefined;
+		if (!media) return;
+		const hadFile = !!(await session.downloadedMedia(media.ox));
+		try {
+			await saveFile(await session.openMedia(media), saveName(media));
+		} catch (err) {
+			// baixou agora e o iPhone perdeu o toque: o arquivo já está aqui, é só repetir
+			error = !hadFile && (err as Error).name === 'NotAllowedError' ? m.erro_salvar_de_novo() : friendlyError(err);
+		}
+	}
 
 	// encaminhar: o menu fecha e abre a escolha do destino; ao escolher, vai para a conversa e a tela segue nela
 	let forwarding = $state.raw<MessageRecord[]>();
@@ -579,6 +600,7 @@
 			onreply={menuFor.upload || closed ? undefined : startReply}
 			onedit={!closed && me && canEdit(menuFor, me) ? startEdit : undefined}
 			oncopy={menuFor.media ? undefined : copyMessage}
+			onsave={canSave(menuFor) ? saveMessage : undefined}
 			onforward={forwardOf(menuFor)
 				? () => {
 						forwarding = [menuFor!];

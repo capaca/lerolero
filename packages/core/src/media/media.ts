@@ -4,6 +4,7 @@ import type { Storage } from '../storage/repositories.ts';
 import type { MediaRecord } from '../storage/records.ts';
 import { download, upload, type BlossomSigner } from './blossom.ts';
 import { decryptFile, encryptFile, sha256 } from './crypto.ts';
+import { isBlockedFile } from './file.ts';
 
 /** O que vai na mensagem (kind 15) para quem recebe achar e abrir o arquivo. */
 export type MediaRef = Pick<MediaRecord, 'ox' | 'x' | 'type' | 'size' | 'urls' | 'key' | 'nonce'>;
@@ -45,16 +46,26 @@ export async function prepareMedia(
 	return refOf(record);
 }
 
+/** Arquivo executável ou grande demais (T22); o nome do erro atravessa o RPC. */
+export class BlockedFileError extends Error {
+	constructor() {
+		super('tipo de arquivo bloqueado');
+		this.name = 'BlockedFileError';
+	}
+}
+
 /** Abre uma mídia recebida: do aparelho, se já baixada; senão baixa, confere, decifra e guarda. */
-export async function openMedia(storage: Storage, ref: MediaRef, now = Date.now()): Promise<Blob> {
+export async function openMedia(storage: Storage, ref: MediaRef & { name?: string }, now = Date.now()): Promise<Blob> {
+	if (isBlockedFile(ref)) throw new BlockedFileError();
 	const known = await storage.media.get(ref.ox);
 	if (known?.file) {
 		await storage.media.touch(ref.ox, now);
 		return known.file;
 	}
-	const encrypted = await download(ref.urls, ref.x);
+	const encrypted = await download(ref.urls, ref.x, ref.size);
 	const data = await decryptFile(encrypted, ref);
 	const file = new Blob([data], { type: ref.type });
-	await storage.media.put({ ...ref, file, keep: known?.keep ?? false, lastAccess: now });
+	const { name: _name, ...record } = ref;
+	await storage.media.put({ ...record, file, keep: known?.keep ?? false, lastAccess: now });
 	return file;
 }

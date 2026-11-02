@@ -43,7 +43,7 @@ type PendingMediaInput = {
 	me: string;
 	file: Blob;
 	/** o que descreve o arquivo na mensagem além do endereço: duração e início (áudio), tamanho e prévia (foto) */
-	extra: Pick<MessageMedia, 'duration' | 'start' | 'width' | 'height' | 'thumb'>;
+	extra: Pick<MessageMedia, 'name' | 'duration' | 'start' | 'width' | 'height' | 'thumb'>;
 	now?: number;
 };
 
@@ -90,6 +90,11 @@ export function startPendingPhoto(
 	return startPendingMedia(storage, { ...rest, extra: { width, height, thumb } });
 }
 
+export function startPendingFile(storage: Storage, input: { conversationId: string; me: string; file: Blob; name: string; now?: number }) {
+	const { name, ...rest } = input;
+	return startPendingMedia(storage, { ...rest, extra: { name } });
+}
+
 export type UploadAttempt =
 	| { state: 'enviado' | 'cancelado' }
 	/** falhou; tenta de novo em `at` (ms) */
@@ -107,7 +112,7 @@ export async function tryPendingUpload(
 		servers: string[];
 		signer: BlossomSigner;
 		/** manda a mensagem de verdade (kind 15, pela fila de sempre) */
-		send: (media: MediaRef & Pick<MessageMedia, 'duration' | 'start' | 'width' | 'height' | 'thumb'>) => Promise<void>;
+		send: (media: MediaRef & Pick<MessageMedia, 'name' | 'duration' | 'start' | 'width' | 'height' | 'thumb'>) => Promise<void>;
 		now?: () => number;
 		random?: () => number;
 	}
@@ -119,8 +124,8 @@ export async function tryPendingUpload(
 		const file = (await storage.media.get(message.media.ox))?.file;
 		if (!file) throw new Error('arquivo não está mais no aparelho');
 		const ref = await prepareMedia(storage, file, { servers: deps.servers, signer: deps.signer, now: now() });
-		const { duration, start, width, height, thumb } = message.media;
-		await deps.send({ ...ref, duration, start, width, height, thumb });
+		const { name, duration, start, width, height, thumb } = message.media;
+		await deps.send({ ...ref, name, duration, start, width, height, thumb });
 	} catch {
 		const attempts = message.upload.attempts + 1;
 		const at = now() + uploadRetryDelay(attempts, deps.random);

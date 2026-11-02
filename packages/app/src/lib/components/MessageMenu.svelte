@@ -17,6 +17,7 @@
 		onstar,
 		onselect,
 		oncopy,
+		onsave,
 		onforward,
 		ondeleteForMe,
 		ondeleteForEveryone
@@ -38,6 +39,8 @@
 		/** só nas mensagens de texto */
 		oncopy?: () => void;
 		/** só no que já saiu e não foi apagado */
+		/** só em foto e arquivo, nunca no que está bloqueado (RF-45) */
+		onsave?: () => void;
 		onforward?: () => void;
 		ondeleteForMe: () => void;
 		ondeleteForEveryone: () => void;
@@ -80,6 +83,9 @@
 		{/if}
 		{#if oncopy}
 			<button class="item" onclick={oncopy}><Icon name="copy" /> {m.menu_copiar()}</button>
+		{/if}
+		{#if onsave}
+			<button class="item" onclick={onsave}><Icon name="download" /> {m.menu_salvar()}</button>
 		{/if}
 		{#if onforward}
 			<button class="item" onclick={onforward}><Icon name="forward" /> {m.menu_encaminhar()}</button>

@@ -5,6 +5,7 @@ import type { Rumor } from '../identity/vault.ts';
 import { cleanName } from '../contacts/invite.ts';
 import { exclusive } from './lock.ts';
 import type { Storage } from '../storage/repositories.ts';
+import { cleanFileName } from '../media/file.ts';
 import { validThumb } from '../media/photo.ts';
 import type { ConversationRecord, MessageMedia, MessageRecord } from '../storage/records.ts';
 import { summaryOf } from '../storage/summary.ts';
@@ -51,6 +52,7 @@ export function mediaTags(media: MessageMedia): string[][] {
 		['size', String(media.size)],
 		...media.urls.slice(1).map((u) => ['fallback', u])
 	];
+	if (media.name) tags.push(['name', media.name]);
 	if (media.duration !== undefined) tags.push(['duration', String(Math.round(media.duration))]);
 	if (media.start) tags.push(['start', String(media.start)]);
 	if (media.width && media.height) tags.push(['dim', `${media.width}x${media.height}`]);
@@ -75,6 +77,7 @@ export function mediaFromRumor(rumor: Rumor): MessageMedia | undefined {
 	const start = Number(tag('start'));
 	const [width, height] = (tag('dim') ?? '').match(/^(\d{1,5})x(\d{1,5})$/)?.slice(1).map(Number) ?? [];
 	const thumb = validThumb(tag('thumb'));
+	const name = cleanFileName(tag('name'));
 	return {
 		ox,
 		x,
@@ -83,6 +86,7 @@ export function mediaFromRumor(rumor: Rumor): MessageMedia | undefined {
 		urls: [url, ...fallbacks].slice(0, 4),
 		key,
 		nonce,
+		...(name ? { name } : {}),
 		...(Number.isFinite(duration) && duration > 0 ? { duration } : {}),
 		...(Number.isFinite(start) && start > 0 && start < (Number.isFinite(duration) && duration > 0 ? duration : 0) ? { start } : {}),
 		...(width && height ? { width, height } : {}),

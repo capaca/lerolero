@@ -63,7 +63,7 @@ do WhatsApp.
 15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).** ➡️ Adiada em 2026-10-29 para depois do beta: o Pedro preferiu seguir para o polimento; o domínio é decidido na revisão de prontidão (item 23).
 16. Velocidade da suíte e2e (M5): sem esperas fixas grandes; ~4 min na CI com 2 workers, que deram o mesmo tempo que 4 com menos risco de falha sem bug. ✅ Feita em 2026-10-30.
 17. Aviso de versão nova mais rápido (M5): procurar versão nova a cada poucos minutos com o app aberto, para as correções chegarem logo a quem testa o beta. O cache de até 10 minutos do Pages continua até haver domínio próprio (Q-N1). ✅ Feita em 2026-10-30: a cada 5 minutos, só com o app na tela.
-18. Arquivos além de fotos e "Salvar" no aparelho (M3; RF-44, 45): PDF e outros tipos pelo caminho das fotos (cifra, Blossom, envio com repetição, hash único do RF-70, encaminhar sem reenviar), com balão de nome, tipo e tamanho e download sob demanda; "Salvar" no menu da mensagem para foto e arquivo. Decidir antes: limite de tamanho por arquivo, tipos bloqueados (executáveis; o app nunca abre o arquivo sozinho, T a registrar) e como salvar no Android e no iOS pelo PWA (Web Share com arquivos ou `<a download>`).
+18. Arquivos além de fotos e "Salvar" no aparelho (M3; RF-44, 45): PDF e outros tipos pelo caminho das fotos (cifra, Blossom, envio com repetição, hash único do RF-70, encaminhar sem reenviar), com balão de nome, tipo e tamanho e download sob demanda; "Salvar" no menu da mensagem para foto e arquivo. Limite de 20 MB, executáveis bloqueados nos dois lados (T22) e "Salvar" por sistema, decididos em 2026-10-30. ✅ Feita em 2026-10-30
 19. Botão de emojis no campo de mensagem (M3; RF-29). Decidir antes: lista própria ou biblioteca (peso no app), busca por nome em português e se "Mais reações" passa a usar o mesmo seletor.
 20. Medição no aparelho de referência de 2 GB (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Depende de haver o aparelho.
 21. Revisão dos textos para linguagem simples (M5; RNF-64).
@@ -130,7 +130,7 @@ uma foto em até 200 KB.
 - ✅ Cartão de perfil privado com nome e foto (Q-P5, RF-02).
 - ✅ Editar mensagem (RF-24).
 - ✅ Mencionar alguém no grupo com `@` (RF-35).
-- ⬜ Arquivos além de fotos e "Salvar" no aparelho (RF-44, 45). Item 18.
+- ✅ Arquivos além de fotos e "Salvar" no aparelho (RF-44, 45). Item 18.
 - ⬜ Botão de emojis no campo de mensagem (RF-29). Item 19.
 
 **Pronto quando:** um grupo de 5 pessoas conversa com respostas, reações e menções; os status aparecem corretamente;
