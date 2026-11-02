@@ -46,11 +46,13 @@ function showInvite() {
   $('#link').value = inviteLink(convite)
 }
 
-async function subscribe() {
+async function subscribe(rotate) {
   const reg = await navigator.serviceWorker.register('sw.js')
   await navigator.serviceWorker.ready
-  const vapid = await generateVapid()
   const old = await reg.pushManager.getSubscription()
+  // ativar de novo (na aba e depois no app instalado) não pode cancelar a inscrição do link já compartilhado
+  if (!rotate && old && old.endpoint === loadInvite()?.endereco) return loadInvite()
+  const vapid = await generateVapid()
   // outra chave VAPID exige outra inscrição; a antiga deixa de valer (é o que corta quem foi bloqueado)
   if (old) await old.unsubscribe()
   const sub = await reg.pushManager.subscribe({
@@ -70,7 +72,7 @@ async function subscribe() {
   return convite
 }
 
-async function enable(button) {
+async function enable(button, rotate) {
   const out = $('#sub-out')
   button.disabled = true
   try {
@@ -80,7 +82,7 @@ async function enable(button) {
       out.innerHTML = `<p class="err">Permissão de notificação: ${perm}.</p>`
       return
     }
-    await subscribe()
+    await subscribe(rotate)
     showInvite()
   } catch (err) {
     out.innerHTML = `<p class="err">${err.name}: ${err.message}</p>`
@@ -115,8 +117,8 @@ async function showReceived() {
   )
 }
 
-$('#enable-btn').onclick = (e) => enable(e.currentTarget)
-$('#rotate-btn').onclick = (e) => enable(e.currentTarget)
+$('#enable-btn').onclick = (e) => enable(e.currentTarget, false)
+$('#rotate-btn').onclick = (e) => enable(e.currentTarget, true)
 
 $('#share-btn').onclick = async () => {
   const url = $('#link').value

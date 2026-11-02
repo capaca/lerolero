@@ -74,7 +74,8 @@ Aparelhos: o Motorola Edge 60 do Pedro como destinatário e o computador (ou out
    no Chrome, ver abaixo), "Gerar comando curl" e rode no terminal logo em seguida.
 4. Celular dormindo: apague a tela, espere 30 min ou mais (no computador, "Esperar" 30 minutos com a página aberta, ou
    o `curl` depois). Repita depois de reiniciar o celular, sem abrir o app.
-5. "Trocar as chaves" no celular e mande de novo pelo link antigo: o serviço deve recusar (é o corte ao bloquear).
+5. "Trocar as chaves" no celular e mande de novo pelo link antigo: o serviço deve recusar com 410 (é o corte ao
+   bloquear). A página do remetente mostra o começo da chave VAPID do link, para conferir com a do celular.
 6. "Copiar resultados (JSON)" nas duas páginas e cole no registro.
 7. Firefox no Android: repita 1 a 3 no Firefox (push da Mozilla, que aceita o CORS).
 
