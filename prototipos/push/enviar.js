@@ -29,7 +29,10 @@ function readInvite() {
   const out = $('#invite-out')
   try {
     const convite = decodeInvite($('#invite').value)
-    out.innerHTML = `<p class="ok">Serviço de push: <b>${pushService(convite.endereco)}</b>.</p>`
+    // o começo da chave, para conferir com o que o celular mostra: link antigo dá 410 no envio
+    out.innerHTML =
+      `<p class="ok">Serviço de push: <b>${pushService(convite.endereco)}</b>, ` +
+      `chave VAPID ${convite.vapid.publica.slice(0, 12)}….</p>`
     return convite
   } catch {
     out.innerHTML = '<p class="err">Cole o link do convite.</p>'
@@ -80,7 +83,9 @@ $('#send-btn').onclick = () => {
     record({ id: p.id, como: 'navegador', enviadoEm: p.enviadoEm, servico: pushService(convite.endereco), ...r })
     $('#send-out').innerHTML = r.ok
       ? `<p class="ok">O serviço aceitou (${r.status}, ${r.ms} ms).</p>`
-      : `<p class="err">Falhou: ${r.status ?? r.erro} ${r.resposta ?? ''}</p>`
+      : r.status === 410
+        ? '<p class="err">410: a inscrição foi trocada ou cancelada. Compartilhe o link de novo a partir do celular.</p>'
+        : `<p class="err">Falhou: ${r.status ?? r.erro} ${r.resposta ?? ''}</p>`
     button.disabled = false
   }, 500)
 }
