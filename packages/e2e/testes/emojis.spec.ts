@@ -38,6 +38,23 @@ test('João escreve com emojis do seletor, e o mais usado vai para o topo', asyn
 	await expect(page.locator('.emojis .emoji').first()).toHaveText('❤️');
 });
 
+// regressão: o campo pegava o foco só quando o envio terminava e, num aparelho lento, fechava o painel aberto no meio tempo
+test('o painel aberto logo depois de enviar continua aberto', async ({ novaPessoa }) => {
+	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
+	await adicionarUmAoOutro(maria, joao);
+	const page = joao.page;
+	const cdp = await page.context().newCDPSession(page);
+	await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
+
+	await page.getByLabel('Mensagem').fill('oi');
+	await page.getByRole('button', { name: 'Enviar', exact: true }).click();
+	await page.getByRole('button', { name: 'Emojis' }).click();
+	// "Enviada" (ou já "Enviada e entregue"): o envio terminou, e com ele o foco que fechava o painel
+	await expect(page.locator('.row.mine', { hasText: 'oi' }).getByLabel(/^Enviada/)).toBeVisible({ timeout: 30_000 });
+	await expect(page.getByLabel('Buscar emoji')).toBeVisible();
+	await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+});
+
 test('o "+" das reações abre o seletor, com busca', async ({ novaPessoa }) => {
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
 	await adicionarUmAoOutro(maria, joao);

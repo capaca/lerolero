@@ -204,6 +204,8 @@
 		const sent = encode(message);
 		const used = mentions;
 		mentions = [];
+		// o teclado fica já, e não depois do envio: um foco atrasado fecharia o painel de emojis aberto no meio tempo
+		input?.focus();
 		try {
 			if (editing) {
 				await session.editMessage(conversationId, editing.id, sent);
@@ -217,7 +219,6 @@
 			mentions = used;
 			error = friendlyError(err);
 		}
-		input?.focus();
 	}
 
 	// no computador, Enter envia e Shift+Enter quebra a linha; no celular, Enter quebra a linha
