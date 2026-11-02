@@ -209,7 +209,9 @@ Registrados a pedido do Pedro; entram na ordem quando ele decidir.
   Começa por um protótipo de 2 a 3 dias que mede, no Motorola, se o aviso enviado direto pelo navegador do remetente
   (cada pessoa com a própria chave VAPID, no cartão de perfil) chega com o PWA fechado; se chegar, ~1 a 1,5 semana no
   app, antes do beta. Plano e alternativas (FCM no app nativo, UnifiedPush, sincronização periódica) em
-  [prototipos/push](../prototipos/push/README.md).
+  [prototipos/push](../prototipos/push/README.md). Primeira medição, no computador (2026-11-02): o FCM do Chrome
+  recusa o CORS, então o envio direto do navegador não passa no Chrome (passaria no Firefox); pelo `curl`, o mesmo
+  aviso chegou (em 0,6 s e em 25 s, em duas rodadas). Falta medir no Motorola com o app fechado e a tela apagada.
 - **Câmera na hora** para fotos (hoje só a galeria).
 - **Ajustar o recorte da foto de perfil** (RF-02; 2026-10-29). Hoje o app usa o quadrado do meio da foto escolhida.
   Tela para arrastar e aproximar antes de salvar, como no WhatsApp.
@@ -310,7 +312,7 @@ a Q-N7 (custo zero × servidor de referência) e a Q-N8 (teto de usuários); as 
 | # | Questão | Responsável |
 |---|---|---|
 | Q-M1 | Refazer as estimativas e a projeção de datas com base no ritmo real | Pedro |
-| Q-M2 | Notificações antes do beta? O [ADR-0005](adr/0005-notificacoes.md) deixa o PWA sem notificação; o protótipo [prototipos/push](../prototipos/push/README.md) mede se o Web Push enviado pelo remetente, sem servidor, funciona no PWA instalado. O resultado decide entre o PWA com Web Push, um repassador mínimo ou o app nativo | Pedro (ao executar o protótipo) |
+| Q-M2 | Notificações antes do beta? O [ADR-0005](adr/0005-notificacoes.md) deixa o PWA sem notificação; o protótipo [prototipos/push](../prototipos/push/README.md) mede se o Web Push enviado pelo remetente, sem servidor, funciona no PWA instalado. No computador, o FCM do Chrome já recusou o CORS (2026-11-02), o que puxa para o repassador mínimo se o aviso chegar com o celular dormindo. O resultado decide entre o PWA com Web Push, um repassador mínimo ou o app nativo | Pedro (ao executar o protótipo) |
 | Q-U2 | Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): ✅ o arquivo de recuperação fica em **texto aberto**, num `.txt` (decidido em 2026-10-29; ver a regra 4 do ADR). ✅ A D1 entra no Android (decidido em 2026-10-29, com a medição do protótipo `prototipos/senha` no Motorola: o aviso aparece no PWA instalado e a frase volta inteira), salvando por `PasswordCredential` e com o formulário que some de reserva (rejeitado: só o formulário, que depende de o navegador adivinhar o envio). Falta: medir no iPhone, quando houver um aparelho. | Pedro (ao implementar o item 14) |
 
 Resolvidas: Q-I1 (internacionalização, 2026-10-27, [ADR-0008](adr/0008-internacionalizacao.md)) e Q-U1 (cadastro sem a

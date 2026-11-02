@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0f766e" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="../icon-192.png" />
+    <link rel="stylesheet" href="estilo.css" />
+    <title>Lero-lero · push</title>
+  </head>
+  <body>
+    <main>
+      <h1>Lero-lero · receber notificação</h1>
+      <p class="hint">
+        Este aparelho faz o papel de quem recebe a mensagem. Mede se o aviso chega com o app fechado, enviado direto
+        pelo navegador de quem manda, sem servidor do projeto (Q-M2). Instale esta página (menu do navegador →
+        Instalar app) e faça os passos no app instalado.
+      </p>
+
+      <section>
+        <h2>Aparelho</h2>
+        <table id="env"></table>
+      </section>
+
+      <section>
+        <h2>1 · Ativar as notificações</h2>
+        <p class="hint">Gera um par de chaves VAPID só deste aparelho e pede ao navegador um endereço de push.</p>
+        <div class="actions">
+          <button id="enable-btn" class="primary">Ativar</button>
+          <button id="rotate-btn">Trocar as chaves (como ao bloquear alguém)</button>
+        </div>
+        <div id="sub-out" class="out"></div>
+      </section>
+
+      <section>
+        <h2>2 · Mandar o convite para quem vai enviar</h2>
+        <p class="hint">
+          No app, isto iria no cartão de perfil, só para os contatos. Mande o link para o computador (ou outro
+          celular) e abra lá. Depois de trocar as chaves, o link antigo deve parar de funcionar.
+        </p>
+        <div class="actions">
+          <button id="share-btn" class="primary" disabled>Compartilhar o link</button>
+          <button id="copy-link-btn" disabled>Copiar o link</button>
+          <span id="link-status" class="hint"></span>
+        </div>
+        <textarea id="link" rows="4" readonly></textarea>
+      </section>
+
+      <section>
+        <h2>3 · Testar daqui, com a página aberta</h2>
+        <p class="hint">Manda um aviso para este mesmo aparelho. Responde se este navegador consegue fazer o POST.</p>
+        <button id="self-btn" disabled>Mandar um aviso para mim</button>
+        <div id="self-out" class="out"></div>
+      </section>
+
+      <section>
+        <h2>Avisos recebidos</h2>
+        <p class="hint">
+          Anotados pelo service worker quando o aviso chega. "Janelas" diz se havia o app aberto naquela hora; o
+          atraso usa o relógio dos dois aparelhos.
+        </p>
+        <table id="received"></table>
+        <div class="actions">
+          <button id="copy-btn">Copiar resultados (JSON)</button>
+          <button id="clear-btn">Apagar os avisos</button>
+          <span id="copy-status" class="hint"></span>
+        </div>
+        <textarea id="json" rows="8" readonly></textarea>
+      </section>
+    </main>
+    <script src="banco.js"></script>
+    <script type="module" src="index.js"></script>
+  </body>
+</html>
