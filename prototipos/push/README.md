@@ -79,6 +79,10 @@ Aparelhos: o Motorola Edge 60 do Pedro como destinatário e o computador (ou out
 6. "Copiar resultados (JSON)" nas duas páginas e cole no registro.
 7. Firefox no Android: repita 1 a 3 no Firefox (push da Mozilla, que aceita o CORS).
 
+Para enviar em horários marcados sem a página aberta (o teste da noite): `caffeinate -i node prototipos/push/agendar.mjs
+'<link do convite>' 60 180` envia 1 h e 3 h depois, com o horário real do envio dentro do aviso. O link sai de novo do
+celular em "Compartilhar o link", sem tocar em Ativar.
+
 Para rodar no computador: `python3 -m http.server -d prototipos` e abra `http://localhost:8000/push/` (os ícones não
 aparecem fora do site).
 
@@ -96,6 +100,32 @@ Chrome 156 no macOS, perfil novo, destinatário e remetente na mesma máquina:
 Ou seja, no Chrome (o caso do Motorola) o envio direto do navegador não passa: precisa de um repassador, ou o envio
 fica só para quem usa Firefox. O que falta medir no celular (app fechado, Doze, reinício) não depende disso e pode ser
 feito pelo `curl`.
+
+### Medido no Motorola (2026-11-02)
+
+Motorola Edge 60, Chrome 156, PWA instalado, app fora dos recentes (o service worker anotou 0 janelas abertas). Envios
+pelo `curl` e pelo `agendar.mjs`, todos aceitos pelo FCM (201). Primeiro envio perdido por um bug do protótipo
+("Ativar" cancelava a inscrição do link já compartilhado; corrigido no #94).
+
+| Situação do celular | Atraso até o service worker acordar |
+|---|---|
+| Na mão, tela acesa | **3,9 s** |
+| Tela apagada há 30 min; o Pedro só viu o aviso ao desbloquear | 62 s |
+| Parado, primeiro envio pelo `curl` | 2,7 min |
+| Tela apagada desde 19h46, envio às 20h16; o Pedro pegou o celular por volta das 20h22 | **5,9 min (chegou às 20h22min36s)** |
+
+Leitura: acordado, chega em segundos; parado, nesta medição **o aviso ficou retido até o celular acordar**. No último caso o
+recebimento bate com a hora em que o Pedro pegou o celular, não com a do envio. Com isso, sozinho, o Web Push no PWA
+não avisa de uma mensagem com o celular no bolso, que é o que importa no beta.
+
+Falta, antes de decidir:
+
+1. A bateria do Chrome no Motorola (Configurações → Apps → Chrome → Bateria): "Otimizado" ou "Sem restrições"? Se
+   estiver otimizada, repetir com "Sem restrições" para saber se é a economia de bateria do fabricante (e se dá para
+   pedir isso a quem testa o beta).
+2. Uma noite parada (Doze profundo garantido): avisos 1 h e 3 h depois com o `agendar.mjs`; de manhã, anotar a hora
+   antes de desbloquear. Recebido perto do envio = chega dormindo; perto do desbloqueio = retido.
+3. Opcional: Firefox no Android (push da Mozilla), para comparar.
 
 ## O que cada resultado decide
 
