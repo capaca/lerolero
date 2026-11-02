@@ -28,7 +28,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M0 Fundação | 3 sem | ✅ 2026-10-16 a 22; falta medir no aparelho de 2 GB (retenção dos relays confirmada em 2026-10-29) |
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
-| M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; voltam arquivos e emojis (itens 18 e 19) |
+| M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; arquivos feitos em 2026-11-02 (item 18); voltam os emojis (item 19) |
 | M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo e gerenciador de senhas feitos; passkey (item 15) adiada para depois do beta |
 | M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade automática feita (item 22); a fazer: itens 20 e 21 e a parte manual do 22 |
 | Revisão de prontidão | — | A fazer, antes do beta: item 23 |
@@ -63,7 +63,7 @@ do WhatsApp.
 15. Passkey (M4; C, RF-08): entrar com digital ou rosto e restaurar em aparelho novo, com o backup cifrado pela chave PRF nos relays. **Só depois da decisão do domínio (Q-N1).** ➡️ Adiada em 2026-10-29 para depois do beta: o Pedro preferiu seguir para o polimento; o domínio é decidido na revisão de prontidão (item 23).
 16. Velocidade da suíte e2e (M5): sem esperas fixas grandes; ~4 min na CI com 2 workers, que deram o mesmo tempo que 4 com menos risco de falha sem bug. ✅ Feita em 2026-10-30.
 17. Aviso de versão nova mais rápido (M5): procurar versão nova a cada poucos minutos com o app aberto, para as correções chegarem logo a quem testa o beta. O cache de até 10 minutos do Pages continua até haver domínio próprio (Q-N1). ✅ Feita em 2026-10-30: a cada 5 minutos, só com o app na tela.
-18. Arquivos além de fotos e "Salvar" no aparelho (M3; RF-44, 45): PDF e outros tipos pelo caminho das fotos (cifra, Blossom, envio com repetição, hash único do RF-70, encaminhar sem reenviar), com balão de nome, tipo e tamanho e download sob demanda; "Salvar" no menu da mensagem para foto e arquivo. Limite de 20 MB, executáveis bloqueados nos dois lados (T22) e "Salvar" por sistema, decididos em 2026-10-30. ✅ Feita em 2026-10-30
+18. Arquivos além de fotos e "Salvar" no aparelho (M3; RF-44, 45): PDF e outros tipos pelo caminho das fotos (cifra, Blossom, envio com repetição, hash único do RF-70, encaminhar sem reenviar), com balão de nome, tipo e tamanho e download sob demanda; "Salvar" no menu da mensagem para foto e arquivo. Limite de 20 MB, executáveis bloqueados nos dois lados (T22) e "Salvar" por sistema, decididos em 2026-10-30. ✅ Feita em 2026-11-02
 19. Botão de emojis no campo de mensagem (M3; RF-29). Decidir antes: lista própria ou biblioteca (peso no app), busca por nome em português e se "Mais reações" passa a usar o mesmo seletor.
 20. Medição no aparelho de referência de 2 GB (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Depende de haver o aparelho.
 21. Revisão dos textos para linguagem simples (M5; RNF-64).
