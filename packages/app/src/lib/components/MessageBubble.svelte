@@ -1,8 +1,9 @@
 <script lang="ts">
 	// Um balão da conversa. first/last marcam o começo e o fim de uma sequência da mesma pessoa:
 	// só o último ganha a pontinha; nos grupos, o nome vai no primeiro.
-	import { splitLinks, splitMentions, withMentionLabels, type Delivery, type MessageRecord, type TextPart } from '@lerolero/core';
+	import { isBlockedFile, splitLinks, splitMentions, withMentionLabels, type Delivery, type MessageRecord, type TextPart } from '@lerolero/core';
 	import AudioPlayer from './AudioPlayer.svelte';
+	import FileCard from './FileCard.svelte';
 	import PhotoView from './PhotoView.svelte';
 	import { hue } from './Avatar.svelte';
 	import Icon from './Icon.svelte';
@@ -86,7 +87,9 @@
 			'mention' in part ? [part] : links === 'texto' ? [{ text: part.text }] : splitLinks(part.text)
 		)
 	);
-	const isPhoto = $derived(!msg.deleted && !!msg.media?.type.startsWith('image/') && links !== 'texto');
+	// nome e tipo vêm de quem enviou: bloqueado vira cartão, mesmo que se diga foto ou áudio (T22)
+	const blocked = $derived(!!msg.media && isBlockedFile(msg.media));
+	const isPhoto = $derived(!msg.deleted && !blocked && !!msg.media?.type.startsWith('image/') && links !== 'texto');
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
@@ -146,7 +149,7 @@
 					{:else if quote.message.media?.type.startsWith('image/')}
 						<Icon name="image" size={13} /> {m.previa_foto()}
 					{:else if quote.message.media}
-						<Icon name="paperclip" size={13} />
+						<Icon name="paperclip" size={13} /> {quote.message.media.name ?? m.previa_arquivo()}
 					{:else}
 						{withMentionLabels(quote.message.text, mentionLabel)}
 					{/if}
@@ -158,33 +161,22 @@
 				<Icon name="trash" size={14} />
 				{mine ? m.bolha_voce_apagou() : m.bolha_apagada()}
 			</p>
+		{:else if blocked && links !== 'texto'}
+			<FileCard media={msg.media!} />
 		{:else if msg.media?.type.startsWith('audio/') && links === 'texto'}
 			<!-- pedido de mensagem (RF-12): nada é baixado nem tocado até a pessoa aceitar -->
 			<p class="hint file"><Icon name="mic" size={16} /> {m.bolha_audio_pedido()}</p>
 		{:else if msg.media?.type.startsWith('audio/')}
 			<AudioPlayer media={msg.media} />
-			{#if msg.upload?.failed}
-				<!-- desistiu depois de alguns minutos: pede uma decisão em vez de ficar "enviando" para sempre -->
-				<p class="failed" role="alert">{m.bolha_falhou()}</p>
-				<div class="failed-actions">
-					<button type="button" onclick={() => session.retryUpload(msg.id)}>{m.bolha_tentar_de_novo()}</button>
-					<button type="button" class="discard" onclick={() => session.discardUpload(msg.id)}>{m.bolha_apagar()}</button>
-				</div>
-			{/if}
 		{:else if msg.media?.type.startsWith('image/') && links === 'texto'}
 			<!-- pedido de mensagem (RF-12): foto fechada até aceitar -->
 			<p class="hint file"><Icon name="image" size={16} /> {m.bolha_foto_pedido()}</p>
 		{:else if msg.media?.type.startsWith('image/')}
 			<PhotoView media={msg.media} />
-			{#if msg.upload?.failed}
-				<p class="failed" role="alert">{m.bolha_falhou()}</p>
-				<div class="failed-actions">
-					<button type="button" onclick={() => session.retryUpload(msg.id)}>{m.bolha_tentar_de_novo()}</button>
-					<button type="button" class="discard" onclick={() => session.discardUpload(msg.id)}>{m.bolha_apagar()}</button>
-				</div>
-			{/if}
+		{:else if msg.media && links === 'texto'}
+			<p class="hint file"><Icon name="paperclip" size={16} /> {m.bolha_arquivo_pedido()}</p>
 		{:else if msg.media}
-			<p class="hint file"><Icon name="paperclip" size={16} /> {m.bolha_arquivo()}</p>
+			<FileCard media={msg.media} />
 		{:else}
 			<p>
 				{#each parts as part, i (i)}
@@ -204,6 +196,14 @@
 					{/if}
 				{/each}
 			</p>
+		{/if}
+		{#if msg.upload?.failed && !msg.deleted}
+			<!-- desistiu depois de alguns minutos: pede uma decisão em vez de ficar "enviando" para sempre -->
+			<p class="failed" role="alert">{m.bolha_falhou()}</p>
+			<div class="failed-actions">
+				<button type="button" onclick={() => session.retryUpload(msg.id)}>{m.bolha_tentar_de_novo()}</button>
+				<button type="button" class="discard" onclick={() => session.discardUpload(msg.id)}>{m.bolha_apagar()}</button>
+			</div>
 		{/if}
 		{#if mine && delivery === 'perdida' && !msg.deleted}
 			<!-- sem confirmação em 7 dias (RF-53): o mesmo rumor vai de novo, só a quem não confirmou -->

@@ -159,6 +159,22 @@
 		}
 	}
 
+	// arquivo (RF-44): sem `accept`, o bloqueio é por extensão e vem do core
+	let filePicker = $state<HTMLInputElement>();
+
+	async function pickFile() {
+		const files = [...(filePicker?.files ?? [])];
+		if (filePicker) filePicker.value = '';
+		error = '';
+		for (const file of files) {
+			try {
+				await session.sendFile(conversationId, file);
+			} catch (err) {
+				error = friendlyError(err);
+			}
+		}
+	}
+
 	onDestroy(cancelAudio);
 
 	// ao escolher "Responder", o teclado já abre no campo
@@ -256,6 +272,10 @@
 			<input bind:this={picker} type="file" accept="image/*" multiple hidden onchange={pickPhoto} data-testid="foto" />
 			<button type="button" class="round ghost" onclick={() => picker?.click()} aria-label={m.envio_foto()}>
 				<Icon name="image" />
+			</button>
+			<input bind:this={filePicker} type="file" multiple hidden onchange={pickFile} data-testid="arquivo-envio" />
+			<button type="button" class="round ghost" onclick={() => filePicker?.click()} aria-label={m.envio_arquivo()}>
+				<Icon name="paperclip" />
 			</button>
 			<textarea
 				bind:this={input}

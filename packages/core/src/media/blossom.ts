@@ -2,12 +2,18 @@
 // Servidores testados em prototipos/relays: aceitam binário opaco e têm CORS.
 
 import type { EventTemplate, NostrEvent } from 'nostr-tools/pure';
+import { FILE_MAX_BYTES } from './file.ts';
+
+const AES_GCM_TAG_BYTES = 16;
 
 export type BlossomSigner = (template: EventTemplate) => Promise<NostrEvent>;
 
 /** Quantos servidores recebem cada arquivo (ADR-0004: redundância). */
 export const COPIES = 2;
 const TIMEOUT_MS = 30_000;
+/** Arquivo grande em 3G leva minutos: 100 KB/s, além da folga fixa (20 MB = quase 4 minutos, RF-44). */
+const BYTES_PER_MS = 100;
+const transferTimeout = (bytes: number) => TIMEOUT_MS + bytes / BYTES_PER_MS;
 
 export class BlossomError extends Error {
 	constructor(message: string) {
@@ -42,7 +48,7 @@ async function authHeader(signer: BlossomSigner, x: string): Promise<string> {
 }
 
 async function uploadOne(server: string, data: Uint8Array<ArrayBuffer>, x: string, signer: BlossomSigner): Promise<string> {
-	const t = withTimeout(TIMEOUT_MS);
+	const t = withTimeout(transferTimeout(data.length));
 	try {
 		const res = await fetch(`${server}/upload`, {
 			method: 'PUT',
@@ -115,13 +121,14 @@ export async function remove(urls: string[], x: string, signer: BlossomSigner): 
 	return removed.filter((u): u is string => !!u);
 }
 
-/** Baixa do primeiro endereço que responder com o arquivo certo (hash `x`). */
-export async function download(urls: string[], x: string): Promise<Uint8Array<ArrayBuffer>> {
+/** Baixa do primeiro endereço que responder com o arquivo certo (hash `x`); `size` só dá o tempo de espera. */
+export async function download(urls: string[], x: string, size = 0): Promise<Uint8Array<ArrayBuffer>> {
 	for (const url of urls) {
-		const t = withTimeout(TIMEOUT_MS);
+		const t = withTimeout(transferTimeout(size));
 		try {
 			const res = await fetch(url, { signal: t.signal });
-			if (!res.ok) continue;
+			// o `size` da mensagem pode mentir: arquivo além do limite nem começa a baixar (T22)
+			if (!res.ok || Number(res.headers.get('content-length')) > FILE_MAX_BYTES + AES_GCM_TAG_BYTES) continue;
 			return new Uint8Array(await res.arrayBuffer());
 		} catch {
 			// servidor fora do ar: tenta o próximo

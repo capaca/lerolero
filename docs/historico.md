@@ -5,6 +5,17 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-10-30: arquivos e "Salvar" (item 18, RF-44 e 45)
+
+- Arquivos vão pelo caminho das fotos (cifra, Blossom, repetição, RF-70, encaminhar), com a tag nova `name`. Foto
+  escolhida pelo clipe é comprimida como foto; áudio escolhido vira arquivo comum; vídeo é recusado.
+- Escolhas do Pedro: 20 MB por arquivo (sonda sem autenticação: o jumble corta em 20 MiB, os outros cinco não informam;
+  10 e 50 MB rejeitados), executáveis bloqueados nos dois lados (T22) e uma opção só de "Salvar", por sistema.
+- O primeiro toque no arquivo baixa e o seguinte salva: no iOS, compartilhar exige um toque recente, que se perde na
+  espera do download.
+- O tempo de envio e de download passou a crescer com o tamanho (30 s + 100 KB/s): os 30 s fixos derrubariam 20 MB.
+- Ficou de fora: progresso em porcentagem, e o limite real dos cinco servidores que pedem autenticação.
+
 ## 2026-10-30
 
 - **Aviso de versão nova mais rápido** (item 17). Com o app aberto, a busca por versão nova, que só rodava ao voltar para

@@ -175,6 +175,7 @@ export {
 	listPendingUploads,
 	PENDING_UPLOAD_PREFIX,
 	retryPendingUpload,
+	startPendingFile,
 	startPendingAudio,
 	startPendingPhoto,
 	tryPendingUpload,
@@ -185,4 +186,5 @@ export {
 export { PHOTO_MAX_BYTES, PHOTO_MAX_SIDE, preparePhoto, prepareProfilePhoto, PROFILE_PHOTO_SIDE, THUMB_MAX_BYTES, THUMB_SIDE, type PhotoEncoder, type PreparedPhoto } from './media/photo.ts';
 export { rms, VoiceStartDetector } from './media/voice-start.ts';
 export { decryptFile, encryptFile, MediaIntegrityError, sha256 } from './media/crypto.ts';
-export { openMedia, prepareMedia, type MediaRef } from './media/media.ts';
+export { BlockedFileError, openMedia, prepareMedia, type MediaRef } from './media/media.ts';
+export { cleanFileName, FILE_MAX_BYTES, fileExtension, isBlockedFile, saveName } from './media/file.ts';

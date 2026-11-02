@@ -20,6 +20,14 @@ export class NotInGroupError extends Error {
 	}
 }
 
+/** Só o que a tela recusa antes de enviar; o motivo vem em `reason` (RF-44). */
+export class FileRefusedError extends Error {
+	constructor(readonly reason: 'grande' | 'vazio' | 'video') {
+		super(`arquivo recusado: ${reason}`);
+		this.name = 'FileRefusedError';
+	}
+}
+
 /** Muitos PINs errados: precisa esperar `waitMs` para tentar de novo. */
 export class PinLockedError extends Error {
 	constructor(readonly waitMs: number) {
@@ -46,6 +54,10 @@ export function friendlyError(err: unknown): string {
 			return inviteProblem(e.detail as InviteProblem | undefined);
 		case 'SelfInviteError':
 			return m.erro_convite_proprio();
+		case 'BlockedFileError':
+			return m.erro_arquivo_bloqueado();
+		case 'FileRefusedError':
+			return fileRefused((err as FileRefusedError).reason);
 		case 'BlossomError':
 			return m.erro_arquivo();
 		case 'NoOpusError':
@@ -61,6 +73,11 @@ export function friendlyError(err: unknown): string {
 		default:
 			return m.erro_generico();
 	}
+}
+
+function fileRefused(reason: FileRefusedError['reason']): string {
+	if (reason === 'grande') return m.erro_arquivo_grande();
+	return reason === 'vazio' ? m.erro_arquivo_vazio() : m.erro_video();
 }
 
 function phraseProblem(problem?: PhraseProblem): string {

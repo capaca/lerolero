@@ -76,8 +76,8 @@
 | RF-41 | **Imagens:** enviar fotos com compressão automática; o destinatário recebe primeiro uma prévia leve e baixa a imagem completa quando quiser (ou automaticamente, conforme configuração) | Must | MVP |
 | RF-42 | Toda mídia é cifrada antes de sair do aparelho | Must | MVP |
 | RF-43 | **Figurinhas**, incluindo a **figurinha sonora** (imagem + áudio curto) | — | v1 |
-| RF-44 | **Arquivos** (PDF, documentos e outros tipos): enviar como anexo, cifrados e guardados uma vez, como as fotos (RF-41, 70); o balão mostra nome, tipo e tamanho, e o arquivo baixa sob demanda (RF-71). Vídeos ficam de fora por ora. Pedido do Pedro em 2026-10-27 | Should | M3 |
-| RF-45 | **Salvar no aparelho** a foto e o arquivo recebidos (ou enviados), pelo menu da mensagem, para a galeria ou a pasta de downloads | Should | M3 |
+| RF-44 | **Arquivos** (PDF, documentos e outros tipos): enviar como anexo, cifrados e guardados uma vez, como as fotos (RF-41, 70); o balão mostra nome, tipo e tamanho, e o arquivo baixa sob demanda (RF-71). Vídeos ficam de fora por ora. Limite de 20 MB por arquivo; executáveis bloqueados no envio e ao receber: o balão mostra nome e aviso, sem baixar nem salvar; o app nunca abre o arquivo (decidido em 2026-10-30, T22). Pedido do Pedro em 2026-10-27 | Should | M3 |
+| RF-45 | **Salvar no aparelho** a foto e o arquivo recebidos (ou enviados), pelo menu da mensagem, para a galeria ou a pasta de downloads. Uma opção só: link de download no Android e no computador, folha de compartilhar no iOS, onde o link não é confiável no app instalado (decidido em 2026-10-30; rejeitados: "Salvar" e "Compartilhar" separados, que obrigam a entender a diferença, e só o link, que falha no iOS). Mensagem de voz fica de fora | Should | M3 |
 
 ## 6. Status de entrega
 

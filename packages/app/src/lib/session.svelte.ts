@@ -84,6 +84,7 @@ import {
 	discardPendingUpload,
 	listPendingUploads,
 	retryPendingUpload,
+	startPendingFile,
 	startPendingAudio,
 	tryPendingUpload,
 	listContacts,
@@ -92,6 +93,10 @@ import {
 	recordFailure,
 	RelayPool,
 	removeFromBlossom,
+	BlockedFileError,
+	cleanFileName,
+	FILE_MAX_BYTES,
+	isBlockedFile,
 	renameContact,
 	storeIncoming,
 	sendTime,
@@ -125,7 +130,7 @@ import {
 	type OpenSession,
 	type Vault
 } from '@lerolero/core';
-import { NoRelaysError, NotInGroupError, PinLockedError } from './errors.ts';
+import { FileRefusedError, NoRelaysError, NotInGroupError, PinLockedError } from './errors.ts';
 import { prepareFromFile, prepareProfileFromFile } from './photo-encoder.ts';
 import { m } from '#lib/paraglide/messages.js';
 import { memberName } from './notices.ts';
@@ -1001,6 +1006,26 @@ class Session {
 		}
 		const { file, width, height, thumb } = await prepareFromFile(original);
 		const message = await startPendingPhoto(storage, { conversationId, me: this.current.publicKey, file, width, height, thumb });
+		this.version++;
+		void this.runUpload(message.id);
+	}
+
+	/**
+	 * Envia um arquivo do aparelho (RF-44). Foto vai pelo caminho das fotos, comprimida. Áudio escolhido vira arquivo
+	 * comum: o player é para mensagem de voz, com duração.
+	 */
+	async sendFile(conversationId: string, original: File) {
+		if (conversationId.startsWith('grupo:') && !(await storage.conversations.get(conversationId))?.group?.amMember) {
+			throw new NotInGroupError();
+		}
+		const name = cleanFileName(original.name) ?? 'arquivo';
+		if (isBlockedFile({ name, type: original.type, size: 0 })) throw new BlockedFileError();
+		if (original.type.startsWith('image/')) return this.sendPhoto(conversationId, original);
+		if (original.type.startsWith('video/')) throw new FileRefusedError('video');
+		if (original.size > FILE_MAX_BYTES) throw new FileRefusedError('grande');
+		if (!original.size) throw new FileRefusedError('vazio');
+		const file = original.type.startsWith('audio/') ? new Blob([original], { type: 'application/octet-stream' }) : original;
+		const message = await startPendingFile(storage, { conversationId, me: this.current.publicKey, file, name });
 		this.version++;
 		void this.runUpload(message.id);
 	}

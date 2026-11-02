@@ -43,7 +43,7 @@
 						{:else if msg.media?.type.startsWith('image/')}
 							<Icon name="image" size={15} /> {m.previa_foto()}
 						{:else if msg.media}
-							<Icon name="paperclip" size={15} />
+							<Icon name="paperclip" size={15} /> {msg.media.name ?? m.previa_arquivo()}
 						{:else}
 							{msg.text}
 						{/if}

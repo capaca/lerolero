@@ -8,7 +8,6 @@
 
 	const limits = [
 		[m.guia_lim_notificacoes, m.guia_lim_notificacoes_texto],
-		[m.guia_lim_fotos, m.guia_lim_fotos_texto],
 		[m.guia_lim_apagar, m.guia_lim_apagar_texto],
 		[m.guia_lim_spam, m.guia_lim_spam_texto],
 		[m.guia_lim_troca, m.guia_lim_troca_texto],
@@ -58,6 +57,7 @@
 		<li><Rich text={m.guia_passo_conversar({ relogio: iconMark('clock'), check: iconMark('check') })} /></li>
 		<li><Rich text={m.guia_passo_audio({ microfone: iconMark('mic'), enviar: iconMark('send') })} /></li>
 		<li><Rich text={m.guia_passo_foto({ imagem: iconMark('image') })} /></li>
+		<li><Rich text={m.guia_passo_arquivo({ clipe: iconMark('paperclip') })} /></li>
 		<li><Rich text={m.guia_passo_grupo()} /></li>
 		<li><Rich text={m.guia_passo_apagar()} /></li>
 		<li><Rich text={m.guia_passo_selecionar()} /></li>
@@ -103,6 +103,7 @@
 		<li><Rich text={m.guia_ajuda_mensagens()} /></li>
 		<li><Rich text={m.guia_ajuda_audios()} /></li>
 		<li><Rich text={m.guia_ajuda_fotos()} /></li>
+		<li><Rich text={m.guia_ajuda_arquivos()} /></li>
 		<li><Rich text={m.guia_ajuda_conversa()} /></li>
 		<li><Rich text={m.guia_ajuda_celular()} /></li>
 	</ul>

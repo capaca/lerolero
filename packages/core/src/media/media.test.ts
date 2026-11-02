@@ -6,7 +6,7 @@ import { openStorage } from '../storage/repositories.ts';
 import { FakeBlossom } from '../testing/fake-blossom.ts';
 import { BlossomError, remove } from './blossom.ts';
 import { decryptFile, encryptFile, MediaIntegrityError } from './crypto.ts';
-import { openMedia, prepareMedia } from './media.ts';
+import { BlockedFileError, openMedia, prepareMedia } from './media.ts';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 const cleanup: Array<() => unknown> = [];
@@ -114,5 +114,14 @@ describe('envio e recebimento pelo Blossom', () => {
 		const removed = await remove(ref.urls, ref.x, s.signer);
 		expect(removed).toHaveLength(2);
 		expect(s.blossoms.every((b) => !b.files.has(ref.x))).toBe(true);
+	});
+});
+
+describe('arquivo bloqueado (T22)', () => {
+	it('recusa antes de tocar na rede, mesmo que a mensagem diga outro tipo', async () => {
+		const storage = openStorage(`midia-${n++}`);
+		cleanup.push(() => storage.close());
+		const ref = { ox: 'a'.repeat(64), x: 'b'.repeat(64), type: 'image/png', size: 10, urls: ['https://nao-deve-ser-chamado.test/x'], key: 'c'.repeat(64), nonce: 'd'.repeat(24) };
+		await expect(openMedia(storage, { ...ref, name: 'virus.exe' })).rejects.toBeInstanceOf(BlockedFileError);
 	});
 });
