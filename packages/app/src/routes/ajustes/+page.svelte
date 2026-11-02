@@ -86,9 +86,6 @@
 				<a href={resolve('/ajustes/perfil')}>{m.ajustes_editar_perfil()}</a>
 			</div>
 		</div>
-		<p class="hint">{m.ajustes_chave_dica()}</p>
-		<p class="key">{npub}</p>
-		<button onclick={copy}>{copied ? m.ajustes_chave_copiada() : m.ajustes_copiar_chave()}</button>
 	</section>
 
 	<section class="card">
@@ -142,8 +139,13 @@
 		</div>
 	</section>
 
-	<section class="card">
-		<h2>{m.ajustes_servidores()}</h2>
+	<!-- chave e servidores ficam fora do fluxo padrão, fechados até quem quiser abrir (RNF-64) -->
+	<details class="card technical">
+		<summary>{m.ajustes_detalhes()}</summary>
+		<p class="hint">{m.ajustes_chave_dica()}</p>
+		<p class="key">{npub}</p>
+		<button onclick={copy}>{copied ? m.ajustes_chave_copiada() : m.ajustes_copiar_chave()}</button>
+		<h3>{m.ajustes_servidores()}</h3>
 		{#await relays}
 			<p class="hint">{m.comum_carregando()}</p>
 		{:then list}
@@ -160,7 +162,7 @@
 				{#each connected as url (url)}<li>{url.replace('wss://', '')}</li>{/each}
 			</ul>
 		{/if}
-	</section>
+	</details>
 
 	{#if __APP_LOCAL__}
 		<section class="card">
@@ -237,6 +239,15 @@
 	}
 	.release {
 		text-align: center;
+	}
+	.technical summary {
+		cursor: pointer;
+		font-weight: 600;
+		padding: 0.25rem 0;
+	}
+	.technical h3 {
+		margin: 1.25rem 0 0.5rem;
+		font-size: 1rem;
 	}
 	.relays {
 		margin: 0;

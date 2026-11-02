@@ -42,7 +42,7 @@ test('primeiro contato: o arquivo protege a conta, e o link dele restaura em out
 
 	await joao.page.goto(await meuConvite(maria.page));
 	await joao.page.getByRole('button', { name: 'Adicionar' }).click();
-	await expect(joao.page.getByRole('heading', { name: 'Guarde seu código de recuperação' })).toBeVisible();
+	await expect(joao.page.getByRole('heading', { name: 'Guarde sua frase de recuperação' })).toBeVisible();
 	await joao.page.getByRole('button', { name: 'Guardar agora' }).click();
 	await simularCompartilhar(joao.page, 'ok');
 	await digitarPin(joao.page, 'pin', PIN);
@@ -51,7 +51,7 @@ test('primeiro contato: o arquivo protege a conta, e o link dele restaura em out
 	// o arquivo se explica sozinho: o aviso, o link e as 12 palavras
 	await joao.page.getByRole('button', { name: 'Guardei o arquivo' }).waitFor();
 	const arquivo = (await joao.page.evaluate(() => (window as Janela).arquivo))!;
-	expect(arquivo.nome).toBe('lerolero-codigo-de-recuperacao.txt');
+	expect(arquivo.nome).toBe('lerolero-frase-de-recuperacao.txt');
 	expect(arquivo.texto).toContain('CONTA DE João');
 	expect(arquivo.texto).toContain('NÃO MANDE ESTE ARQUIVO PARA NINGUÉM');
 	const palavras = palavrasDo(arquivo.texto);
@@ -64,14 +64,14 @@ test('primeiro contato: o arquivo protege a conta, e o link dele restaura em out
 	await expect(joao.page.getByRole('heading', { name: 'Maria' })).toBeVisible();
 	await joao.page.goto('./');
 	await noInicio(joao.page);
-	await expect(joao.page.getByText('Você ainda não guardou seu código de recuperação.')).toHaveCount(0);
+	await expect(joao.page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
 	await abrirAjustes(joao.page);
 	await expect(joao.page.getByRole('link', { name: /Proteção da conta · protegida/ })).toBeVisible();
 
 	// o link do arquivo num aparelho novo: as palavras chegam prontas e saem do endereço
 	const outro = await novoAparelho();
 	await outro.goto(link);
-	await expect(outro.getByText('As palavras do seu código de recuperação já estão aqui.', { exact: false })).toBeVisible({ timeout: 20_000 });
+	await expect(outro.getByText('As palavras da sua frase de recuperação já estão aqui.', { exact: false })).toBeVisible({ timeout: 20_000 });
 	await expect(outro.locator('#frase')).toHaveValue(palavras.join(' '));
 	expect(new URL(outro.url()).hash).toBe('');
 	await criarPinERecuperar(outro);
@@ -121,7 +121,7 @@ test('Proteção da conta: cancelar não protege; o cartão sai na impressão; o
 	const baixado = page.waitForEvent('download');
 	await page.getByRole('button', { name: 'Salvar no celular' }).click();
 	const download = await baixado;
-	expect(download.suggestedFilename()).toBe('lerolero-codigo-de-recuperacao.txt');
+	expect(download.suggestedFilename()).toBe('lerolero-frase-de-recuperacao.txt');
 	const caminho = await download.path();
 	await page.getByRole('button', { name: 'Guardei o arquivo' }).click();
 	await expect(page.getByText('Pronto, conta protegida.', { exact: false })).toBeVisible();
@@ -138,10 +138,10 @@ test('Proteção da conta: cancelar não protege; o cartão sai na impressão; o
 		await (await seletor).setFiles(arquivo);
 	};
 	await escolher({ name: 'compras.txt', mimeType: 'text/plain', buffer: Buffer.from('arroz\nfeijão\n') });
-	await expect(outro.getByText('Não achei as 12 palavras neste arquivo.', { exact: false })).toBeVisible();
+	await expect(outro.getByText('Não achamos as 12 palavras neste arquivo.', { exact: false })).toBeVisible();
 	await escolher(caminho);
 	await expect(outro.locator('#frase')).toHaveValue(/^(\p{L}+ ){11}\p{L}+$/u);
-	await expect(outro.getByText('Não achei as 12 palavras neste arquivo.', { exact: false })).toHaveCount(0);
+	await expect(outro.getByText('Não achamos as 12 palavras neste arquivo.', { exact: false })).toHaveCount(0);
 	await criarPinERecuperar(outro);
 	await abrirAjustes(outro);
 	await expect(outro.locator('.key')).toHaveText(chave!);
@@ -193,14 +193,14 @@ test('gerenciador de senhas: guardar protege a conta, e a frase salva restaura e
 	const vazio = await novoAparelho();
 	await simularGerenciador(vazio);
 	await vazio.goto('./restaurar');
-	await vazio.getByRole('button', { name: 'Usar o código salvo no navegador' }).click();
-	await expect(vazio.getByText('Não achei um código salvo neste navegador.', { exact: false })).toBeVisible();
+	await vazio.getByRole('button', { name: 'Usar a frase salva no navegador' }).click();
+	await expect(vazio.getByText('Não achamos uma frase salva neste navegador.', { exact: false })).toBeVisible();
 
 	// aparelho novo com a frase sincronizada pela conta Google: ela chega pronta, falta o PIN
 	const outro = await novoAparelho();
 	await simularGerenciador(outro, guardado.password);
 	await outro.goto('./restaurar');
-	await outro.getByRole('button', { name: 'Usar o código salvo no navegador' }).click();
+	await outro.getByRole('button', { name: 'Usar a frase salva no navegador' }).click();
 	await expect(outro.locator('#frase')).toHaveValue(guardado.password);
 	await criarPinERecuperar(outro);
 	await abrirAjustes(outro);
@@ -227,5 +227,5 @@ test('gerenciador de senhas sem PasswordCredential: o formulário é enviado e s
 	await outro.addInitScript(() => delete (window as { PasswordCredential?: unknown }).PasswordCredential);
 	await outro.goto('./restaurar');
 	await expect(outro.getByRole('button', { name: 'Abrir o arquivo de recuperação' })).toBeVisible();
-	await expect(outro.getByRole('button', { name: 'Usar o código salvo no navegador' })).toHaveCount(0);
+	await expect(outro.getByRole('button', { name: 'Usar a frase salva no navegador' })).toHaveCount(0);
 });

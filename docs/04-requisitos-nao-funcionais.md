@@ -90,7 +90,7 @@ Metas de qualidade que valem para todo o app. Os números são propostas iniciai
 | RNF-61 | Funciona com leitor de tela (TalkBack no Android, NVDA/VoiceOver no desktop) |
 | RNF-62 | Suporta fonte do sistema em 200% sem quebrar o layout |
 | RNF-63 | Alvos de toque de pelo menos 48 dp |
-| RNF-64 | Linguagem simples em toda a interface; nada de jargão técnico (chave, relay, hash) no fluxo padrão |
+| RNF-64 | Linguagem simples em toda a interface; nada de jargão técnico (chave, relay, hash) no fluxo padrão. A chave pública e os servidores ficam em "Detalhes técnicos", fechado no fim dos Ajustes; o e2e `linguagem` barra o jargão nos textos (2026-11-02) |
 | RNF-65 | Fluxos principais (cadastro, adicionar contato, enviar mensagem e áudio) testados com pessoas idosas ou com pouca familiaridade digital |
 
 ## 8. Idiomas

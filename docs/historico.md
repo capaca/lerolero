@@ -5,6 +5,26 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-02: linguagem simples (item 21, RNF-64)
+
+- Revisão dos 683 textos de `pt-BR.json`. Um nome só para as 12 palavras: **frase de recuperação**, também no arquivo
+  (agora `lerolero-frase-de-recuperacao.txt`), no cartão e no gerenciador de senhas. Escolha do Pedro, que revê a regra
+  1 do ADR-0009 (rejeitado: "código" em todo o app). Arquivos antigos continuam abrindo: a leitura usa o link ou a
+  lista numerada, não o título.
+- Chave pública e servidores saem do topo dos Ajustes para **Detalhes técnicos**, fechado no fim da tela (escolha do
+  Pedro; rejeitados: só trocar as palavras no lugar, e tirar a chave da interface). Lá a chave virou "identificador da
+  conta" e os relays, "servidores de mensagens".
+- Outras trocas: "cifrado" → "protegido por criptografia"; "offline" → "sem internet"; "Bug" → "Problema" no
+  comentário; "chave reserva" → "único jeito de recuperar"; o exemplo de link sem `nprofile1`; a voz do app em
+  "Não achamos" / "Não sabemos" no lugar de "Não achei" / "Não sei". O guia e o roteiro passaram a citar os arquivos,
+  e o roteiro corrigiu o passo que começa o dia sem internet (7) e o fim dos extras (23).
+- Trava nova: o e2e `linguagem` lê o `pt-BR.json` e falha com relay, npub, hash, cifrado, offline, bug ou "código"
+  (fora de "código QR"), exceto nos Detalhes técnicos e na medição do app em dev.
+- *Bug achado no caminho (do item 19):* num aparelho lento, tocar na carinha logo depois de enviar abria o painel de
+  emojis e ele fechava sozinho, porque o campo só pegava o foco quando o envio terminava. Agora pega na hora. Teste de
+  regressão no e2e `emojis`, com o processador 6× mais lento (falhava 3 de 3 sem a correção). *Ficou de fora:* uma leitura com
+  pessoas leigas, que fica para o beta fechado (item 24).
+
 ## 2026-11-02: botão de emojis (item 19, RF-29)
 
 - Botão com carinha no campo de mensagem, ao lado do clipe: abre um painel no lugar do teclado, e cada toque põe o

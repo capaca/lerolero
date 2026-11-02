@@ -71,7 +71,10 @@ papel:
 Regras do desenho:
 
 1. **A frase continua sendo a base.** Nenhuma camada a substitui; todas são "embrulhos" dela. As palavras continuam
-   visíveis nos ajustes, mas a interface passa a falar em **código de recuperação**.
+   visíveis nos ajustes. A interface fala em **frase de recuperação** em todas as telas, no arquivo, no cartão e no
+   gerenciador de senhas (decidido pelo Pedro em 2026-11-02, na revisão de linguagem simples, item 21). Antes, as
+   telas novas falavam em "código de recuperação" e as antigas em "frase", e a mistura confundia (até "seu código...
+   Sem ela"). *Rejeitado:* "código" em todo o app, que era o plano original desta regra.
 2. **Uma camada concluída basta** para o lembrete do RF-04 parar. O estado aparece numa tela só, "Proteção da conta"
    (Protegida / Falta proteger), com os passos oferecidos na hora certa.
 3. **Na restauração**, a ordem é do mais fácil para o mais seguro: passkey, preenchimento automático, arquivo, digitar

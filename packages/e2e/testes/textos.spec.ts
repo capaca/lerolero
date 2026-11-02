@@ -419,6 +419,8 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 
 	// ajustes, o perfil, a frase (conferida desta vez) e o comentário
 	await page.goto(PSEUDO_URL + 'ajustes');
+	await semTextoFixo(page, nomes);
+	await page.locator('details.technical summary').click();
 	await expect(page.locator('.relays li').first()).toBeVisible({ timeout: 20_000 });
 	await semTextoFixo(page, [...nomes, ...(await dados(page, '.key')), ...(await dados(page, '.relays li'))]);
 	await page.goto(PSEUDO_URL + 'ajustes/perfil');
