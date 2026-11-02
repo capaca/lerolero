@@ -1,6 +1,6 @@
-# Protótipo: notificações por Web Push no PWA (a fazer)
+# Protótipo: notificações por Web Push no PWA
 
-Plano registrado em 2026-11-02, para o Pedro executar depois. Ainda não há código aqui.
+Plano registrado em 2026-11-02; as páginas ficaram prontas no mesmo dia. Falta a medição no Motorola.
 
 Mede, num aparelho de verdade, se o PWA instalado recebe um aviso de mensagem nova com o app fechado, enviado direto
 pelo navegador de quem manda, sem servidor do projeto. O resultado decide se o PWA ganha notificações antes do beta
@@ -43,9 +43,15 @@ do app que manda avisos; ele falha se o remetente perder a rede logo depois de e
 
 ## O que medir
 
-HTML e JavaScript puros, como o [`prototipos/senha`](../senha/README.md), publicado na homologação em `/push/`. Uma
-página faz o papel do destinatário (inscreve-se e mostra um QR ou link com endereço e chaves) e outra, do remetente
-(lê o QR, cifra, assina e envia).
+HTML e JavaScript puros, como o [`prototipos/senha`](../senha/README.md), sem build nem biblioteca: a homologação
+copia a pasta para `/lerolero/push/`. A cifra (RFC 8291) e o JWT VAPID (RFC 8292) usam só o WebCrypto e foram
+conferidos contra o `http_ece`, a biblioteca do `web-push`.
+
+| Página | Papel |
+|---|---|
+| `index.html` | Destinatário: ativa (chave VAPID própria e inscrição), compartilha o convite por link, lista os avisos que o service worker anotou (hora, atraso, se havia janela aberta, nome lido no IndexedDB) |
+| `enviar.html` | Remetente: abre pelo link do convite, cifra, assina e faz o POST, na hora ou depois de N minutos; também gera o mesmo pedido como comando `curl` |
+| `sw.js` | Acorda com o push, anota no IndexedDB e mostra "Mensagem de …" |
 
 | Pergunta | Por que importa |
 |---|---|
@@ -58,6 +64,37 @@ página faz o papel do destinatário (inscreve-se e mostra um QR ou link com end
 
 Aparelhos: o Motorola Edge 60 do Pedro como destinatário e o computador (ou outro celular) como remetente. Estimativa:
 2 a 3 dias.
+
+### Como medir
+
+1. No Chrome do Motorola, abra https://lerolero-app.github.io/lerolero/push/ e instale (menu → Instalar app; nome
+   "Lero push", verde-azulado). No app instalado, toque em Ativar e permita as notificações.
+2. "Compartilhar o link" e mande para o computador. Abra lá: o convite vem preenchido em `enviar.html`.
+3. Feche o app no celular (tirar dos recentes). No computador, "Enviar pelo navegador"; se falhar por CORS (esperado
+   no Chrome, ver abaixo), "Gerar comando curl" e rode no terminal logo em seguida.
+4. Celular dormindo: apague a tela, espere 30 min ou mais (no computador, "Esperar" 30 minutos com a página aberta, ou
+   o `curl` depois). Repita depois de reiniciar o celular, sem abrir o app.
+5. "Trocar as chaves" no celular e mande de novo pelo link antigo: o serviço deve recusar (é o corte ao bloquear).
+6. "Copiar resultados (JSON)" nas duas páginas e cole no registro.
+7. Firefox no Android: repita 1 a 3 no Firefox (push da Mozilla, que aceita o CORS).
+
+Para rodar no computador: `python3 -m http.server -d prototipos` e abra `http://localhost:8000/push/` (os ícones não
+aparecem fora do site).
+
+### Medido no computador (2026-11-02)
+
+Chrome 156 no macOS, perfil novo, destinatário e remetente na mesma máquina:
+
+- **O FCM recusa o CORS.** O preflight do POST ao endereço `fcm.googleapis.com/fcm/send/…` volta sem
+  `Access-Control-Allow-Origin`, e o fetch falha. Pelo `curl` com o mesmo pedido, o FCM responde 201: a assinatura e a
+  cifra estão certas, só o navegador é barrado. O mesmo preflight, sondado com `curl`, passa no push da Mozilla
+  (`updates.push.services.mozilla.com` devolve a origem da homologação) e falha no da Apple (`web.push.apple.com`, 405).
+- **Pelo `curl`, o aviso chegou em 0,6 s numa rodada e 25 s na outra** (inscrições recém-criadas; o atraso no
+  celular é o que vale), e o service worker leu o nome do contato no IndexedDB.
+
+Ou seja, no Chrome (o caso do Motorola) o envio direto do navegador não passa: precisa de um repassador, ou o envio
+fica só para quem usa Firefox. O que falta medir no celular (app fechado, Doze, reinício) não depende disso e pode ser
+feito pelo `curl`.
 
 ## O que cada resultado decide
 

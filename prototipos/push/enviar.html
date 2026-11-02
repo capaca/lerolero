@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0f766e" />
+    <link rel="stylesheet" href="estilo.css" />
+    <title>Lero-lero · enviar push</title>
+  </head>
+  <body>
+    <main>
+      <h1>Lero-lero · enviar notificação</h1>
+      <p class="hint">
+        Este aparelho faz o papel de quem manda a mensagem: cifra o aviso para o destinatário, assina com a chave
+        VAPID dele e faz o POST direto no endereço de push, sem servidor do projeto.
+      </p>
+
+      <section>
+        <h2>Convite do destinatário</h2>
+        <p class="hint">Vem preenchido quando se abre o link compartilhado; também dá para colar o link aqui.</p>
+        <textarea id="invite" rows="4"></textarea>
+        <div id="invite-out" class="out"></div>
+      </section>
+
+      <section>
+        <h2>Enviar</h2>
+        <label>Nome de quem manda <input id="from" value="Maria" /></label>
+        <label>
+          Esperar antes de enviar (minutos)
+          <input id="delay" type="number" min="0" step="1" value="0" />
+        </label>
+        <p class="hint">
+          Para o teste do celular dormindo: apague a tela do celular, escolha 30 minutos e deixe esta página aberta.
+        </p>
+        <div class="actions">
+          <button id="send-btn" class="primary">Enviar pelo navegador</button>
+          <button id="curl-btn">Gerar comando curl</button>
+          <span id="timer" class="hint"></span>
+        </div>
+        <div id="send-out" class="out"></div>
+        <textarea id="curl" rows="5" readonly hidden></textarea>
+        <p id="curl-hint" class="hint" hidden>
+          Se o navegador for barrado pelo CORS, rode isto no terminal logo depois de gerar: mede se o aviso chega sem
+          misturar com o CORS. O atraso conta a partir de quando o comando foi gerado.
+        </p>
+      </section>
+
+      <section>
+        <h2>Envios</h2>
+        <table id="sent"></table>
+        <div class="actions">
+          <button id="copy-btn">Copiar resultados (JSON)</button>
+          <button id="clear-btn">Apagar os envios</button>
+          <span id="copy-status" class="hint"></span>
+        </div>
+        <textarea id="json" rows="8" readonly></textarea>
+      </section>
+    </main>
+    <script type="module" src="enviar.js"></script>
+  </body>
+</html>
