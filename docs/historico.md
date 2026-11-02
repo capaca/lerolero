@@ -5,7 +5,7 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
-## 2026-10-30: arquivos e "Salvar" (item 18, RF-44 e 45)
+## 2026-11-02: arquivos e "Salvar" (item 18, RF-44 e 45)
 
 - Arquivos vão pelo caminho das fotos (cifra, Blossom, repetição, RF-70, encaminhar), com a tag nova `name`. Foto
   escolhida pelo clipe é comprimida como foto; áudio escolhido vira arquivo comum; vídeo é recusado.
