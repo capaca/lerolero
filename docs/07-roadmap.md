@@ -28,7 +28,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M0 Fundação | 3 sem | ✅ 2026-10-16 a 22; falta medir no aparelho de 2 GB (retenção dos relays confirmada em 2026-10-29) |
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
-| M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; arquivos feitos em 2026-11-02 (item 18); voltam os emojis (item 19) |
+| M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; arquivos (item 18) e botão de emojis (item 19) feitos em 2026-11-02 |
 | M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo e gerenciador de senhas feitos; passkey (item 15) adiada para depois do beta |
 | M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade automática feita (item 22); a fazer: itens 20 e 21 e a parte manual do 22 |
 | Revisão de prontidão | — | A fazer, antes do beta: item 23 |
@@ -64,7 +64,7 @@ do WhatsApp.
 16. Velocidade da suíte e2e (M5): sem esperas fixas grandes; ~4 min na CI com 2 workers, que deram o mesmo tempo que 4 com menos risco de falha sem bug. ✅ Feita em 2026-10-30.
 17. Aviso de versão nova mais rápido (M5): procurar versão nova a cada poucos minutos com o app aberto, para as correções chegarem logo a quem testa o beta. O cache de até 10 minutos do Pages continua até haver domínio próprio (Q-N1). ✅ Feita em 2026-10-30: a cada 5 minutos, só com o app na tela.
 18. Arquivos além de fotos e "Salvar" no aparelho (M3; RF-44, 45): PDF e outros tipos pelo caminho das fotos (cifra, Blossom, envio com repetição, hash único do RF-70, encaminhar sem reenviar), com balão de nome, tipo e tamanho e download sob demanda; "Salvar" no menu da mensagem para foto e arquivo. Limite de 20 MB, executáveis bloqueados nos dois lados (T22) e "Salvar" por sistema, decididos em 2026-10-30. ✅ Feita em 2026-11-02
-19. Botão de emojis no campo de mensagem (M3; RF-29). Decidir antes: lista própria ou biblioteca (peso no app), busca por nome em português e se "Mais reações" passa a usar o mesmo seletor.
+19. Botão de emojis no campo de mensagem (M3; RF-29). Decidido em 2026-11-02: lista gerada do `emojibase-data` (pt) por um script só no desenvolvimento, sem tons de pele e sem os emojis novos demais para o Android antigo, baixada só quando o seletor abre; busca por nome em português, com os mais usados primeiro; o "+" do menu da mensagem abre o mesmo seletor. Rejeitadas: lista à mão (faltam emojis, busca pobre), componente pronto (peso, visual e textos dele, axe e pseudolíngua), seletor sem busca e manter os 48 fixos no menu. ✅ Feita em 2026-11-02
 20. Medição no aparelho de referência de 2 GB (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Depende de haver o aparelho.
 21. Revisão dos textos para linguagem simples (M5; RNF-64).
 22. Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (M5; RNF-60..63). Em andamento: a parte automática ficou pronta em 2026-10-30 (axe-core em todas as telas no e2e `textos`, nos dois temas); falta a manual: TalkBack no celular, fonte do sistema a 200% e alvos de 48 dp.
@@ -131,7 +131,7 @@ uma foto em até 200 KB.
 - ✅ Editar mensagem (RF-24).
 - ✅ Mencionar alguém no grupo com `@` (RF-35).
 - ✅ Arquivos além de fotos e "Salvar" no aparelho (RF-44, 45). Item 18.
-- ⬜ Botão de emojis no campo de mensagem (RF-29). Item 19.
+- ✅ Botão de emojis no campo de mensagem (RF-29). Item 19.
 
 **Pronto quando:** um grupo de 5 pessoas conversa com respostas, reações e menções; os status aparecem corretamente;
 dá para selecionar várias mensagens e agir de uma vez; os textos da interface estão fora do código, com português

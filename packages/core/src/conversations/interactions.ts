@@ -11,21 +11,11 @@ import { directConversationId } from './messaging.ts';
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{64}$/.test(v);
 
-/** Emojis do menu da mensagem. Quem recebe aceita qualquer reação curta (NIP-25), de outros apps também. */
-export const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
-
 /**
- * O seletor completo ("+" no menu): rostos, gestos, corações e coisas do dia a dia. Quem recebe aceita qualquer
- * reação curta, então a lista é só uma sugestão e pode crescer sem mudar o protocolo.
+ * Emojis do menu da mensagem; o "+" abre o seletor do app com todos (RF-29). Quem recebe aceita qualquer reação curta
+ * (NIP-25), de outros apps também.
  */
-export const REACTION_PICKER = [
-	'😀', '😂', '🤣', '😊', '😍', '😘', '😎', '🤔',
-	'😮', '😢', '😭', '😡', '🥳', '😴', '🤯', '🙄',
-	'👍', '👎', '👏', '🙌', '🙏', '💪', '🤝', '👀',
-	'❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔',
-	'🔥', '🎉', '✨', '💯', '✅', '❌', '🎂', '🍕',
-	'☕', '🍺', '⚽', '🚀', '🌹', '🌞', '🌧️', '🐶'
-] as const;
+export const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
 
 /** Tags de um pedido de reação a uma mensagem (NIP-25). */
 export const reactionTags = (message: Pick<MessageRecord, 'id' | 'kind'>): string[][] => [

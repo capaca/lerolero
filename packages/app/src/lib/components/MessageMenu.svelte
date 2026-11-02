@@ -1,8 +1,9 @@
 <script lang="ts">
 	// Menu de uma mensagem (toque longo no celular, botão direito no computador).
 	import Icon from './Icon.svelte';
+	import EmojiPicker from './EmojiPicker.svelte';
 	import Sheet from './Sheet.svelte';
-	import { QUICK_REACTIONS, REACTION_PICKER } from '@lerolero/core';
+	import { QUICK_REACTIONS } from '@lerolero/core';
 	import { m } from '#lib/paraglide/messages.js';
 
 	let {
@@ -47,7 +48,7 @@
 	} = $props();
 
 	let confirming = $state(false);
-	// "+" abre o seletor completo no lugar dos seis principais
+	// "+" abre o seletor de emojis do campo de mensagem (RF-29) no lugar dos itens do menu
 	let picking = $state(false);
 </script>
 
@@ -61,8 +62,8 @@
 		</div>
 	{:else}
 		{#if onreact}
-			<div class="reactions" class:all={picking} role="group" aria-label={m.menu_reacoes()}>
-				{#each picking ? REACTION_PICKER : QUICK_REACTIONS as emoji (emoji)}
+			<div class="reactions" role="group" aria-label={m.menu_reacoes()}>
+				{#each QUICK_REACTIONS as emoji (emoji)}
 					<button type="button" class="emoji" class:chosen={myReaction === emoji} aria-pressed={myReaction === emoji} aria-label={m.menu_reagir({ emoji })} onclick={() => onreact(emoji)}>
 						{emoji}
 					</button>
@@ -72,32 +73,36 @@
 				</button>
 			</div>
 		{/if}
-		{#if onreply}
-			<button class="item" onclick={onreply}><Icon name="reply" /> {m.menu_responder()}</button>
+		{#if picking && onreact}
+			<EmojiPicker onpick={onreact} label={(emoji) => m.menu_reagir({ emoji })} chosen={myReaction} />
+		{:else}
+			{#if onreply}
+				<button class="item" onclick={onreply}><Icon name="reply" /> {m.menu_responder()}</button>
+			{/if}
+			{#if onedit}
+				<button class="item" onclick={onedit}><Icon name="pencil" /> {m.menu_editar()}</button>
+			{/if}
+			{#if onstar}
+				<button class="item" onclick={onstar}><Icon name="star" /> {starred ? m.menu_desfavoritar() : m.menu_favoritar()}</button>
+			{/if}
+			{#if oncopy}
+				<button class="item" onclick={oncopy}><Icon name="copy" /> {m.menu_copiar()}</button>
+			{/if}
+			{#if onsave}
+				<button class="item" onclick={onsave}><Icon name="download" /> {m.menu_salvar()}</button>
+			{/if}
+			{#if onforward}
+				<button class="item" onclick={onforward}><Icon name="forward" /> {m.menu_encaminhar()}</button>
+			{/if}
+			{#if onselect}
+				<button class="item" onclick={onselect}><Icon name="check" /> {m.menu_selecionar()}</button>
+			{/if}
+			{#if mine}
+				<button class="item" onclick={() => (confirming = true)}><Icon name="trash" /> {m.menu_apagar_todos()}</button>
+			{/if}
+			<button class="item" onclick={ondeleteForMe}><Icon name="trash" /> {m.menu_apagar_mim()}</button>
+			<button class="item cancel" onclick={onclose}>{m.comum_cancelar()}</button>
 		{/if}
-		{#if onedit}
-			<button class="item" onclick={onedit}><Icon name="pencil" /> {m.menu_editar()}</button>
-		{/if}
-		{#if onstar}
-			<button class="item" onclick={onstar}><Icon name="star" /> {starred ? m.menu_desfavoritar() : m.menu_favoritar()}</button>
-		{/if}
-		{#if oncopy}
-			<button class="item" onclick={oncopy}><Icon name="copy" /> {m.menu_copiar()}</button>
-		{/if}
-		{#if onsave}
-			<button class="item" onclick={onsave}><Icon name="download" /> {m.menu_salvar()}</button>
-		{/if}
-		{#if onforward}
-			<button class="item" onclick={onforward}><Icon name="forward" /> {m.menu_encaminhar()}</button>
-		{/if}
-		{#if onselect}
-			<button class="item" onclick={onselect}><Icon name="check" /> {m.menu_selecionar()}</button>
-		{/if}
-		{#if mine}
-			<button class="item" onclick={() => (confirming = true)}><Icon name="trash" /> {m.menu_apagar_todos()}</button>
-		{/if}
-		<button class="item" onclick={ondeleteForMe}><Icon name="trash" /> {m.menu_apagar_mim()}</button>
-		<button class="item cancel" onclick={onclose}>{m.comum_cancelar()}</button>
 	{/if}
 </Sheet>
 
@@ -107,13 +112,6 @@
 		justify-content: space-between;
 		gap: 0.2rem;
 		margin-bottom: 0.4rem;
-	}
-	/* o seletor completo: oito por fileira, rolando se faltar altura */
-	.reactions.all {
-		display: grid;
-		grid-template-columns: repeat(8, minmax(0, 1fr));
-		max-height: 40vh;
-		overflow-y: auto;
 	}
 	.emoji.more {
 		display: grid;

@@ -229,6 +229,24 @@ test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum
 	await ana.page.locator('.sheet .emoji').first().click();
 	await expect(ana.page.locator('.row .chip')).toBeVisible();
 	await semTextoFixo(ana.page, nomes);
+	// o "+" das reações abre o seletor de emojis (RF-29), também com a busca sem resultado
+	await ana.page.locator('.row', { hasText: 'oi' }).first().locator('.bubble').click({ button: 'right' });
+	await ana.page.locator('.sheet .emoji.more').click();
+	await expect(ana.page.locator('.sheet .picker h3').first()).toBeVisible();
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.locator('.sheet input[type="search"]').fill('xyzw');
+	await expect(ana.page.locator('.sheet .picker .hint')).toBeVisible();
+	await semTextoFixo(ana.page, [...nomes, 'xyzw']);
+	await ana.page.keyboard.press('Escape');
+
+	// o painel de emojis do campo (terceiro botão, depois de foto e arquivo), já com os "Mais usados"
+	await ana.page.locator('.composer .line button.round.ghost').nth(2).click();
+	await ana.page.locator('.composer .picker .emoji').first().click();
+	await ana.page.locator('.composer .line button.round.ghost').nth(2).click();
+	await ana.page.locator('.composer .line button.round.ghost').nth(2).click();
+	await expect(ana.page.locator('.composer .picker h3')).toHaveCount(10);
+	await semTextoFixo(ana.page, nomes);
+	await ana.page.locator('.composer textarea').fill('');
 
 	// editar a minha (segundo item do menu das minhas, depois de Responder): a faixa de edição e a marca "editada"
 	await ana.page.locator('.row.mine', { hasText: 'oi' }).locator('.bubble').click({ button: 'right' });
