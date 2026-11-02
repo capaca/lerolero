@@ -36,10 +36,10 @@ test('Maria responde a João citando a mensagem, e os dois reagem', async ({ nov
 	const daMaria = joao.page.locator('.row.mine', { hasText: 'vamos jantar?' });
 	await expect(daMaria.getByRole('button', { name: 'Reação 👍: 1' })).toBeVisible({ timeout: 30_000 });
 
-	// o "+" abre o seletor completo, com muito mais emojis que os seis principais
+	// o "+" abre o seletor de emojis (RF-29; o resto dele está no e2e `emojis`)
 	await doJoao.locator('.bubble').click({ button: 'right' });
 	await menu(maria).getByRole('button', { name: 'Mais reações' }).click();
-	expect(await menu(maria).locator('.emoji').count()).toBeGreaterThan(40);
+	await menu(maria).getByLabel('Buscar emoji').fill('cone de festa');
 	await menu(maria).getByRole('button', { name: 'Reagir com 🎉' }).click();
 	await expect(doJoao.getByRole('button', { name: 'Reação 🎉: 1' })).toBeVisible();
 	await expect(doJoao.getByRole('button', { name: /Reação 👍/ })).toHaveCount(0);

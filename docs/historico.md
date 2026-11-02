@@ -5,6 +5,23 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-02: botão de emojis (item 19, RF-29)
+
+- Botão com carinha no campo de mensagem, ao lado do clipe: abre um painel no lugar do teclado, e cada toque põe o
+  emoji onde estava o cursor. Tocar no campo ou no botão (que vira um teclado) fecha o painel. E2e `emojis`.
+- O "+" do menu da mensagem abre o mesmo seletor no lugar dos itens do menu; os seis principais continuam no topo.
+  Saiu do core a lista fixa de 48 (`REACTION_PICKER`).
+- Escolhas do Pedro: lista gerada do `emojibase-data` em português, busca por nome e o mesmo seletor nas reações.
+  Rejeitados: lista à mão (faltariam emojis e a busca seria pobre), componente pronto (peso, visual e textos dele,
+  e passar no axe e na pseudolíngua) e seletor sem busca.
+- `packages/app/scripts/emojis.js` gera `src/lib/emojis.json` (só no desenvolvimento; o pacote não vai para o app):
+  1.640 emojis em 9 grupos, sem tons de pele e até o Emoji 11.0 (Android 9 mostra todos; no Android 8 do aparelho
+  de referência faltam ~150). São 110 KB, 34 KB comprimidos, baixados na primeira vez que o seletor abre.
+- Busca sem acento ("coracao" acha "coração"), cada palavra digitada é o começo de uma palavra do nome ou das
+  palavras-chave do emojibase ("kkk" acha 😂). "Mais usados" (até 16) abre o seletor e ordena a busca; a contagem
+  fica no aparelho (`localStorage`), como o tamanho da letra.
+- Desempenho: os grupos fora da tela não são desenhados (`content-visibility`), para o aparelho de 2 GB.
+
 ## 2026-11-02: arquivos e "Salvar" (item 18, RF-44 e 45)
 
 - Arquivos vão pelo caminho das fotos (cifra, Blossom, repetição, RF-70, encaminhar), com a tag nova `name`. Foto

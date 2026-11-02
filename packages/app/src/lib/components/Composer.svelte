@@ -2,6 +2,7 @@
 	// Campo de envio da conversa: texto, ou gravação de áudio quando o campo está vazio.
 	import { MAX_TEXT_LENGTH, mentionedIn, mentionOf, withMentionLabels } from '@lerolero/core';
 	import { onDestroy } from 'svelte';
+	import EmojiPicker from './EmojiPicker.svelte';
 	import Icon from './Icon.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { MAX_SECONDS, startRecording, type Recording } from '#lib/recorder.ts';
@@ -175,6 +176,16 @@
 		}
 	}
 
+	// emojis (RF-29): o painel fica no lugar do teclado, e cada toque põe um emoji onde estava o cursor; voltar ao
+	// campo (pelo botão do teclado ou tocando nele) fecha o painel
+	let emojis = $state(false);
+
+	function insertEmoji(emoji: string) {
+		if (text.length + emoji.length > MAX_TEXT_LENGTH) return;
+		text = `${text.slice(0, caret)}${emoji}${text.slice(caret)}`;
+		caret += emoji.length;
+	}
+
 	onDestroy(cancelAudio);
 
 	// ao escolher "Responder", o teclado já abre no campo
@@ -277,6 +288,9 @@
 			<button type="button" class="round ghost" onclick={() => filePicker?.click()} aria-label={m.envio_arquivo()}>
 				<Icon name="paperclip" />
 			</button>
+			<button type="button" class="round ghost" onclick={() => (emojis ? input?.focus() : (emojis = true))} aria-expanded={emojis} aria-label={m.envio_emojis()}>
+				<Icon name={emojis ? 'keyboard' : 'smile'} />
+			</button>
 			<textarea
 				bind:this={input}
 				bind:value={text}
@@ -284,6 +298,7 @@
 				oninput={trackCaret}
 				onkeyup={trackCaret}
 				onclick={trackCaret}
+				onfocus={() => (emojis = false)}
 				rows="1"
 				maxlength={MAX_TEXT_LENGTH}
 				placeholder={m.envio_mensagem()}
@@ -297,6 +312,11 @@
 				<button class="round primary" type="button" onclick={startAudio} aria-label={m.envio_gravar()}><Icon name="mic" /></button>
 			{/if}
 		</div>
+		{#if emojis}
+			<div class="emojis">
+				<EmojiPicker onpick={insertEmoji} label={(_, nome) => m.emoji_inserir({ nome })} />
+			</div>
+		{/if}
 	{/if}
 </form>
 
@@ -317,6 +337,9 @@
 		display: flex;
 		gap: 0.5rem;
 		align-items: flex-end;
+	}
+	.emojis {
+		margin-top: 0.5rem;
 	}
 	.mentions {
 		list-style: none;
