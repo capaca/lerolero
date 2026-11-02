@@ -282,29 +282,35 @@
 		{/if}
 		<div class="line">
 			<input bind:this={picker} type="file" accept="image/*" multiple hidden onchange={pickPhoto} data-testid="foto" />
-			<button type="button" class="round ghost" onclick={() => picker?.click()} aria-label={m.envio_foto()}>
-				<Icon name="image" />
-			</button>
 			<input bind:this={filePicker} type="file" multiple hidden onchange={pickFile} data-testid="arquivo-envio" />
-			<button type="button" class="round ghost" onclick={() => filePicker?.click()} aria-label={m.envio_arquivo()}>
-				<Icon name="paperclip" />
-			</button>
-			<button type="button" class="round ghost" onclick={() => (emojis ? input?.focus() : (emojis = true))} aria-expanded={emojis} aria-label={m.envio_emojis()}>
-				<Icon name={emojis ? 'keyboard' : 'smile'} />
-			</button>
-			<textarea
-				bind:this={input}
-				bind:value={text}
-				{onkeydown}
-				oninput={trackCaret}
-				onkeyup={trackCaret}
-				onclick={trackCaret}
-				onfocus={() => (emojis = false)}
-				rows="1"
-				maxlength={MAX_TEXT_LENGTH}
-				placeholder={m.envio_mensagem()}
-				aria-label={m.envio_mensagem()}
-			></textarea>
+			<!-- os botões ficam dentro da moldura do campo, e menores, para sobrar largura para o texto no celular -->
+			<div class="field">
+				<button type="button" class="round ghost" onclick={() => (emojis ? input?.focus() : (emojis = true))} aria-expanded={emojis} aria-label={m.envio_emojis()}>
+					<Icon name={emojis ? 'keyboard' : 'smile'} />
+				</button>
+				<textarea
+					bind:this={input}
+					bind:value={text}
+					{onkeydown}
+					oninput={trackCaret}
+					onkeyup={trackCaret}
+					onclick={trackCaret}
+					onfocus={() => (emojis = false)}
+					rows="1"
+					maxlength={MAX_TEXT_LENGTH}
+					placeholder={m.envio_mensagem()}
+					aria-label={m.envio_mensagem()}
+				></textarea>
+				<button type="button" class="round ghost" onclick={() => filePicker?.click()} aria-label={m.envio_arquivo()}>
+					<Icon name="paperclip" />
+				</button>
+				<!-- a foto some enquanto há texto, como no WhatsApp: quem escreve precisa do espaço -->
+				{#if !text}
+					<button type="button" class="round ghost" onclick={() => picker?.click()} aria-label={m.envio_foto()}>
+						<Icon name="image" />
+					</button>
+				{/if}
+			</div>
 			{#if editing}
 				<button class="round primary" type="submit" disabled={!text.trim()} aria-label={m.edicao_salvar()}><Icon name="check" /></button>
 			{:else if text.trim()}
@@ -420,10 +426,34 @@
 			opacity: 0.3;
 		}
 	}
+	.field {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		align-items: flex-end;
+		border: 1px solid var(--line);
+		border-radius: 1.45rem;
+		background: var(--surface);
+	}
+	.field:has(textarea:focus-visible) {
+		outline: 3px solid var(--accent);
+		outline-offset: 2px;
+	}
+	.field .round {
+		width: 2.5rem;
+		height: 2.75rem;
+	}
 	textarea {
 		flex: 1;
+		min-width: 0;
 		resize: none;
 		max-height: 8rem;
 		field-sizing: content;
+		padding: 0.7rem 0.2rem;
+		border: none;
+		background: transparent;
+	}
+	textarea:focus-visible {
+		outline: none;
 	}
 </style>

@@ -5,6 +5,13 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-02: mais espaço para o texto no campo de mensagem
+
+- Com o botão de emojis, o campo tinha quatro botões ao redor e sobravam uns 90 px para o texto num celular de
+  360 px. Emoji, clipe e foto passaram para dentro da moldura do campo, mais estreitos (emoji à esquerda, clipe e foto
+  à direita, como no WhatsApp), e a foto some enquanto há texto: uns 150 px com o campo vazio e 190 px ao digitar.
+  Aprovado pelo Pedro no celular. O e2e `textos` acha o botão de emojis pelo `aria-expanded`, não mais pela posição.
+
 ## 2026-11-02: linguagem simples (item 21, RNF-64)
 
 - Revisão dos 683 textos de `pt-BR.json`. Um nome só para as 12 palavras: **frase de recuperação**, também no arquivo

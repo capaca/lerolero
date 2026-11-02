@@ -239,11 +239,11 @@ test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum
 	await semTextoFixo(ana.page, [...nomes, 'xyzw']);
 	await ana.page.keyboard.press('Escape');
 
-	// o painel de emojis do campo (terceiro botão, depois de foto e arquivo), já com os "Mais usados"
-	await ana.page.locator('.composer .line button.round.ghost').nth(2).click();
+	// o painel de emojis do campo (o botão com aria-expanded, à esquerda do texto), já com os "Mais usados"
+	await ana.page.locator('.composer .field button[aria-expanded]').click();
 	await ana.page.locator('.composer .picker .emoji').first().click();
-	await ana.page.locator('.composer .line button.round.ghost').nth(2).click();
-	await ana.page.locator('.composer .line button.round.ghost').nth(2).click();
+	await ana.page.locator('.composer .field button[aria-expanded]').click();
+	await ana.page.locator('.composer .field button[aria-expanded]').click();
 	await expect(ana.page.locator('.composer .picker h3')).toHaveCount(10);
 	await semTextoFixo(ana.page, nomes);
 	await ana.page.locator('.composer textarea').fill('');
