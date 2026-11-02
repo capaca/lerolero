@@ -29,4 +29,5 @@ O conteúdo da notificação **nunca** passa pelo serviço de push: o push só d
 
 - PWA no MVP depende do usuário abrir o app; aceitável para validar o núcleo.
 - No Android, o usuário pode precisar instalar um distribuidor (ex.: ntfy) à parte, o que é um obstáculo para leigos (Q7 da Visão).
+- Em estudo desde 2026-11-02 (Q-M2 do [roadmap](../07-roadmap.md)): Web Push no PWA antes do beta, com o "acorde" enviado pelo app do remetente e uma chave VAPID por pessoa; plano em [prototipos/push](../../prototipos/push/README.md). Esta decisão só muda depois da medição.
 - **Quem dispara o push** continua em aberto: um serviço comunitário que vigia os relays (sabe a chave pública do usuário) ou o próprio app do remetente enviando o "acorde" para o endereço de push do destinatário, compartilhado só com contatos. Decidir antes da v1.
