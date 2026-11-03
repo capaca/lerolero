@@ -43,7 +43,7 @@
 		<RecoveryFile {words} onsaved={saved} />
 	{/if}
 
-	<p class="other"><a href={resolve('/ajustes/frase')}>{m.protecao_ver_palavras()}</a></p>
+	<p class="other"><a class="block" href={resolve('/ajustes/frase')}>{m.protecao_ver_palavras()}</a></p>
 </main>
 
 <style>

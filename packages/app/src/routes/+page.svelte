@@ -277,8 +277,8 @@
 		position: relative;
 		display: grid;
 		place-items: center;
-		width: 2.75rem;
-		height: 2.75rem;
+		width: 3rem;
+		height: 3rem;
 		border-radius: 50%;
 		color: var(--fg);
 	}

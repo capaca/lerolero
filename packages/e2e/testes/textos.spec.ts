@@ -80,11 +80,42 @@ async function falhasDeAcessibilidade(page: Page) {
 	return [...claro, ...escuro];
 }
 
+/**
+ * Alvos de toque menores que 48 px (RNF-63; o axe só exige 24). A caixa de seleção vale pelo rótulo que a envolve,
+ * e a área invisível da classe `touch` conta. Ficam de fora o link no meio de uma frase e os atalhos de grupo do
+ * seletor de emojis (nove numa linha; rolar a lista leva ao mesmo grupo), que a WCAG 2.5.8 também deixa de fora.
+ */
+function alvosPequenos(page: Page) {
+	return page.evaluate(() => {
+		const noMeioDaFrase = (el: HTMLElement) =>
+			el.tagName === 'A' &&
+			getComputedStyle(el).display === 'inline' &&
+			[...el.parentElement!.childNodes].some(
+				(n) => n !== el && n.textContent!.trim() && (n.nodeType === Node.TEXT_NODE || getComputedStyle(n as Element).display === 'inline')
+			);
+		const tamanho = (el: HTMLElement) => {
+			const alvo = el.matches('input[type=checkbox], input[type=radio]') ? (el.closest('label') ?? el) : el;
+			const r = alvo.getBoundingClientRect();
+			const area = getComputedStyle(alvo, '::after');
+			if (area.content === 'none' || area.position !== 'absolute') return { w: r.width, h: r.height };
+			const px = (v: string) => Math.min(0, parseFloat(v) || 0);
+			return { w: r.width - px(area.left) - px(area.right), h: r.height - px(area.top) - px(area.bottom) };
+		};
+		return [...document.querySelectorAll<HTMLElement>('button, a[href], input:not([type=hidden]), select, textarea, [role=button], [role=menuitem], [role=tab], [role=option], [role=checkbox], [role=switch], [role=radio], summary')]
+			// contentVisibilityAuto: os grupos de emojis fora da vista não são desenhados, e medi-los forçaria o desenho
+			.filter((el) => el.checkVisibility({ contentVisibilityAuto: true }) && !el.closest('[inert], .shortcuts') && !noMeioDaFrase(el))
+			.map((el) => ({ el, ...tamanho(el) }))
+			.filter(({ w, h }) => w > 0 && (w < 47.5 || h < 47.5))
+			.map(({ el, w, h }) => `${el.tagName.toLowerCase()}${el.className ? '.' + String(el.className).trim().split(/\s+/)[0] : ''} "${(el.getAttribute('aria-label') ?? el.innerText).trim().slice(0, 30)}" ${Math.round(w)}×${Math.round(h)}`);
+	});
+}
+
 /** A tela não tem texto fixo nem falha de acessibilidade. */
 const semTextoFixo = async (page: Page, permitidos?: string[]) => {
 	expect(await textosFixos(page, permitidos)).toEqual([]);
 	// soft: mostra as falhas de todas as telas numa rodada só
 	expect.soft(await falhasDeAcessibilidade(page)).toEqual([]);
+	expect.soft(await alvosPequenos(page)).toEqual([]);
 };
 
 /**
@@ -169,6 +200,8 @@ test('guia de teste e roteiro de aceite: nenhum texto fixo', async ({ novoAparel
 });
 
 test('conversa (lista, balões, menus, áudio, avisos de grupo e pedido): nenhum texto fixo', async ({ novaPessoa }) => {
+	// umas vinte telas, cada uma com o axe nos dois temas e a medida dos alvos: no Mac ocupado passava de 60 s
+	test.setTimeout(120_000);
 	const [ana, bia, caio] = await Promise.all(['Ana', 'Bia', 'Caio'].map(novaPessoa));
 	const nomes = ['Ana', 'Bia', 'Caio', 'Amigos', 'oi', 'apagar'];
 	// montado no app normal: texto, áudio e uma mensagem apagada entre a Ana e a Bia; um grupo; um pedido do Caio

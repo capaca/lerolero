@@ -361,6 +361,8 @@
 		text-align: left;
 		border: none;
 		background: none;
+		/* alvo de toque de 48 px (RNF-63) */
+		min-height: 3rem;
 		padding: 0.55rem 0.6rem;
 	}
 	.mentions button:hover,
@@ -439,17 +441,14 @@
 		outline: 3px solid var(--accent);
 		outline-offset: 2px;
 	}
-	.field .round {
-		width: 2.5rem;
-		height: 2.75rem;
-	}
 	textarea {
 		flex: 1;
 		min-width: 0;
 		resize: none;
 		max-height: 8rem;
 		field-sizing: content;
-		padding: 0.7rem 0.2rem;
+		min-height: 3rem;
+		padding: 0.75rem 0.2rem;
 		border: none;
 		background: transparent;
 	}

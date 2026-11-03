@@ -78,6 +78,10 @@ label {
 	font-weight: 600;
 	margin: 1rem 0 0.35rem;
 }
+/* o rótulo inteiro é o alvo de toque da caixa de seleção: 48 px (RNF-63) */
+label:has(> input[type='checkbox'], > input[type='radio']) {
+	min-height: 3rem;
+}
 input,
 textarea {
 	font: inherit;
@@ -113,6 +117,8 @@ button.link {
 	border: none;
 	background: none;
 	color: var(--accent);
+	/* alvo de toque de 48 px (RNF-63); em rem, cresce com o tamanho da letra */
+	min-height: 3rem;
 	padding: 0.5rem 0;
 	text-decoration: underline;
 }
@@ -128,6 +134,16 @@ button:disabled {
 }
 .actions.stack {
 	flex-direction: column;
+}
+/* link sozinho na linha, entre botões: alvo de toque de 48 px (RNF-63) */
+.actions a,
+a.block {
+	display: flex;
+	align-items: center;
+	min-height: 3rem;
+}
+.actions:not(.stack) a {
+	display: inline-flex;
 }
 .card {
 	background: var(--surface);
@@ -153,8 +169,8 @@ button:disabled {
 
 /* botão redondo só com ícone (enviar, gravar, ir para o fim) */
 .round {
-	width: 2.9rem;
-	height: 2.9rem;
+	width: 3rem;
+	height: 3rem;
 	border-radius: 50%;
 	padding: 0;
 	display: grid;
@@ -165,4 +181,14 @@ button:disabled {
 	border-color: transparent;
 	background: transparent;
 	color: var(--muted);
+}
+
+/* área de toque de 48 px em volta de um alvo que fica menor na tela, como o chip de reação (RNF-63) */
+.touch {
+	position: relative;
+}
+.touch::after {
+	content: '';
+	position: absolute;
+	inset: min(0px, (100% - 3rem) / 2);
 }

@@ -30,7 +30,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; arquivos (item 18) e botão de emojis (item 19) feitos em 2026-11-02 |
 | M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo e gerenciador de senhas feitos; passkey (item 15) adiada para depois do beta |
-| M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade automática feita (item 22); linguagem simples feita (item 21); a fazer: item 20 e a parte manual do 22 |
+| M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade feita (item 22); linguagem simples feita (item 21); a fazer: item 20 |
 | Revisão de prontidão | — | A fazer, antes do beta: item 23 |
 | Beta fechado | 6 sem de uso | A fazer: item 24 |
 | v1 Android + desktop | 26 sem | Depois do beta |
@@ -67,7 +67,7 @@ do WhatsApp.
 19. Botão de emojis no campo de mensagem (M3; RF-29). Decidido em 2026-11-02: lista gerada do `emojibase-data` (pt) por um script só no desenvolvimento, sem tons de pele e sem os emojis novos demais para o Android antigo, baixada só quando o seletor abre; busca por nome em português, com os mais usados primeiro; o "+" do menu da mensagem abre o mesmo seletor. Rejeitadas: lista à mão (faltam emojis, busca pobre), componente pronto (peso, visual e textos dele, axe e pseudolíngua), seletor sem busca e manter os 48 fixos no menu. ✅ Feita em 2026-11-02
 20. Medição no aparelho de referência de 2 GB (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Depende de haver o aparelho.
 21. Revisão dos textos para linguagem simples (M5; RNF-64). ✅ Feita em 2026-11-02
-22. Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (M5; RNF-60..63). Em andamento: a parte automática ficou pronta em 2026-10-30 (axe-core em todas as telas no e2e `textos`, nos dois temas); falta a manual: TalkBack no celular, fonte do sistema a 200% e alvos de 48 dp.
+22. Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (M5; RNF-60..63): axe-core e alvos de 48 dp em todas as telas no e2e `textos`; TalkBack e fonte a 200% conferidos no celular. ✅ Feita em 2026-11-03
 23. Revisão de prontidão para produção, com os seis temas, os [limites conhecidos](#limites-conhecidos) e a decisão do domínio (Q-N1).
 24. Beta fechado.
 
@@ -161,9 +161,7 @@ de referência; uma mensagem apagada propositalmente de um relay de teste é det
 - ⬜ Medição de todas as metas de desempenho e dados no aparelho de referência (seções 2 e 3 do
   [04](04-requisitos-nao-funcionais.md)). Item 20.
 - ✅ Revisão de textos para linguagem simples (RNF-64). Item 21, feito em 2026-11-02.
-- 🟡 Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (RNF-60..63). Item 22. Feito em 2026-10-30: o e2e `textos`
-  passa o axe-core em todas as telas (tema escuro só o contraste) e falha com qualquer achado. Falta o manual: TalkBack
-  no celular, fonte do sistema a 200% (RNF-62) e alvos de 48 dp (RNF-63; o axe só exige 24 px).
+- ✅ Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (RNF-60..63). Item 22, feito em 2026-11-03.
 - ⬜ Correção dos problemas encontrados; *Could* (RF-02, 26) só se sobrar tempo.
 
 **Pronto quando:** as metas de desempenho são atingidas ou têm justificativa documentada; o fluxo de primeiro uso leva

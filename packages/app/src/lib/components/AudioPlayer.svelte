@@ -115,7 +115,7 @@
 	/>
 	<span class="time">{fmt(phase === 'parado' ? Math.max(0, total - skip) : Math.max(0, current - skip))}</span>
 	<!-- o nome contém o que aparece ("1,5x"), para quem comanda por voz (WCAG 2.5.3) -->
-	<button class="speed" onclick={cycleSpeed} aria-label={m.audio_velocidade({ velocidade: speedText })}>{speedText}</button>
+	<button class="speed touch" onclick={cycleSpeed} aria-label={m.audio_velocidade({ velocidade: speedText })}>{speedText}</button>
 	<audio
 		bind:this={audio}
 		onplay={() => (claimPlayback(audio!), (phase = 'tocando'), followPlayback())}
@@ -143,9 +143,10 @@
 		gap: 0.5rem;
 		min-width: 220px;
 	}
+	/* alvos de toque de 48 px (RNF-63) */
 	.play {
-		width: 2.5rem;
-		height: 2.5rem;
+		width: 3rem;
+		height: 3rem;
 		border-radius: 50%;
 		padding: 0;
 		flex-shrink: 0;
@@ -158,7 +159,7 @@
 	/* barra própria: trilho cinza, parte tocada na cor do app, bolinha que cresce ao tocar */
 	input[type='range'] {
 		flex: 1;
-		height: 1.4rem;
+		height: 3rem;
 		padding: 0;
 		border: none;
 		background: transparent;

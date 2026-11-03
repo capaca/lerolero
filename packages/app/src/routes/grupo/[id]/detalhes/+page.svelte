@@ -245,10 +245,14 @@
 		text-align: left;
 		margin-top: 1rem;
 	}
+	/* alvo de toque de 48 px (RNF-63) sem engordar a linha do nome */
 	.icon {
 		display: grid;
 		place-items: center;
-		padding: 0.4rem;
+		width: 3rem;
+		height: 3rem;
+		margin: -0.5rem 0;
+		padding: 0;
 		border: none;
 		background: none;
 		color: var(--muted);

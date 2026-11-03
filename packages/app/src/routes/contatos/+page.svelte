@@ -253,6 +253,7 @@
 	.spam summary {
 		cursor: pointer;
 		font-weight: 600;
-		padding: 0.6rem 0;
+		/* alvo de toque de 48 px (RNF-63) */
+		padding: 0.75rem 0;
 	}
 </style>

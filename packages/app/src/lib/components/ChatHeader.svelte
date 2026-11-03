@@ -31,9 +31,13 @@
 	header a {
 		text-decoration: none;
 	}
+	/* alvo de toque de 48 px (RNF-63) sem engordar o cabeçalho */
 	.back {
 		display: grid;
 		place-items: center;
+		width: 3rem;
+		height: 3rem;
+		margin: -0.5rem -0.8rem -0.5rem -1rem;
 		color: var(--fg);
 	}
 	.who {
@@ -41,6 +45,9 @@
 		align-items: center;
 		gap: 0.6rem;
 		min-width: 0;
+		/* alvo de toque de 48 px (RNF-63) sem engordar o cabeçalho */
+		min-height: 3rem;
+		margin: -0.5rem 0;
 	}
 	.text {
 		display: flex;
