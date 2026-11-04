@@ -58,7 +58,7 @@ Como os usuários espalham suas mensagens por vários relays independentes, **ne
 | T3 | Relay lê o conteúdo | Criptografia ponta a ponta | MVP |
 | T4 | Relay apaga ou deixa de entregar mensagens | Publicar em vários relays (3 a 5); detecção de perda (Visão, Q10) | MVP |
 | T5 | Relay monta o mapa de quem fala com quem | Ocultar o remetente (se o protocolo permitir); espalhar por vários relays. Risco residual aceito | MVP |
-| T6 | Serviço de push vê conteúdo | Push sem conteúdo, só "acorde" | Android nativo |
+| T6 | Serviço de push vê conteúdo | No PWA, aviso cifrado só para o navegador de quem recebe (RFC 8291), com no máximo o nome de quem mandou e nunca o conteúdo; no nativo, push sem conteúdo, só "acorde" | MVP (PWA, [ADR-0010](adr/0010-web-push-no-pwa.md)) + Android nativo |
 | T7 | Spam em massa de desconhecidos | **Pedidos de mensagem:** desconhecidos vão para uma caixa separada, sem notificação e sem carregar links ou mídia até o usuário aceitar | MVP |
 | T8 | Spam automatizado em grande volume | **Custo para enviar:** prova de trabalho (NIP-13) no que vai para quem ainda não me escreveu; o que chega sem ela de quem não é contato fica em "Possível spam", sem aviso. Limite (2026-10-29): 14 bits custam ~0,2 s num celular, mas milissegundos num servidor; a prova encarece o spam barato e em massa, e a defesa principal segue sendo a caixa de Pedidos. Risco aceito (2026-10-29): esse spam ainda ocupa espaço no aparelho (com limite de quantos guardar), em troca de não perder mensagem de quem usa versão antiga ou outro app | MVP |
 | T9 | Golpe do falso parente (golpista usa nome e foto de um conhecido) | Pedidos de mensagem (T7) já separam o desconhecido; a foto de perfil de quem mandou pedido só aparece depois de aceito (decidido em 2026-10-29) e o nome que dei ao contato vence o do cartão (RF-14). Mais mecanismos em estudo (Q-A4) | MVP + futuro |
@@ -75,6 +75,8 @@ Como os usuários espalham suas mensagens por vários relays independentes, **ne
 | T20 | Um contato manda pedidos de reenvio sem parar para fazer o meu aparelho publicar de novo (gasto de dados e de bateria) | O reenvio é só do que o pedido cita, a quem estava na mensagem, no máximo uma vez por hora para cada pessoa e mensagem, e no máximo 50 números por pedido (docs/06 §3.5). Bloquear o contato encerra | MVP |
 | T21 | O arquivo ou o cartão de recuperação (D2, [ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)) cai na mão de outra pessoa: enviado por engano, conta Google ou Apple invadida, papel achado | **Risco aceito** com o arquivo em texto aberto (decidido em 2026-10-29): o arquivo e o cartão começam com o aviso de não mandar a ninguém; o compartilhar sugere salvar em Arquivos ou no Drive, não numa conversa; o link de restauração leva as palavras no fragmento (`#`), que o navegador não manda ao servidor, e a tela de restauração o tira do endereço assim que abre | MVP |
 | T22 | Arquivo malicioso enviado por contato: executável, página HTML ou SVG com script, nome disfarçado (`foto` + inversão de texto + `gpj.exe`, `nota.pdf.exe`), tipo falso, arquivo enorme para gastar dados. Um cliente modificado ignora qualquer regra de quem envia | O app nunca abre arquivo: só baixa sob demanda e salva. Lista de extensões e tipos bloqueados vale ao enviar e ao receber (`media/file.ts`, decidido em 2026-10-30; rejeitados: só avisar, porque leigos confirmam sem ler, e bloquear só no envio). O nome é limpo dos dois lados; bloqueado não baixa nem salva; acima de 20 MB também não. **Risco aceito:** documento com macro (`.docm`, `.xlsm`) e `.zip` passam, e a lista não cobre tudo: quem salva e abre fora do app depende do sistema | MVP |
+| T23 | Repassador de Web Push usado como proxy aberto, ou derrubado por excesso de pedidos | Só encaminha para os serviços de push conhecidos, com limite de pedidos; sem estado nem credencial, então cair só tira o aviso, não a mensagem ([ADR-0010](adr/0010-web-push-no-pwa.md)) | MVP |
+| T24 | Contato manda avisos sem parar, ou quem foi bloqueado continua acordando a pessoa | Bloquear gera chaves VAPID e inscrição novas, com o cartão de perfil atualizado só aos contatos que ficaram; o endereço de push só vai a contatos ([ADR-0010](adr/0010-web-push-no-pwa.md)) | MVP |
 
 ## Decisões tomadas nesta etapa
 
@@ -94,7 +96,9 @@ Como os usuários espalham suas mensagens por vários relays independentes, **ne
 | Relays veem quem recebe mensagens, quando e o IP | Esconder isso exigiria onion routing (mais dados, mais lento), o que conflita com celular simples e rede ruim |
 | Sem forward secrecy no MVP | Simplifica muito o início; o público-alvo não exige proteção de nível ativista |
 | Perda de mensagens no modo Pausar | Por design, para não sobrecarregar os relays (Visão) |
-| Serviços de push veem que algo chegou | Inevitável no iOS e no PWA; no Android nativo o UnifiedPush reduz essa exposição |
+| Serviços de push veem que algo chegou | Inevitável no iOS e no PWA; no Android nativo o UnifiedPush reduz essa exposição. No PWA só vale para quem ativa as notificações (2026-11-04) |
+| O repassador de Web Push vê o IP de quem manda o aviso e o endereço de push de quem recebe | Sem ele o Chrome não envia (CORS do FCM); não vê o conteúdo nem as chaves Nostr e não guarda nada (decidido em 2026-11-04, [ADR-0010](adr/0010-web-push-no-pwa.md)) |
+| Com o celular parado, o aviso pode ficar retido até o desbloqueio | Medido no Motorola em 2026-11-02, mesmo com `Urgency: high`; para o beta, ainda melhor do que lembrar de abrir o app. Rever com o retorno do beta (app nativo com FCM) |
 
 ## Requisitos para o protocolo (entrada para o ADR-0001)
 

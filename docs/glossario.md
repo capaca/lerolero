@@ -32,9 +32,12 @@
 | **Prova de trabalho** | Pequeno cálculo obrigatório antes de enviar, que encarece o spam em massa (NIP-13) |
 | **PWA** | *Progressive Web App*: site que pode ser instalado e funciona como app |
 | **Relay** | Servidor Nostr que recebe, guarda temporariamente e repassa eventos |
+| **Repassador** | Servidor mínimo do projeto que só encaminha ao serviço de push o aviso já cifrado e assinado pelo app de quem manda; não guarda nada ([ADR-0010](adr/0010-web-push-no-pwa.md)) |
 | **Svelte** | Framework de interface que gera código pequeno e rápido |
 | **Tauri** | Ferramenta que empacota um app web como app de desktop leve, com código nativo em Rust |
 | **UnifiedPush** | Padrão aberto de notificações no Android, sem depender do Google; o usuário escolhe o distribuidor (ex.: ntfy) |
+| **VAPID** | Par de chaves que assina os pedidos de Web Push; no Lero-lero, cada pessoa tem o seu, entregue só aos contatos no cartão de perfil |
 | **WCAG** | Diretrizes internacionais de acessibilidade para conteúdo web |
+| **Web Push** | Padrão de notificações do navegador: o serviço de push do navegador (Google, Mozilla, Apple) acorda o service worker do app com um aviso cifrado |
 | **Web Worker** | Thread separada do navegador, usada para tarefas pesadas sem travar a interface |
 | **WebSocket** | Conexão contínua entre o app e o relay, usada para enviar e receber eventos em tempo real |
