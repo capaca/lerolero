@@ -59,6 +59,13 @@ Workers**, no plano gratuito (100 mil pedidos por dia), com deploy pela CI (deci
 Deploy, por limites menos previsíveis, e funções da Netlify ou da Vercel, pensadas para um site inteiro e mais lentas
 na primeira chamada).
 
+No repassador (decidido em 2026-11-04, `packages/repassador`): **120 pedidos por minuto por IP**, que cabe a rajada
+de uma mensagem num grupo grande (rejeitados 60, que perderia avisos em grupo com mensagens seguidas, e 300, que
+protege menos o limite diário); **só as origens do app** (produção; na homologação também localhost e a rede local),
+para outro site não usá-lo pelo navegador dos visitantes (rejeitado aceitar qualquer origem, que serviria a forks em
+outros domínios). Um worker para a homologação, a cada merge, e outro para a produção, na release; conta da
+Cloudflare que o Pedro já usa em outro projeto.
+
 Aceito: com o celular parado, o aviso pode ficar retido até o desbloqueio. Para o beta, ainda é melhor do que lembrar
 de abrir o app.
 

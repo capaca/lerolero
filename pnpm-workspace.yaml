@@ -2,3 +2,9 @@ packages:
   - packages/*
 
 engineStrict: true
+
+# esbuild e workerd (do wrangler, no repassador) funcionam pelos binários dos pacotes de cada plataforma;
+# o script de instalação deles só confere o binário
+allowBuilds:
+  esbuild: false
+  workerd: false

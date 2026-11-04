@@ -116,8 +116,30 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
+  # o repassador de push (ADR-0010) do mesmo commit, no Cloudflare Workers da produção
+  repassador:
+    needs: montar
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.montar.outputs.commit }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @lerolero/repassador
+      - name: Publica na produção
+        working-directory: packages/repassador
+        run: pnpm deploy:producao
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   registrar:
-    needs: [montar, publicar]
+    needs: [montar, publicar, repassador]
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -5,6 +5,23 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-04: repassador de Web Push (item 25, etapa 1)
+
+- `packages/repassador`, um Cloudflare Worker sem estado que recebe do app o aviso já cifrado e o JWT VAPID e só faz
+  o POST no serviço de push, devolvendo o status dele (410 = inscrição cancelada). Confere cada campo: destino em
+  https num dos serviços conhecidos (FCM, Mozilla, Apple, Windows), sem porta, usuário nem redirecionamento; TTL até
+  28 dias; `Urgency`; o formato do `Authorization`; aviso de até 4096 bytes.
+- Decisões do Pedro: 120 pedidos por minuto por IP (o binding de rate limit gratuito do Workers; rejeitados 60 e
+  300) e só as origens do app (rejeitado aceitar qualquer origem). A homologação aceita também localhost e a rede
+  local, para o dev e o `celular.sh`. Conta da Cloudflare: a que o Pedro já usa em outro projeto.
+- Deploy pela CI: `repassador.yml` publica o worker da homologação a cada merge que muda a pasta; a release publica o
+  da produção com o mesmo commit validado. Logs do Workers desligados, para o IP e o endereço de push não ficarem
+  guardados.
+- Achado no caminho: o runtime do Workers recusa qualquer export que não seja handler no arquivo de entrada (o
+  `wrangler dev` falhou com `BODY_MAX_BYTES`), então a lógica ficou em `repassador.ts` e a entrada em `index.ts`. O
+  `pnpm check` do pacote roda o `wrangler deploy --dry-run` dos dois ambientes para pegar erro de configuração na CI.
+- Conferido localmente no `workerd`: o pedido chega ao FCM de verdade e o limite corta no 121º pedido do minuto.
+
 ## 2026-11-03: acessibilidade manual, com alvos de toque de 48 px
 
 - Item 22, parte manual. O e2e `textos` passou a medir, em cada tela, todo elemento tocável menor que 48 px
