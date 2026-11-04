@@ -1,6 +1,8 @@
 # Protótipo: notificações por Web Push no PWA
 
-Plano registrado em 2026-11-02; as páginas ficaram prontas no mesmo dia. Falta a medição no Motorola.
+Plano registrado em 2026-11-02; as páginas ficaram prontas no mesmo dia. Medido no computador e no Motorola em
+2026-11-02. **Decidido em 2026-11-04** ([ADR-0010](../../docs/adr/0010-web-push-no-pwa.md)): Web Push no app antes do
+beta, com um repassador mínimo; item 25 do roadmap.
 
 Mede, num aparelho de verdade, se o PWA instalado recebe um aviso de mensagem nova com o app fechado, enviado direto
 pelo navegador de quem manda, sem servidor do projeto. O resultado decide se o PWA ganha notificações antes do beta
@@ -118,11 +120,11 @@ Leitura: acordado, chega em segundos; parado, nesta medição **o aviso ficou re
 recebimento bate com a hora em que o Pedro pegou o celular, não com a do envio. Com isso, sozinho, o Web Push no PWA
 não avisa de uma mensagem com o celular no bolso, que é o que importa no beta.
 
-Falta, antes de decidir:
+A bateria do Chrome no Motorola estava em "Otimizado". O Pedro decidiu em 2026-11-04 sem os testes abaixo, que ficam
+como referência se o beta mostrar que o aviso retido não basta:
 
-1. A bateria do Chrome no Motorola (Configurações → Apps → Chrome → Bateria): "Otimizado" ou "Sem restrições"? Se
-   estiver otimizada, repetir com "Sem restrições" para saber se é a economia de bateria do fabricante (e se dá para
-   pedir isso a quem testa o beta).
+1. Repetir com a bateria do Chrome (Configurações → Apps → Chrome → Bateria) em "Sem restrições", para saber se é a
+   economia de bateria do fabricante (e se dá para pedir isso a quem testa o beta).
 2. Uma noite parada (Doze profundo garantido): avisos 1 h e 3 h depois com o `agendar.mjs`; de manhã, anotar a hora
    antes de desbloquear. Recebido perto do envio = chega dormindo; perto do desbloqueio = retido.
 3. Opcional: Firefox no Android (push da Mozilla), para comparar.

@@ -96,7 +96,7 @@ Princípios derivados do objetivo "alternativa brasileira às Big Techs". Servem
 
 ## Plataformas
 
-- **MVP:** Web/PWA (instalável, sem custo de lojas). Sem notificações em segundo plano: ao voltar para a aba ou abrir o app, ele reconecta aos relays e busca tudo o que chegou desde a última sincronização.
+- **MVP:** Web/PWA (instalável, sem custo de lojas). Ao voltar para a aba ou abrir o app, ele reconecta aos relays e busca tudo o que chegou desde a última sincronização. Desde 2026-11-04, notificações opcionais por Web Push, com o aviso enviado pelo app de quem manda ([ADR-0010](adr/0010-web-push-no-pwa.md)); antes, o MVP não teria notificação em segundo plano.
 - **Prioridade seguinte:** Android nativo (plataforma principal, ver princípio 10) e desktop nativo (Windows, macOS, Linux), ambos reaproveitando o código web (ex.: Capacitor no Android, Tauri no desktop).
 - **Futuro:** iOS.
 

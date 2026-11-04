@@ -116,7 +116,7 @@
 |---|---|---|---|
 | RF-80 | Ao abrir o app ou voltar para a aba, reconectar aos relays e buscar tudo o que chegou desde a última sincronização | Must | MVP |
 | RF-81 | Enquanto o app está aberto, receber mensagens em tempo real | Must | MVP |
-| RF-82 | Notificações com o app fechado | — | v1 (Android: UnifiedPush; desktop: conexão própria) |
+| RF-82 | Notificações com o app fechado: opcional, ativadas em Ajustes; o aviso diz no máximo de quem é a mensagem, nunca o conteúdo; tocar abre a conversa; só de contatos aceitos (RF-12) | Should | MVP: Web Push ([ADR-0010](adr/0010-web-push-no-pwa.md), 2026-11-04); v1: Android com UnifiedPush, desktop com conexão própria |
 
 ## 10. Antispam
 

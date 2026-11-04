@@ -10,7 +10,7 @@ caminho) está no [histórico de entregas](historico.md).
 
 - **Feito:** M0 (menos uma espera: o aparelho de 2 GB), M1, M2 e M3 inteiros; do M4,
   tudo menos a passkey, adiada para depois do beta.
-- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 17).
+- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 25: o item 20 espera o aparelho).
 - **Em produção:** https://capaca.github.io/lerolero/; homologação em https://lerolero-app.github.io/lerolero/.
 
 ## Premissas
@@ -30,7 +30,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; arquivos (item 18) e botão de emojis (item 19) feitos em 2026-11-02 |
 | M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo e gerenciador de senhas feitos; passkey (item 15) adiada para depois do beta |
-| M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade feita (item 22); linguagem simples feita (item 21); a fazer: item 20 |
+| M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade feita (item 22); linguagem simples feita (item 21); a fazer: notificações (item 25) e item 20 |
 | Revisão de prontidão | — | A fazer, antes do beta: item 23 |
 | Beta fechado | 6 sem de uso | A fazer: item 24 |
 | v1 Android + desktop | 26 sem | Depois do beta |
@@ -68,6 +68,7 @@ do WhatsApp.
 20. Medição no aparelho de referência de 2 GB (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Depende de haver o aparelho.
 21. Revisão dos textos para linguagem simples (M5; RNF-64). ✅ Feita em 2026-11-02
 22. Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (M5; RNF-60..63): axe-core e alvos de 48 dp em todas as telas no e2e `textos`; TalkBack e fonte a 200% conferidos no celular. ✅ Feita em 2026-11-03
+25. Notificações por Web Push no PWA (M5; RF-82, Q-M2, [ADR-0010](adr/0010-web-push-no-pwa.md)): decidido em 2026-11-04, antes do beta; o número 25 é para não renumerar os outros. Em três etapas, cada uma com o seu PR: (1) o repassador mínimo, sem estado, só para os serviços de push conhecidos e com limite de pedidos, no Cloudflare Workers gratuito (escolhido em 2026-11-04); (2) no core, chave VAPID por pessoa, inscrição no cartão de perfil, cifra do aviso (RFC 8291) e envio depois de cada mensagem (1:1, grupo, fila offline), com chaves novas ao bloquear; (3) no app, "Notificações" em Ajustes, o service worker que mostra "Mensagem de <nome>" e abre a conversa ao tocar, e o e2e.
 23. Revisão de prontidão para produção, com os seis temas, os [limites conhecidos](#limites-conhecidos) e a decisão do domínio (Q-N1).
 24. Beta fechado.
 
@@ -162,6 +163,7 @@ de referência; uma mensagem apagada propositalmente de um relay de teste é det
   [04](04-requisitos-nao-funcionais.md)). Item 20.
 - ✅ Revisão de textos para linguagem simples (RNF-64). Item 21, feito em 2026-11-02.
 - ✅ Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (RNF-60..63). Item 22, feito em 2026-11-03.
+- ⬜ Notificações por Web Push no PWA (RF-82, [ADR-0010](adr/0010-web-push-no-pwa.md)). Item 25, decidido em 2026-11-04.
 - ⬜ Correção dos problemas encontrados; *Could* (RF-02, 26) só se sobrar tempo.
 
 **Pronto quando:** as metas de desempenho são atingidas ou têm justificativa documentada; o fluxo de primeiro uso leva
@@ -203,15 +205,7 @@ Registrados a pedido do Pedro; entram na ordem quando ele decidir.
 - **Baixar a foto sozinha** (2026-10-28). A prévia de 96 px esticada no balão ainda fica borrada; o que resolve de vez
   é baixar a foto sem toque, como o WhatsApp, mas isso gasta dados e mostra o IP a quem não é contato (T7). Proposta:
   só de contatos aceitos e talvez só no Wi-Fi.
-- **Notificações no PWA por Web Push** (2026-11-02; Q-M2). Sem elas, quem testa o beta precisa lembrar de abrir o app.
-  Começa por um protótipo de 2 a 3 dias que mede, no Motorola, se o aviso enviado direto pelo navegador do remetente
-  (cada pessoa com a própria chave VAPID, no cartão de perfil) chega com o PWA fechado; se chegar, ~1 a 1,5 semana no
-  app, antes do beta. Plano e alternativas (FCM no app nativo, UnifiedPush, sincronização periódica) em
-  [prototipos/push](../prototipos/push/README.md). Primeira medição, no computador (2026-11-02): o FCM do Chrome
-  recusa o CORS, então o envio direto do navegador não passa no Chrome (passaria no Firefox); pelo `curl`, o mesmo
-  aviso chegou (em 0,6 s e em 25 s, em duas rodadas). No Motorola (2026-11-02), com o app fechado: 3,9 s com o
-  celular na mão, mas com ele parado o aviso ficou retido até o Pedro pegá-lo (até 5,9 min). Falta a bateria do Chrome
-  sem restrições e uma noite parada.
+- ~~**Notificações no PWA por Web Push** (2026-11-02; Q-M2).~~ Entrou na ordem em 2026-11-04 como item 25 ([ADR-0010](adr/0010-web-push-no-pwa.md)); medições em [prototipos/push](../prototipos/push/README.md).
 - **Câmera na hora** para fotos (hoje só a galeria).
 - **Ajustar o recorte da foto de perfil** (RF-02; 2026-10-29). Hoje o app usa o quadrado do meio da foto escolhida.
   Tela para arrastar e aproximar antes de salvar, como no WhatsApp.
@@ -312,7 +306,7 @@ a Q-N7 (custo zero × servidor de referência) e a Q-N8 (teto de usuários); as 
 | # | Questão | Responsável |
 |---|---|---|
 | Q-M1 | Refazer as estimativas e a projeção de datas com base no ritmo real | Pedro |
-| Q-M2 | Notificações antes do beta? O [ADR-0005](adr/0005-notificacoes.md) deixa o PWA sem notificação; o protótipo [prototipos/push](../prototipos/push/README.md) mede se o Web Push enviado pelo remetente, sem servidor, funciona no PWA instalado. No computador, o FCM do Chrome já recusou o CORS (2026-11-02), o que puxa para o repassador mínimo se o aviso chegar com o celular dormindo; no Motorola, com ele parado, o aviso ficou retido até o desbloqueio (falta testar a bateria do Chrome sem restrições e uma noite parada). O resultado decide entre o PWA com Web Push, um repassador mínimo ou o app nativo | Pedro (ao executar o protótipo) |
+| Q-M2 | ✅ Notificações antes do beta? Decidido em 2026-11-04, sem o teste da noite: **Web Push no PWA com um repassador mínimo** ([ADR-0010](adr/0010-web-push-no-pwa.md), item 25), aceitando que, com o celular parado, o aviso fique retido até o desbloqueio (medido no Motorola, mesmo com `Urgency: high`). Rejeitados: nada antes do beta (depender de lembrar de abrir o app) e o app nativo com FCM (~2 semanas, gateway com credencial do Firebase, APK ou Play Store, duas versões). Medições em [prototipos/push](../prototipos/push/README.md) | Pedro |
 | Q-U2 | Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): ✅ o arquivo de recuperação fica em **texto aberto**, num `.txt` (decidido em 2026-10-29; ver a regra 4 do ADR). ✅ A D1 entra no Android (decidido em 2026-10-29, com a medição do protótipo `prototipos/senha` no Motorola: o aviso aparece no PWA instalado e a frase volta inteira), salvando por `PasswordCredential` e com o formulário que some de reserva (rejeitado: só o formulário, que depende de o navegador adivinhar o envio). Falta: medir no iPhone, quando houver um aparelho. | Pedro (ao implementar o item 14) |
 
 Resolvidas: Q-I1 (internacionalização, 2026-10-27, [ADR-0008](adr/0008-internacionalizacao.md)) e Q-U1 (cadastro sem a

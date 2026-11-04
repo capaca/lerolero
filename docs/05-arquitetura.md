@@ -25,11 +25,13 @@ flowchart LR
     Relays["Relays Nostr<br/>(públicos + brasileiros)"]
     Blossom["Servidores Blossom<br/>(mídia cifrada)"]
     UP["Distribuidores UnifiedPush<br/>(v1, Android)"]
+    Rep["Repassador de Web Push<br/>(PWA, sem estado)"]
     Static["Hospedagem estática<br/>(PWA + lista de relays)"]
   end
 
   Core <-->|WebSocket/TLS| Relays
   Core <-->|HTTPS| Blossom
+  Core -->|HTTPS, aviso cifrado| Rep
   Plat <-.->|v1| UP
   UI -.->|carrega o app| Static
 ```
@@ -42,7 +44,8 @@ flowchart LR
 | [0002](adr/0002-stack-do-cliente.md) | Stack: **TypeScript + Svelte**, núcleo independente da interface; Capacitor (Android) e Tauri/Rust (desktop) na v1 |
 | [0003](adr/0003-armazenamento-local.md) | Armazenamento local: **IndexedDB (Dexie)** atrás de uma interface própria |
 | [0004](adr/0004-midia.md) | Mídia: cifrada no aparelho, guardada em **Blossom**, deduplicada pelo hash |
-| [0005](adr/0005-notificacoes.md) | Notificações: nenhuma no PWA; **UnifiedPush** no Android; conexão própria no desktop |
+| [0005](adr/0005-notificacoes.md) | Notificações: **UnifiedPush** no Android; conexão própria no desktop |
+| [0010](adr/0010-web-push-no-pwa.md) | Notificações no PWA: **Web Push** enviado pelo app do remetente, chave VAPID por pessoa, repassador mínimo |
 | [0008](adr/0008-internacionalizacao.md) | Textos: **Paraglide JS** na interface, pt-BR como base; o núcleo devolve códigos, nunca texto de interface |
 
 ## Componentes
@@ -81,11 +84,11 @@ Pontos onde PWA, Android e desktop se comportam de forma diferente, atrás de in
 
 | Adaptador | PWA (MVP) | Android (v1) | Desktop (v1) |
 |---|---|---|---|
-| Notificações | Nenhuma em segundo plano | UnifiedPush | Conexão própria + notificação do sistema |
+| Notificações | Web Push pelo repassador ([ADR-0010](adr/0010-web-push-no-pwa.md)) | UnifiedPush | Conexão própria + notificação do sistema |
 | Cofre de chaves | Chave cifrada com PIN no IndexedDB | Android Keystore | Keychain / Credential Manager / Secret Service |
 | Câmera (QR) | API do navegador | Plugin Capacitor | API do sistema |
 | Galeria / arquivos | Download do navegador | Galeria do Android | Sistema de arquivos |
-| Ciclo de vida | `visibilitychange` → sincronizar | Push → acordar → sincronizar | Sempre conectado (bandeja) |
+| Ciclo de vida | `visibilitychange` → sincronizar; push → notificação | Push → acordar → sincronizar | Sempre conectado (bandeja) |
 
 ## Peças externas
 
@@ -94,6 +97,7 @@ Pontos onde PWA, Android e desktop se comportam de forma diferente, atrás de in
 | Relays Nostr | Guardar e repassar mensagens cifradas (7 dias) | Operadores públicos; meta: voluntários brasileiros | Zero |
 | Servidores Blossom | Guardar mídia cifrada | Operadores públicos; meta: voluntários brasileiros | Zero |
 | Distribuidores UnifiedPush (v1) | Acordar o app Android | Voluntários brasileiros (ex.: ntfy) | Zero |
+| Repassador de Web Push | Encaminhar ao serviço de push o aviso já cifrado e assinado pelo remetente (o FCM do Chrome recusa o CORS); só para serviços de push conhecidos, sem guardar nada ([ADR-0010](adr/0010-web-push-no-pwa.md)) | O projeto, no plano gratuito do Cloudflare Workers | Zero |
 | Hospedagem estática | Servir o PWA e a **lista padrão de relays/Blossom** | GitHub Pages ou Cloudflare Pages | Zero |
 
 **Lista padrão de relays (RNF-36):** um arquivo JSON publicado junto com o PWA e também embutido no app como reserva. O app usa a versão mais nova que conseguir obter, e o usuário avançado pode editar a sua. Isso evita que o site de hospedagem vire um ponto único de falha.
