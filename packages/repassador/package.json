@@ -1,0 +1,19 @@
+{
+	"name": "@lerolero/repassador",
+	"version": "0.0.0",
+	"private": true,
+	"license": "AGPL-3.0-or-later",
+	"type": "module",
+	"scripts": {
+		"check": "tsc --noEmit && wrangler deploy --dry-run --env \"\" --outdir \"${TMPDIR:-/tmp}/lerolero-repassador\" > /dev/null && wrangler deploy --dry-run --env homologacao --outdir \"${TMPDIR:-/tmp}/lerolero-repassador\" > /dev/null",
+		"test": "vitest run",
+		"dev": "wrangler dev --env homologacao",
+		"deploy:homologacao": "wrangler deploy --env homologacao",
+		"deploy:producao": "wrangler deploy --env \"\""
+	},
+	"devDependencies": {
+		"typescript": "6.0.3",
+		"vitest": "5.0.3",
+		"wrangler": "4.151.3"
+	}
+}

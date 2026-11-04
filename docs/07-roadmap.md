@@ -68,7 +68,7 @@ do WhatsApp.
 20. Medição no aparelho de referência de 2 GB (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Depende de haver o aparelho.
 21. Revisão dos textos para linguagem simples (M5; RNF-64). ✅ Feita em 2026-11-02
 22. Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (M5; RNF-60..63): axe-core e alvos de 48 dp em todas as telas no e2e `textos`; TalkBack e fonte a 200% conferidos no celular. ✅ Feita em 2026-11-03
-25. Notificações por Web Push no PWA (M5; RF-82, Q-M2, [ADR-0010](adr/0010-web-push-no-pwa.md)): decidido em 2026-11-04, antes do beta; o número 25 é para não renumerar os outros. Em três etapas, cada uma com o seu PR: (1) o repassador mínimo, sem estado, só para os serviços de push conhecidos e com limite de pedidos, no Cloudflare Workers gratuito (escolhido em 2026-11-04); (2) no core, chave VAPID por pessoa, inscrição no cartão de perfil, cifra do aviso (RFC 8291) e envio depois de cada mensagem (1:1, grupo, fila offline), com chaves novas ao bloquear; (3) no app, "Notificações" em Ajustes, o service worker que mostra "Mensagem de <nome>" e abre a conversa ao tocar, e o e2e.
+25. Notificações por Web Push no PWA (M5; RF-82, Q-M2, [ADR-0010](adr/0010-web-push-no-pwa.md)): decidido em 2026-11-04, antes do beta; o número 25 é para não renumerar os outros. Em três etapas, cada uma com o seu PR: (1) o repassador mínimo, sem estado, só para os serviços de push conhecidos e com limite de pedidos, no Cloudflare Workers gratuito (escolhido em 2026-11-04; feita em 2026-11-04, `packages/repassador`, 120 pedidos por minuto por IP e só as origens do app); (2) no core, chave VAPID por pessoa, inscrição no cartão de perfil, cifra do aviso (RFC 8291) e envio depois de cada mensagem (1:1, grupo, fila offline), com chaves novas ao bloquear; (3) no app, "Notificações" em Ajustes, o service worker que mostra "Mensagem de <nome>" e abre a conversa ao tocar, e o e2e.
 23. Revisão de prontidão para produção, com os seis temas, os [limites conhecidos](#limites-conhecidos) e a decisão do domínio (Q-N1).
 24. Beta fechado.
 
@@ -163,7 +163,7 @@ de referência; uma mensagem apagada propositalmente de um relay de teste é det
   [04](04-requisitos-nao-funcionais.md)). Item 20.
 - ✅ Revisão de textos para linguagem simples (RNF-64). Item 21, feito em 2026-11-02.
 - ✅ Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (RNF-60..63). Item 22, feito em 2026-11-03.
-- ⬜ Notificações por Web Push no PWA (RF-82, [ADR-0010](adr/0010-web-push-no-pwa.md)). Item 25, decidido em 2026-11-04.
+- ⬜ Notificações por Web Push no PWA (RF-82, [ADR-0010](adr/0010-web-push-no-pwa.md)). Item 25, decidido em 2026-11-04; etapa 1 (repassador) feita em 2026-11-04.
 - ⬜ Correção dos problemas encontrados; *Could* (RF-02, 26) só se sobrar tempo.
 
 **Pronto quando:** as metas de desempenho são atingidas ou têm justificativa documentada; o fluxo de primeiro uso leva

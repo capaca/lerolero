@@ -1,0 +1,38 @@
+name: Repassador de push
+
+# Publica o repassador de Web Push (ADR-0010, packages/repassador) no Cloudflare Workers da homologação a cada merge
+# que muda a pasta. A produção sai só na release (release.yml), com o commit validado na homologação.
+# Secrets: CLOUDFLARE_API_TOKEN ("lerolero-repassador-ci": Workers Scripts Read e Write na conta, vence em 2027-11-04,
+# com aviso no situacao.sh e na agenda do Pedro) e CLOUDFLARE_ACCOUNT_ID.
+
+on:
+  push:
+    branches: [main]
+    paths: ['packages/repassador/**', 'pnpm-lock.yaml', '.github/workflows/repassador.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repassador-homologacao
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @lerolero/repassador
+      - name: Publica na homologação
+        working-directory: packages/repassador
+        run: pnpm deploy:homologacao
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -50,6 +50,15 @@ branch=$(git branch --show-current)
 alteracoes=$(git status --porcelain | wc -l | tr -d ' ')
 echo "Local:       $branch, $(git rev-list --count origin/main..HEAD) commit(s) à frente e $(git rev-list --count HEAD..origin/main) atrás da main, $alteracoes arquivo(s) alterado(s)"
 
+# Credenciais com prazo: avisa 30 dias antes de vencer, porque vencida só aparece quando o deploy falha.
+# Ao trocar uma, atualize a data aqui. CLOUDFLARE_API_TOKEN: deploy do repassador de push (ADR-0010).
+hoje=$(date +%Y-%m-%d)
+for credencial in "CLOUDFLARE_API_TOKEN 2027-11-04"; do
+	read -r nome vence <<< "$credencial"
+	aviso=$(date -j -v-30d -f %Y-%m-%d "$vence" +%Y-%m-%d 2>/dev/null || date -d "$vence -30 days" +%Y-%m-%d)
+	[[ ! "$hoje" < "$aviso" ]] && echo "Credencial:  $nome vence em $vence; crie outro token e troque o secret"
+done
+
 # Sessões paralelas usam as mesmas portas fixas (e2e na 4190, celular.sh na 5180).
 for porta in 4190 5180; do
 	lsof -iTCP:$porta -sTCP:LISTEN -t >/dev/null 2>&1 && echo "Porta $porta ocupada (outra sessão?)"
