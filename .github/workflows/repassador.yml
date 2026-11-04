@@ -2,7 +2,8 @@ name: Repassador de push
 
 # Publica o repassador de Web Push (ADR-0010, packages/repassador) no Cloudflare Workers da homologação a cada merge
 # que muda a pasta. A produção sai só na release (release.yml), com o commit validado na homologação.
-# Secrets: CLOUDFLARE_API_TOKEN (permissão "Workers Scripts: Edit" só nesta conta) e CLOUDFLARE_ACCOUNT_ID.
+# Secrets: CLOUDFLARE_API_TOKEN ("lerolero-repassador-ci": Workers Scripts Read e Write na conta, vence em 2027-11-04,
+# com aviso no situacao.sh e na agenda do Pedro) e CLOUDFLARE_ACCOUNT_ID.
 
 on:
   push:
