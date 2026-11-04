@@ -5,6 +5,25 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-03: acessibilidade manual, com alvos de toque de 48 px
+
+- Item 22, parte manual. O e2e `textos` passou a medir, em cada tela, todo elemento tocável menor que 48 px
+  (RNF-63; o axe-core só exige 24). Na primeira rodada achou uns 30: a barra "Voltar" do topo com 24 px de altura, a
+  seta e o nome no cabeçalho da conversa, os botões do campo de mensagem (40 px), o tocador de áudio, as bolinhas do
+  PIN, a grade de emojis, links sozinhos na linha, "Detalhes técnicos" e os rótulos das caixas de seleção.
+- Tudo foi para 3rem, que nunca fica abaixo de 48 px porque o tamanho da letra só aumenta a raiz. No cabeçalho e no
+  "Voltar", margem negativa para não engordar a tela. O chip de reação e a velocidade do áudio continuam pequenos na
+  tela, com uma área de toque invisível de 48 px em volta (classe `touch`), que o teste também conta.
+- Exceção decidida: os nove atalhos de grupo do seletor de emojis ficam com uns 41 px, porque não cabem numa linha
+  de celular, e rolar a lista chega ao mesmo grupo (o "controle equivalente" da WCAG 2.5.8). Rejeitados: rolagem lateral
+  dos atalhos, que esconderia grupos, e duas linhas, que tirariam espaço da grade.
+- Os botões do campo de mensagem cresceram de 40 para 48 px, então sobram uns 24 px a menos para o texto; o Pedro
+  achou aceitável no celular.
+- O Pedro conferiu no Motorola o TalkBack (PIN, lista, conversa, texto e áudio, menu da mensagem, reações, Ajustes) e
+  a fonte do sistema no máximo com o zoom do Chrome a 200%, sem achados.
+- O teste da conversa no `textos` ganhou 2 minutos: com o axe nos dois temas e a medição em umas vinte telas, passava
+  de 60 s no Mac ocupado.
+
 ## 2026-11-02: mais espaço para o texto no campo de mensagem
 
 - Com o botão de emojis, o campo tinha quatro botões ao redor e sobravam uns 90 px para o texto num celular de

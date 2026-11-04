@@ -102,6 +102,7 @@
 	}
 	.forgot {
 		margin-top: 2.5rem;
-		padding: 0.6rem;
+		/* alvo de toque de 48 px (RNF-63) */
+		padding: 0.75rem;
 	}
 </style>

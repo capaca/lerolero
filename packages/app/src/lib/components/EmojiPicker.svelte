@@ -145,7 +145,8 @@
 	.shortcuts button {
 		flex: 1;
 		min-width: 0;
-		min-height: 2.75rem;
+		/* alvos de toque de 48 px (RNF-63) */
+		min-height: 3rem;
 		padding: 0;
 		border: none;
 		background: none;
@@ -169,10 +170,10 @@
 	}
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(2.75rem, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
 	}
 	.emoji {
-		min-height: 2.75rem;
+		min-height: 3rem;
 		padding: 0;
 		font-size: 1.6rem;
 		line-height: 1;

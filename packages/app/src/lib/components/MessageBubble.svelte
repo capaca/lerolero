@@ -217,7 +217,7 @@
 				{#each reactions as reaction (reaction.emoji)}
 					<button
 						type="button"
-						class="chip"
+						class="chip touch"
 						class:mine={reaction.mine}
 						aria-pressed={reaction.mine}
 						aria-label={m.reacao_chip({ emoji: reaction.emoji, count: reaction.count })}
@@ -448,6 +448,9 @@
 	.quote {
 		display: block;
 		width: 100%;
+		/* alvo de toque de 48 px (RNF-63), mesmo num balão estreito como o de um emoji só */
+		min-width: 3rem;
+		min-height: 3rem;
 		margin: 0 0 0.25rem;
 		padding: 0.2rem 0.5rem;
 		border: 0;

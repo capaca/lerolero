@@ -83,7 +83,7 @@
 			<Avatar name={session.identity?.displayName} publicKey={session.identity?.publicKey ?? ''} size={56} />
 			<div>
 				<p><Rich text={m.ajustes_nome({ nome: session.identity?.displayName ?? '' })} /></p>
-				<a href={resolve('/ajustes/perfil')}>{m.ajustes_editar_perfil()}</a>
+				<a class="block" href={resolve('/ajustes/perfil')}>{m.ajustes_editar_perfil()}</a>
 			</div>
 		</div>
 	</section>
@@ -243,7 +243,8 @@
 	.technical summary {
 		cursor: pointer;
 		font-weight: 600;
-		padding: 0.25rem 0;
+		/* alvo de toque de 48 px (RNF-63) */
+		padding: 0.75rem 0;
 	}
 	.technical h3 {
 		margin: 1.25rem 0 0.5rem;

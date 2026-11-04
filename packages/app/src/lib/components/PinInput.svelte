@@ -100,7 +100,8 @@
 	.dots {
 		display: flex;
 		gap: 1.1rem;
-		padding: 0.6rem 0.8rem;
+		/* 48 px de altura: o campo invisível por cima é o alvo de toque (RNF-63) */
+		padding: 1rem 0.8rem;
 	}
 	.dot {
 		width: 1rem;

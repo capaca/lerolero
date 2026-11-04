@@ -15,6 +15,9 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
+		/* alvo de toque de 48 px (RNF-63) sem afastar o título */
+		min-height: 3rem;
+		margin: -0.75rem 0;
 		text-decoration: none;
 		font-weight: 600;
 	}
