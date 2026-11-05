@@ -11,7 +11,8 @@
 	import { READ_RECEIPTS_KEY, session } from '#lib/session.svelte.ts';
 	import { FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
 	import { readTextSize, saveTextSize, type TextSize } from '#lib/text-size.ts';
-	import { NoServiceWorkerError, pushSupport, PushPermissionError } from '#lib/push-subscription.ts';
+	import { pushErrorMessage } from '#lib/push-offer.ts';
+	import { pushSupport } from '#lib/push-subscription.ts';
 
 	const npub = $derived(session.identity ? toNpub(session.identity.publicKey) : '');
 
@@ -61,14 +62,7 @@
 			await (want ? session.enablePush() : session.disablePush());
 		} catch (e) {
 			pushOn = !want;
-			pushError =
-				e instanceof NoServiceWorkerError
-					? m.ajustes_notificacoes_sem_suporte()
-					: !(e instanceof PushPermissionError)
-						? m.ajustes_notificacoes_erro()
-						: e.blocked
-							? m.ajustes_notificacoes_bloqueada()
-							: m.ajustes_notificacoes_negada();
+			pushError = pushErrorMessage(e);
 		} finally {
 			pushBusy = false;
 		}

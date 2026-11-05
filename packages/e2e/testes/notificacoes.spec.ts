@@ -79,7 +79,9 @@ test('com as notificações ativas, a mensagem gera um aviso só com o nome, e t
 	await expect.poll(() => registros.length).toBeGreaterThan(0);
 	await ana.page.goto('about:blank');
 	const { registrationId, scopeURL } = registros[0];
-	await cdp.send('ServiceWorker.deliverPushMessage', { origin: new URL(scopeURL).origin, registrationId, data: JSON.stringify(payload) });
+	const entregar = () =>
+		cdp.send('ServiceWorker.deliverPushMessage', { origin: new URL(scopeURL).origin, registrationId, data: JSON.stringify(payload) });
+	await entregar();
 	const worker = ana.page.context().serviceWorkers()[0] ?? (await ana.page.context().waitForEvent('serviceworker'));
 	type Mostrada = { title: string; body: string; url: string };
 	type ServiceWorkerGlobal = { registration: { getNotifications(): Promise<Notification[]> } };
@@ -87,7 +89,12 @@ test('com as notificações ativas, a mensagem gera um aviso só com o nome, e t
 		worker.evaluate(async () =>
 			(await (globalThis as unknown as ServiceWorkerGlobal).registration.getNotifications()).map((n) => ({ title: n.title, body: n.body, url: n.data?.url }) as Mostrada)
 		);
-	await expect.poll(mostradas).toEqual([{ title: 'Mensagem de Bia', body: 'Toque para abrir a conversa', url: `${scopeURL}conversa/${payload.de}` }]);
+	// a página que acabou de sair ainda pode contar como visível por um instante (sem notificação, de propósito):
+	// entrega de novo; a mesma etiqueta substitui a anterior
+	await expect(async () => {
+		if (!(await mostradas()).length) await entregar();
+		expect(await mostradas()).toEqual([{ title: 'Mensagem de Bia', body: 'Toque para abrir a conversa', url: `${scopeURL}conversa/${payload.de}` }]);
+	}).toPass({ timeout: 20_000 });
 
 	// tocar abre a conversa; passou o prazo da sessão aberta, então o PIN vem antes
 	await worker.evaluate(
@@ -113,3 +120,43 @@ test('com as notificações ativas, a mensagem gera um aviso só com o nome, e t
 	await expect.poll(() => enderecosNosCartoes(bia.page), { timeout: 30_000 }).toEqual([]);
 });
 
+
+test('o convite da tela inicial ativa as notificações, e "Agora não" o dispensa neste aparelho', async ({ novaPessoa }) => {
+	const [ana, bia] = await Promise.all([novaPessoa('Ana'), novaPessoa('Bia')]);
+	await adicionarUmAoOutro(ana, bia);
+	await enviarTexto(bia.page, 'oi, Ana');
+	await abrirConversaQuandoChegar(ana.page, 'Bia');
+	await simularInscricao(ana.page, (await fakePushDevice()).target);
+	// sem a permissão dada, o Chrome da suíte responde "bloqueada", e aí o convite não aparece
+	await bia.page.context().grantPermissions(['notifications']);
+
+	const convite = (page: Page) => page.getByRole('status').filter({ hasText: 'Quer ser avisado quando chegar mensagem?' });
+	for (const [page, outra] of [[ana.page, 'Bia'], [bia.page, 'Ana']] as const) {
+		await page.goto('./');
+		await expect(page.locator('.conversations a', { hasText: outra })).toBeVisible();
+		// o lembrete da frase vem antes: o convite espera ele sair da frente
+		const depois = page.getByRole('button', { name: 'Lembrar depois' });
+		await expect(depois.or(convite(page))).toBeVisible();
+		if (await depois.isVisible()) {
+			await expect(convite(page)).toBeHidden();
+			await depois.click();
+		}
+		await expect(convite(page)).toBeVisible();
+	}
+
+	await convite(ana.page).getByRole('button', { name: 'Ativar' }).click();
+	await expect(convite(ana.page)).toBeHidden();
+	await ana.page.goto('./ajustes');
+	await expect(ana.page.getByRole('checkbox', { name: 'Avisar quando chegar mensagem' })).toBeChecked();
+	await ana.page.goto('./');
+	await expect(ana.page.locator('.conversations a', { hasText: 'Bia' })).toBeVisible();
+	await expect(convite(ana.page)).toBeHidden();
+
+	await convite(bia.page).getByRole('button', { name: 'Agora não' }).click();
+	await expect(convite(bia.page)).toBeHidden();
+	await bia.page.reload();
+	await expect(bia.page.locator('.conversations a', { hasText: 'Ana' })).toBeVisible();
+	await expect(convite(bia.page)).toBeHidden();
+	await bia.page.goto('./ajustes');
+	await expect(bia.page.getByRole('checkbox', { name: 'Avisar quando chegar mensagem' })).not.toBeChecked();
+});

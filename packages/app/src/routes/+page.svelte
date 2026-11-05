@@ -12,6 +12,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { takePendingInvite } from '#lib/pending-invite.ts';
 	import { phraseReminderDue, snoozePhraseReminder } from '#lib/phrase-reminder.ts';
+	import { dismissPushOffer, pushErrorMessage, pushOfferDue } from '#lib/push-offer.ts';
 	import { highRiskOfDataLoss, isIOS } from '#lib/platform.ts';
 	import { session } from '#lib/session.svelte.ts';
 
@@ -98,7 +99,30 @@
 		contactCount = (await session.listContacts()).length;
 		showInstallWarning = highRiskOfDataLoss();
 		showPhraseReminder = await phraseReminderDue(contactCount);
+		pushOfferReady = await pushOfferDue();
 	});
+
+	// convite para as notificações (RF-82): depois da primeira conversa, e nunca junto do lembrete da frase
+	let pushOfferReady = $state(false);
+	let pushBusy = $state(false);
+	let pushError = $state('');
+	const showPushOffer = $derived(pushOfferReady && !!conversations?.length && !showPhraseReminder);
+	async function enablePush() {
+		pushBusy = true;
+		pushError = '';
+		try {
+			await session.enablePush();
+			pushOfferReady = false;
+		} catch (e) {
+			pushError = pushErrorMessage(e);
+		} finally {
+			pushBusy = false;
+		}
+	}
+	function notNow() {
+		dismissPushOffer();
+		pushOfferReady = false;
+	}
 
 	// lembrete do RF-04
 	async function snooze() {
@@ -140,6 +164,18 @@
 			<div class="actions">
 				<a href={resolve('/ajustes/protecao')}>{m.inicio_frase_guardar()}</a>
 				<button class="link" onclick={snooze}>{m.inicio_frase_depois()}</button>
+			</div>
+		</div>
+	{/if}
+
+	{#if showPushOffer}
+		<div class="banner" role="status">
+			<p><strong>{m.inicio_notificacoes_titulo()}</strong></p>
+			<p>{m.inicio_notificacoes_texto()}</p>
+			{#if pushError}<p role="alert">{pushError}</p>{/if}
+			<div class="actions">
+				<button onclick={enablePush} disabled={pushBusy}>{m.inicio_notificacoes_ativar()}</button>
+				<button class="link" onclick={notNow}>{m.inicio_notificacoes_agora_nao()}</button>
 			</div>
 		</div>
 	{/if}
