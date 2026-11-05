@@ -133,10 +133,18 @@ jobs:
       - run: pnpm install --frozen-lockfile --filter @lerolero/repassador
       - name: Publica na produção
         working-directory: packages/repassador
-        run: pnpm deploy:producao
+        # Espaço ou quebra de linha colados com o secret entram na URL da API. Suspeita do primeiro deploy (2026-11-04),
+        # em que o wrangler não achou o subdomínio workers.dev que a conta tem; já aconteceu com o HOMOLOG_TOKEN.
+        run: |
+          conta=$(printf %s "$CONTA" | tr -d '[:space:]')
+          token=$(printf %s "$TOKEN" | tr -d '[:space:]')
+          [ "${#conta}" = "${#CONTA}" ] || echo "::warning::O secret CLOUDFLARE_ACCOUNT_ID tinha espaços ou quebras de linha"
+          [ "${#token}" = "${#TOKEN}" ] || echo "::warning::O secret CLOUDFLARE_API_TOKEN tinha espaços ou quebras de linha"
+          [[ "$conta" =~ ^[0-9a-f]{32}$ ]] || { echo "::error::O secret CLOUDFLARE_ACCOUNT_ID não parece um Account ID (32 caracteres hexadecimais)"; exit 1; }
+          CLOUDFLARE_ACCOUNT_ID=$conta CLOUDFLARE_API_TOKEN=$token pnpm deploy:producao
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CONTA: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   registrar:
     needs: [montar, publicar, repassador]
