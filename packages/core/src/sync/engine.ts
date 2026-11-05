@@ -84,6 +84,16 @@ export type SyncOptions = {
 	canSend?: () => boolean;
 };
 
+type History = {
+	since: number;
+	/** quantos embrulhos e o mais antigo deles: o relay pode ter cortado no limite de resultados */
+	count: number;
+	oldest?: number;
+	/** o cursor que será gravado quando o histórico terminar */
+	newest?: number;
+	finishing?: boolean;
+};
+
 export class SyncEngine {
 	private readonly storage: Storage;
 	private readonly pool: RelayPool;
@@ -94,6 +104,8 @@ export class SyncEngine {
 	private lastQueuedAt = 0;
 	private subscription?: { close: () => void };
 	private cursors = new Map<string, number>();
+	/** a leitura do histórico em curso em cada relay; refeita a cada assinatura (reconexão) */
+	private histories = new Map<string, History>();
 	private flushing?: Promise<void>;
 	private retryTimer?: ReturnType<typeof setTimeout>;
 	/** processa um embrulho por vez: o mesmo pode chegar de dois relays ao mesmo tempo */
@@ -119,7 +131,10 @@ export class SyncEngine {
 		this.subscription = this.pool.subscribe(
 			relays,
 			(relay) => [this.filterFor(relay)],
-			(relay) => ({ onevent: (event) => this.receive(relay, event) })
+			(relay) => ({
+				onevent: (event) => this.receive(relay, event),
+				oneose: () => void this.finishHistory(relay)
+			})
 		);
 		void this.storage.seenWraps.prune(this.seconds() - SEEN_RETENTION_S);
 		void this.flush();
@@ -128,6 +143,7 @@ export class SyncEngine {
 	stop() {
 		this.subscription?.close();
 		this.subscription = undefined;
+		this.histories.clear();
 		clearTimeout(this.retryTimer);
 	}
 
@@ -171,21 +187,82 @@ export class SyncEngine {
 		return this.flushing;
 	}
 
+	/** Chamado a cada assinatura, inclusive na reconexão: começa uma leitura nova do histórico daquele relay. */
 	private filterFor(relay: string): Filter {
 		const cursor = this.cursors.get(relay);
 		const since = cursor !== undefined ? cursor - CURSOR_MARGIN_S : this.seconds() - FIRST_SYNC_WINDOW_S;
+		this.histories.set(relay, { since, count: 0 });
 		return { kinds: [1059], '#p': [this.myPublicKey], since };
 	}
 
 	private receive(relay: string, wrap: NostrEvent) {
-		this.queue = this.queue.then(() => this.process(relay, wrap)).catch(() => undefined);
+		if (!this.accepts(wrap)) return;
+		const history = this.histories.get(relay);
+		if (history) {
+			history.count++;
+			history.oldest = Math.min(history.oldest ?? Infinity, wrap.created_at);
+		}
+		this.queue = this.queue
+			.then(async () => {
+				await this.process(relay, wrap);
+				await this.advance(relay, wrap.created_at);
+			})
+			.catch(() => undefined);
+	}
+
+	/** Só o que é para mim; o datado do futuro é descartado sem mexer no cursor (T26). */
+	private accepts(wrap: NostrEvent) {
+		if (wrap.kind !== 1059 || !wrap.tags.some((t) => t[0] === 'p' && t[1] === this.myPublicKey)) return false;
+		return wrap.created_at <= this.seconds() + FUTURE_TOLERANCE_S;
+	}
+
+	/**
+	 * P2: os relays mandam o mais novo primeiro e cortam no limite de resultados deles. Depois do EOSE, pede de novo
+	 * com `until` no mais antigo recebido até não vir nada mais antigo, e só então grava o cursor. Se o app fechar
+	 * no meio, o cursor não andou e a próxima sincronização refaz o que faltou.
+	 */
+	private async finishHistory(relay: string) {
+		const history = this.histories.get(relay);
+		if (!history || history.finishing) return;
+		history.finishing = true;
+		let until = history.oldest;
+		while (history.count > 0 && until !== undefined) {
+			const page = await this.pool.queryAnswered([relay], [{ kinds: [1059], '#p': [this.myPublicKey], since: history.since, until }]);
+			if (this.histories.get(relay) !== history) return; // reconectou: a assinatura nova refaz
+			if (page.answered === 0) return; // sem resposta: o cursor fica onde estava
+			for (const wrap of page.events) this.receive(relay, wrap);
+			const older = page.events.filter((e) => this.accepts(e) && e.created_at < until!);
+			if (older.length === 0) break;
+			until = Math.min(...older.map((e) => e.created_at));
+		}
+		// depois de processar tudo o que veio do histórico
+		this.queue = this.queue
+			.then(async () => {
+				if (this.histories.get(relay) !== history) return;
+				this.histories.delete(relay);
+				if (history.newest !== undefined) await this.moveCursor(relay, history.newest);
+			})
+			.catch(() => undefined);
+		await this.queue;
+	}
+
+	/** Durante a leitura do histórico, só anota; depois dela, cada embrulho ao vivo avança o cursor. */
+	private async advance(relay: string, createdAt: number) {
+		// o cursor nunca passa do relógio do aparelho, nem com o embrulho dentro da folga (T26)
+		const at = Math.min(createdAt, this.seconds());
+		const history = this.histories.get(relay);
+		if (history) history.newest = Math.max(history.newest ?? -Infinity, at);
+		else await this.moveCursor(relay, at);
+	}
+
+	private async moveCursor(relay: string, at: number) {
+		const cursor = this.cursors.get(relay);
+		if (cursor !== undefined && at <= cursor) return;
+		this.cursors.set(relay, at);
+		await this.storage.sync.setCursor(relay, at);
 	}
 
 	private async process(relay: string, wrap: NostrEvent) {
-		if (wrap.kind !== 1059 || !wrap.tags.some((t) => t[0] === 'p' && t[1] === this.myPublicKey)) return;
-		// T26: datado do futuro, qualquer um com a npub publicaria um para travar o cursor deste relay
-		const now = this.seconds();
-		if (wrap.created_at > now + FUTURE_TOLERANCE_S) return;
 		if (!(await this.storage.seenWraps.has(wrap.id))) {
 			try {
 				await this.events.onWrap(wrap, relay);
@@ -195,13 +272,6 @@ export class SyncEngine {
 			// marca depois de processar (RNF-30): se o app morrer no meio, a mensagem ainda não foi guardada e
 			// precisa vir de novo. O inválido também é marcado, para não ser tentado a cada sincronização.
 			await this.storage.seenWraps.add({ id: wrap.id, receivedAt: this.seconds() });
-		}
-		// o cursor nunca passa do relógio do aparelho, nem com o embrulho dentro da folga (T26)
-		const at = Math.min(wrap.created_at, now);
-		const cursor = this.cursors.get(relay);
-		if (cursor === undefined || at > cursor) {
-			this.cursors.set(relay, at);
-			await this.storage.sync.setCursor(relay, at);
 		}
 	}
 

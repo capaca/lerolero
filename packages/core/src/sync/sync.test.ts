@@ -188,6 +188,56 @@ describe('motor de sincronização', () => {
 		expect(received).toEqual([wrap.id]);
 	});
 
+	it('o cursor só avança quando o histórico termina de ser processado (P2)', async () => {
+		// achado na revisão de prontidão (2026-11-05): o relay manda o mais novo primeiro e o cursor ia para ele;
+		// fechar o app antes de processar os mais antigos os pulava para sempre
+		const r = await relay();
+		const bob = await person();
+		const now = Math.floor(Date.now() / 1000);
+		const at = (created_at: number) =>
+			finalizeEvent({ kind: 1059, created_at, tags: [['p', bob.publicKey]], content: 'x' }, generateSecretKey());
+		const newer = at(now - 60);
+		const older = at(now - 3600);
+		r.events.push(newer, older);
+
+		const processed: string[] = [];
+		const dying = new SyncEngine({
+			storage: bob.storage,
+			pool: bob.pool,
+			myPublicKey: bob.publicKey,
+			events: {
+				onWrap: async (w) => {
+					if (w.id === older.id) await new Promise<void>(() => {}); // nunca termina: o app morreu
+					processed.push(w.id);
+				}
+			}
+		});
+		await dying.start([r.url]);
+		await until(() => processed.includes(newer.id));
+		await new Promise((res) => setTimeout(res, 200));
+		dying.stop();
+		expect(await bob.storage.sync.getCursor(r.url)).toBeUndefined();
+	});
+
+	it('pede o histórico em partes quando o relay corta no limite de resultados (P2)', async () => {
+		const r = await relay();
+		r.maxResults = 2;
+		const bob = await person();
+		const now = Math.floor(Date.now() / 1000);
+		const wraps = [1, 2, 3, 4, 5].map((h) =>
+			finalizeEvent({ kind: 1059, created_at: now - h * 3600, tags: [['p', bob.publicKey]], content: 'x' }, generateSecretKey())
+		);
+		r.events.push(...wraps);
+
+		const received: string[] = [];
+		const engine = new SyncEngine({ storage: bob.storage, pool: bob.pool, myPublicKey: bob.publicKey, events: { onWrap: async (w) => void received.push(w.id) } });
+		cleanup.push(() => engine.stop());
+		await engine.start([r.url]);
+		await until(async () => (await bob.storage.sync.getCursor(r.url)) !== undefined);
+		expect(received.sort()).toEqual(wraps.map((w) => w.id).sort());
+		expect(await bob.storage.sync.getCursor(r.url)).toBe(now - 3600);
+	});
+
 	it('descarta embrulhos que não abrem sem travar os outros', async () => {
 		const r = await relay();
 		const bob = await person();

@@ -17,6 +17,8 @@ export class FakeRelay {
 	/** não responde ao AUTH (simula conexão que cai no meio da autenticação); `pendingAuth` conta os AUTH recebidos */
 	ignoreAuth = false;
 	pendingAuth = 0;
+	/** limite de resultados por REQ, como os relays reais têm (os mais novos primeiro) */
+	maxResults = Infinity;
 	private server?: WebSocketServer;
 	private clients = new Set<Client>();
 	private port = 0;
@@ -102,7 +104,7 @@ export class FakeRelay {
 			}
 			client.subs.set(id, filters);
 			const matching = this.events.filter((e) => matchFilters(filters, e) && this.canRead(client, e));
-			const limit = Math.min(...filters.map((f) => f.limit ?? Infinity));
+			const limit = Math.min(this.maxResults, ...filters.map((f) => f.limit ?? Infinity));
 			const sorted = matching.sort((a, b) => b.created_at - a.created_at).slice(0, limit);
 			for (const e of sorted) this.send(client, ['EVENT', id, e]);
 			this.send(client, ['EOSE', id]);
