@@ -24,7 +24,7 @@ npm run dev       # abre na rede local (--host)
 npm run build     # gera dist/
 ```
 
-No celular, use a versão publicada no GitHub Pages (`/medicao/`): Web Crypto e service workers exigem HTTPS fora de `localhost`.
+No celular, use a versão publicada na homologação (https://lerolero-app.github.io/lerolero/medicao/; saiu da produção no P7 da prontidão): Web Crypto e service workers exigem HTTPS fora de `localhost`.
 
 ## Como medir
 
