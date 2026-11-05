@@ -147,7 +147,7 @@ import { memberName } from './notices.ts';
 import { relayList } from './relays.ts';
 import { currentPushEndpoint, subscribePush, unsubscribePush } from './push-subscription.ts';
 
-export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
+export type Status = 'carregando' | 'erro' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
 
 const ATTEMPTS_KEY = 'tentativasPin';
 /** Onde a interface guardava a sessão aberta antes do P6; hoje é o cofre que a guarda, e esta é apagada ao abrir. */
@@ -194,6 +194,8 @@ const RESTORED_AT_KEY = 'restauradaEm';
 
 class Session {
 	status = $state<Status>('carregando');
+	/** o erro ao abrir o banco, mostrado na tela de erro (P8) */
+	initError = $state<string>();
 	private network?: { pool: RelayPool; engine: SyncEngine };
 	/** muda a cada mensagem ou conversa alterada: as telas observam e recarregam */
 	version = $state(0);
@@ -236,9 +238,16 @@ class Session {
 	private notifier?: PushNotifier;
 
 	async init() {
-		// P6: a sessão de antes, com a chave AES e a cifrada nas mãos da interface, some (o PIN é pedido uma vez)
-		await storage.settings.set(LEGACY_OPEN_SESSION_KEY, undefined);
-		this.identity = await storage.identity.get();
+		try {
+			// P6: a sessão de antes, com a chave AES e a cifrada nas mãos da interface, some (o PIN é pedido uma vez)
+			await storage.settings.set(LEGACY_OPEN_SESSION_KEY, undefined);
+			this.identity = await storage.identity.get();
+		} catch (err) {
+			// P8: migração que lança, cota cheia ou banco corrompido; sem isto a tela ficava branca para sempre
+			this.initError = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+			this.status = 'erro';
+			return;
+		}
 		if (!this.identity) this.status = 'sem-identidade';
 		else if (await this.resumeOpenSession()) this.unlocked();
 		else this.status = 'bloqueado';

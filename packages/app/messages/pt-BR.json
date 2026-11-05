@@ -7,6 +7,10 @@
 	"layout_atualizar": "Atualizar",
 	"layout_homologacao": "Homologação",
 	"layout_local": "Local",
+	"erro_abrir_titulo": "O Lero-lero não abriu",
+	"erro_abrir_texto": "Não conseguimos ler os dados guardados neste aparelho. Suas conversas continuam aqui: nada foi apagado.",
+	"erro_abrir_avisar": "Tente de novo. Se continuar, mande uma foto desta tela para quem convidou você para o teste.",
+	"erro_abrir_tentar": "Tentar de novo",
 	"backup_achado_titulo": "Achamos um backup seu",
 	"backup_achado_texto": [
 		{

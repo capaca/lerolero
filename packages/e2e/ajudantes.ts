@@ -256,6 +256,23 @@ export function apagarSessao() {
 	});
 }
 
+/**
+ * O banco do app não abre (P8: cota cheia, migração que lança, banco corrompido) enquanto `consertar` não for
+ * chamado. Vale a partir da próxima carga da página; o banco do cofre, no worker, abre normalmente.
+ */
+export async function quebrarBanco(page: Page): Promise<() => Promise<void>> {
+	await page.addInitScript(() => {
+		if (localStorage.getItem('e2e-banco-quebrado') !== '1') return;
+		const open = IDBFactory.prototype.open;
+		IDBFactory.prototype.open = function (this: IDBFactory, name: string, version?: number) {
+			if (name === 'lerolero') throw new DOMException('Sem espaço no aparelho', 'QuotaExceededError');
+			return open.call(this, name, version);
+		};
+	});
+	await page.evaluate(() => localStorage.setItem('e2e-banco-quebrado', '1'));
+	return () => page.evaluate(() => localStorage.removeItem('e2e-banco-quebrado'));
+}
+
 /** Endereços de relays de fora (ex.: os do convite de comentários) que a suíte desviou para o relay local. */
 export const desviados: string[] = [];
 
