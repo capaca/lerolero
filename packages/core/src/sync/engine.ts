@@ -36,6 +36,8 @@ export const RETRY_DELAYS_MS = [5_000, 15_000, 60_000, 5 * 60_000, 15 * 60_000];
 export const EXTRA_ATTEMPTS_AFTER_ACCEPTED = 3;
 /** Quantos itens da fila saem ao mesmo tempo: não espera um por um o tempo esgotado de relays fora do ar. */
 export const FLUSH_CONCURRENCY = 5;
+/** Quanto `stop()` espera o embrulho em processamento antes de seguir (um worker travado não trava o "Bloquear"). */
+export const STOP_WAIT_MS = 5_000;
 
 /**
  * Geração da sincronização: sobe sempre que o app passa a entender um tipo novo de
@@ -68,7 +70,10 @@ export async function upgradeSyncGeneration(storage: Storage): Promise<boolean> 
 }
 
 export type SyncEvents = {
-	/** um embrulho novo chegou (já sem repetidos). Erros aqui não travam a sincronização. */
+	/**
+	 * um embrulho novo chegou (já sem repetidos). Erros aqui não travam a sincronização; só o `InvalidWrapError`
+	 * descarta o embrulho de vez, os outros (cota, worker, cofre trancado) o deixam para a próxima (P3).
+	 */
 	onWrap: (wrap: NostrEvent, relay: string) => Promise<void>;
 	/** um item da fila foi aceito pelo primeiro relay (a mensagem passa a "enviada") */
 	onSent?: (item: OutboxRecord) => Promise<void>;
@@ -110,6 +115,10 @@ export class SyncEngine {
 	private retryTimer?: ReturnType<typeof setTimeout>;
 	/** processa um embrulho por vez: o mesmo pode chegar de dois relays ao mesmo tempo */
 	private queue: Promise<void> = Promise.resolve();
+	/** sobe a cada `stop()`: o que estava na fila de antes não é mais processado */
+	private run = 0;
+	/** relays com embrulho que falhou por motivo passageiro: o cursor não anda até uma leitura nova do histórico (P3) */
+	private stuck = new Set<string>();
 
 	constructor(options: SyncOptions) {
 		this.storage = options.storage;
@@ -122,7 +131,7 @@ export class SyncEngine {
 
 	/** Começa a receber nos relays indicados (os meus relays de DM). */
 	async start(relays: string[]) {
-		this.stop();
+		await this.stop();
 		for (const relay of relays) {
 			// cursor que já foi para o futuro (antes da correção do T26) volta ao relógio
 			const cursor = await this.storage.sync.getCursor(relay);
@@ -140,11 +149,19 @@ export class SyncEngine {
 		void this.flush();
 	}
 
-	stop() {
+	/**
+	 * Para de receber e espera o embrulho em processamento terminar (P3): o "Bloquear" tranca o cofre logo depois.
+	 * O que ainda estava na fila fica para a próxima sincronização, sem ser marcado como visto.
+	 */
+	async stop() {
+		this.run++;
 		this.subscription?.close();
 		this.subscription = undefined;
 		this.histories.clear();
 		clearTimeout(this.retryTimer);
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		await Promise.race([this.queue, new Promise((res) => (timer = setTimeout(res, STOP_WAIT_MS)))]);
+		clearTimeout(timer);
 	}
 
 	/** O app voltou para a tela ou a internet voltou (RF-80): reconecta e esvazia a fila. */
@@ -192,6 +209,8 @@ export class SyncEngine {
 		const cursor = this.cursors.get(relay);
 		const since = cursor !== undefined ? cursor - CURSOR_MARGIN_S : this.seconds() - FIRST_SYNC_WINDOW_S;
 		this.histories.set(relay, { since, count: 0 });
+		// a leitura nova traz de novo o que falhou (o cursor ficou parado antes dele)
+		this.stuck.delete(relay);
 		return { kinds: [1059], '#p': [this.myPublicKey], since };
 	}
 
@@ -202,12 +221,14 @@ export class SyncEngine {
 			history.count++;
 			history.oldest = Math.min(history.oldest ?? Infinity, wrap.created_at);
 		}
+		const run = this.run;
 		this.queue = this.queue
 			.then(async () => {
-				await this.process(relay, wrap);
-				await this.advance(relay, wrap.created_at);
+				if (run !== this.run) return; // parou no meio: fica para a próxima sincronização
+				if (await this.process(relay, wrap)) await this.advance(relay, wrap.created_at);
+				else this.stuck.add(relay);
 			})
-			.catch(() => undefined);
+			.catch(() => void this.stuck.add(relay));
 	}
 
 	/** Só o que é para mim; o datado do futuro é descartado sem mexer no cursor (T26). */
@@ -256,23 +277,26 @@ export class SyncEngine {
 	}
 
 	private async moveCursor(relay: string, at: number) {
+		if (this.stuck.has(relay)) return;
 		const cursor = this.cursors.get(relay);
 		if (cursor !== undefined && at <= cursor) return;
 		this.cursors.set(relay, at);
 		await this.storage.sync.setCursor(relay, at);
 	}
 
-	private async process(relay: string, wrap: NostrEvent) {
-		if (!(await this.storage.seenWraps.has(wrap.id))) {
-			try {
-				await this.events.onWrap(wrap, relay);
-			} catch {
-				// embrulho que não abre ou não é para nós: descartado, o resto segue
-			}
-			// marca depois de processar (RNF-30): se o app morrer no meio, a mensagem ainda não foi guardada e
-			// precisa vir de novo. O inválido também é marcado, para não ser tentado a cada sincronização.
-			await this.storage.seenWraps.add({ id: wrap.id, receivedAt: this.seconds() });
+	/** Devolve false se falhou por motivo passageiro: o embrulho não é marcado como visto e vem de novo (P3). */
+	private async process(relay: string, wrap: NostrEvent): Promise<boolean> {
+		if (await this.storage.seenWraps.has(wrap.id)) return true;
+		try {
+			await this.events.onWrap(wrap, relay);
+		} catch (err) {
+			// só o embrulho que não abre é descartado de vez; o nome atravessa o worker (RemoteError)
+			if ((err as Error | undefined)?.name !== 'InvalidWrapError') return false;
 		}
+		// marca depois de processar (RNF-30): se o app morrer no meio, a mensagem ainda não foi guardada e
+		// precisa vir de novo. O inválido também é marcado, para não ser tentado a cada sincronização.
+		await this.storage.seenWraps.add({ id: wrap.id, receivedAt: this.seconds() });
+		return true;
 	}
 
 	private async flushOnce() {

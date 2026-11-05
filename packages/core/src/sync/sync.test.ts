@@ -267,6 +267,108 @@ describe('motor de sincronização', () => {
 		expect(ok).toEqual([good.id]);
 	});
 
+	it('embrulho que falhou por motivo passageiro não é marcado como visto e vem de novo (P3)', async () => {
+		// achado na revisão de prontidão (2026-11-05): cota cheia, worker ou cofre trancado no meio da
+		// sincronização descartavam a mensagem para sempre
+		const r = await relay();
+		const bob = await person();
+		const wrap = wrapFor(bob.publicKey, 'chegou com a cota cheia');
+		r.events.push(wrap);
+
+		let failed = false;
+		const full = new SyncEngine({
+			storage: bob.storage,
+			pool: bob.pool,
+			myPublicKey: bob.publicKey,
+			events: {
+				onWrap: async () => {
+					failed = true;
+					throw new DOMException('cota cheia', 'QuotaExceededError');
+				}
+			}
+		});
+		await full.start([r.url]);
+		await until(() => failed);
+		await new Promise((res) => setTimeout(res, 200));
+		await full.stop();
+		expect(await bob.storage.seenWraps.has(wrap.id)).toBe(false);
+		expect(await bob.storage.sync.getCursor(r.url)).toBeUndefined();
+
+		const received: string[] = [];
+		const next = new SyncEngine({ storage: bob.storage, pool: bob.pool, myPublicKey: bob.publicKey, events: { onWrap: async (w) => void received.push(w.id) } });
+		cleanup.push(() => next.stop());
+		await next.start([r.url]);
+		await until(() => received.length > 0);
+		expect(received).toEqual([wrap.id]);
+	});
+
+	it('o cursor não passa de um embrulho que falhou, nem com outro chegando depois (P3)', async () => {
+		const r = await relay();
+		const bob = await person();
+		const now = Math.floor(Date.now() / 1000);
+		const at = (created_at: number) =>
+			finalizeEvent({ kind: 1059, created_at, tags: [['p', bob.publicKey]], content: 'x' }, generateSecretKey());
+		const failing = at(now - 3600);
+		r.events.push(failing);
+
+		const received: string[] = [];
+		const engine = new SyncEngine({
+			storage: bob.storage,
+			pool: bob.pool,
+			myPublicKey: bob.publicKey,
+			events: {
+				onWrap: async (w) => {
+					if (w.id === failing.id) throw new Error('worker reiniciou');
+					received.push(w.id);
+				}
+			}
+		});
+		cleanup.push(() => engine.stop());
+		await engine.start([r.url]);
+		const live = wrapFor(bob.publicKey, 'ao vivo');
+		await (await person()).pool.publish([r.url], live);
+		await until(() => received.includes(live.id));
+		await new Promise((res) => setTimeout(res, 200));
+		expect(await bob.storage.sync.getCursor(r.url)).toBeUndefined();
+	});
+
+	it('stop() espera o embrulho em processamento e deixa o resto da fila para a próxima (P3)', async () => {
+		// "Bloquear" no meio da sincronização: o cofre tranca logo depois de stop()
+		const r = await relay();
+		const bob = await person();
+		const wraps = [wrapFor(bob.publicKey, 'um'), wrapFor(bob.publicKey, 'dois'), wrapFor(bob.publicKey, 'três')];
+		r.events.push(...wraps);
+
+		let release!: () => void;
+		const slow = new Promise<void>((res) => (release = res));
+		const processed: string[] = [];
+		let started = false;
+		const engine = new SyncEngine({
+			storage: bob.storage,
+			pool: bob.pool,
+			myPublicKey: bob.publicKey,
+			events: {
+				onWrap: async (w) => {
+					started = true;
+					await slow;
+					processed.push(w.id);
+				}
+			}
+		});
+		await engine.start([r.url]);
+		await until(() => started);
+		let stopped = false;
+		const stopping = engine.stop().then(() => (stopped = true));
+		await new Promise((res) => setTimeout(res, 100));
+		expect(stopped).toBe(false);
+		release();
+		await stopping;
+
+		expect(processed).toHaveLength(1);
+		expect(await bob.storage.seenWraps.has(processed[0])).toBe(true);
+		for (const w of wraps.filter((w) => w.id !== processed[0])) expect(await bob.storage.seenWraps.has(w.id)).toBe(false);
+	});
+
 	it('volta a receber depois de uma queda de conexão', async () => {
 		const r = await relay();
 		const bob = await person();

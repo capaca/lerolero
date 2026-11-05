@@ -347,7 +347,8 @@ class Session {
 	}
 
 	async lock() {
-		this.stopNetwork();
+		// o embrulho em processamento termina antes de o cofre trancar (P3)
+		await this.stopNetwork();
 		await this.savingSession;
 		await storage.settings.set(OPEN_SESSION_KEY, undefined);
 		await vault.lock();
@@ -443,17 +444,18 @@ class Session {
 
 	private stopWatchingConnection = () => {};
 
-	private stopNetwork() {
+	private async stopNetwork() {
 		this.stopWatchingConnection();
 		clearInterval(this.gapTimer);
 		clearTimeout(this.backupTimer);
 		this.uploadTimers.forEach(clearTimeout);
 		this.uploadTimers.clear();
-		this.network?.engine.stop();
-		this.network?.pool.close();
+		const network = this.network;
 		this.network = undefined;
 		this.notifier?.stop();
 		this.notifier = undefined;
+		await network?.engine.stop();
+		network?.pool.close();
 	}
 
 	/** O app voltou para a tela ou a internet voltou (RF-80). */
