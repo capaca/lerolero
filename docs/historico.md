@@ -5,6 +5,17 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: o cursor não pula mais o histórico (P2)
+
+- O cursor de cada relay só é gravado quando o histórico inteiro foi processado; até lá, o maior horário fica só
+  anotado. Fechar o app (ou o iPhone suspender) no meio da sincronização não pula mais o resto: a próxima refaz a
+  partir do cursor antigo, e o que já foi processado não se repete.
+- Depois do EOSE, o app pede de novo com `until` no embrulho mais antigo recebido, até não vir nada mais antigo.
+  Como o limite de resultados de cada relay não é conhecido, sempre há essa página extra (quase sempre vazia), em vez
+  de adivinhar quando o relay cortou. Na primeira sincronização (restauração, aparelho novo) nada antigo fica de fora.
+- Relay que não responde à página extra deixa o cursor onde estava, e a próxima assinatura tenta de novo.
+- Testes de regressão no `sync.test.ts`; o relay falso ganhou um limite de resultados para simular o corte.
+
 ## 2026-11-05: embrulho datado do futuro não trava mais o recebimento (P1, T26)
 
 - O cursor de cada relay nunca passa do relógio do aparelho, e o embrulho mais de 1 hora à frente é descartado sem
