@@ -1,6 +1,19 @@
 // Backup cifrado (RF-06): num aparelho novo, a frase traz de volta o nome, os contatos com o nome que dei, os
 // bloqueios, os grupos e o ajuste de leitura, sem pedir o nome. Favoritas e mensagens antigas não entram.
-import { abrirAjustes, adicionarPeloConvite, confirmarConvite, enviarTexto, expect, lerAjuste, meuConvite, noInicio, recuperarConta, test, verFrase } from '../ajudantes.ts';
+import {
+	abrirAjustes,
+	adicionarPeloConvite,
+	confirmarConvite,
+	enviarTexto,
+	expect,
+	lerAjuste,
+	meuConvite,
+	noInicio,
+	recuperarConta,
+	restaurarSemAcharOBackup,
+	test,
+	verFrase
+} from '../ajudantes.ts';
 
 test('a frase num aparelho novo traz o nome, os contatos, o bloqueio, o grupo e o ajuste de leitura', async ({ novaPessoa, novoAparelho }) => {
 	const [maria, joao, caio] = await Promise.all(['Maria', 'João', 'Caio'].map(novaPessoa));
@@ -52,4 +65,24 @@ test('a frase num aparelho novo traz o nome, os contatos, o bloqueio, o grupo e 
 	await abrirAjustes(novo);
 	await expect(novo.getByText('Nome: Maria')).toBeVisible();
 	await expect(novo.getByRole('checkbox', { name: 'Confirmação de leitura' })).not.toBeChecked();
+});
+
+test('backup que demorou a aparecer: pergunta antes de gravar por cima e traz os contatos (P5)', async ({ novaPessoa, novoAparelho }) => {
+	const { novo, aviso } = await restaurarSemAcharOBackup(novaPessoa, () => novoAparelho());
+	await aviso.getByRole('button', { name: 'Trazer para este aparelho' }).click();
+	await expect(aviso).toBeHidden();
+	await expect
+		.poll(async () => (await lerAjuste<{ content: string }>(novo, 'backupPublicado'))?.content ?? '', { timeout: 20_000 })
+		.toMatch(/"contacts":\[\{/);
+	await novo.goto('./contatos');
+	await expect(novo.getByText('João')).toBeVisible();
+});
+
+test('backup que demorou a aparecer: descartar grava o deste aparelho (P5)', async ({ novaPessoa, novoAparelho }) => {
+	const { novo, aviso } = await restaurarSemAcharOBackup(novaPessoa, () => novoAparelho());
+	await aviso.getByRole('button', { name: 'Descartar o backup antigo' }).click();
+	await expect(aviso).toBeHidden();
+	await expect
+		.poll(async () => (await lerAjuste<{ content: string }>(novo, 'backupPublicado'))?.content ?? '', { timeout: 20_000 })
+		.toMatch(/"contacts":\[\]/);
 });

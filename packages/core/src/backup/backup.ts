@@ -189,13 +189,39 @@ export function backupChanged(previous: string | undefined, next: Backup): boole
 }
 
 /**
- * Procura o meu backup. `answered` diz se algum relay respondeu: sem resposta, não dá para saber se existe, e quem
- * chama não pode publicar um backup novo por cima (apagaria o bom).
+ * Procura o meu backup. `answered` diz se dá para confiar que não existe: sem resposta, quem chama não pode publicar
+ * um backup novo por cima (apagaria o bom). P5: precisa da resposta de todos os `required` (os relays gerais), que
+ * guardam por mais tempo; um relay de DM (7 dias) respondendo "nada" enquanto o que tem o backup demora não basta.
  */
-export async function fetchBackup(pool: RelayPool, relays: string[], me: string): Promise<{ events: NostrEvent[]; answered: boolean }> {
-	const { events, answered } = await pool.queryAnswered(relays, [{ kinds: [BACKUP_KIND], authors: [me], '#d': [BACKUP_D_TAG] }]);
+export async function fetchBackup(
+	pool: RelayPool,
+	relays: string[],
+	me: string,
+	required: string[] = []
+): Promise<{ events: NostrEvent[]; answered: boolean }> {
+	const { events, answeredBy } = await pool.queryAnswered([...new Set([...relays, ...required])], [{ kinds: [BACKUP_KIND], authors: [me], '#d': [BACKUP_D_TAG] }]);
+	const answered = answeredBy.length > 0 && required.every((r) => answeredBy.includes(r));
 	// o mais novo primeiro; quem abre (o cofre) confere a assinatura e descarta o que não é meu
-	return { events: events.filter((e) => e.pubkey === me).sort((a, b) => b.created_at - a.created_at), answered: answered > 0 };
+	return { events: events.filter((e) => e.pubkey === me).sort((a, b) => b.created_at - a.created_at), answered };
+}
+
+/**
+ * Quantos contatos e grupos do backup este aparelho não tem (os que `applyBackup` traria). P5: com algum, o aparelho
+ * não publica o seu por cima sem perguntar.
+ */
+export async function missingFromDevice(storage: Storage, me: string, backup: Backup): Promise<{ contacts: number; groups: number }> {
+	let contacts = 0;
+	for (const c of backup.contacts) {
+		if (c.publicKey === me) continue;
+		const existing = await storage.contacts.get(c.publicKey);
+		if (!existing || existing.state === 'pedido') contacts++;
+	}
+	let groups = 0;
+	for (const g of backup.groups) {
+		if (!g.state.members.some((m) => m.publicKey === me)) continue;
+		if (!(await storage.conversations.get(groupConversationId(g.id)))) groups++;
+	}
+	return { contacts, groups };
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);

@@ -28,6 +28,7 @@ export {
 	BACKUP_SENT_KEY,
 	buildBackup,
 	fetchBackup,
+	missingFromDevice,
 	parseBackup,
 	type Backup
 } from './backup/backup.ts';

@@ -9,7 +9,7 @@ import { RelayPool } from '../net/pool.ts';
 import { openStorage } from '../storage/repositories.ts';
 import type { MessageMedia } from '../storage/records.ts';
 import { FakeRelay } from '../testing/fake-relay.ts';
-import { applyBackup, backupChanged, backupContent, buildBackup, fetchBackup, parseBackup } from './backup.ts';
+import { applyBackup, backupChanged, backupContent, buildBackup, fetchBackup, missingFromDevice, parseBackup } from './backup.ts';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 const socket: SocketFactory = (url) => new NodeWebSocket(url) as unknown as WebSocket;
@@ -137,6 +137,18 @@ describe('backup cifrado (RF-06)', () => {
 		expect((await novo.storage.conversations.get(id))?.group?.state.name).toBe('Família Silva');
 	});
 
+	it('conta os contatos e grupos do backup que o aparelho não tem (P5)', async () => {
+		const { ana, bia } = await scene();
+		const backup = parseBackup(backupContent(await buildBackup(ana.storage, ana.publicKey, clock)))!;
+		const novo = await newDevice(ana);
+		// Bia escreveu nos últimos dias: a sincronização a trouxe como pedido, que o backup ainda muda para contato
+		await novo.storage.contacts.put({ publicKey: bia.publicKey, state: 'pedido', dmRelays: [], addedAt: 20 });
+		expect(await missingFromDevice(novo.storage, ana.publicKey, backup)).toEqual({ contacts: 2, groups: 1 });
+
+		await applyBackup(novo.storage, ana.publicKey, backup);
+		expect(await missingFromDevice(novo.storage, ana.publicKey, backup)).toEqual({ contacts: 0, groups: 0 });
+	});
+
 	it('junta ao que a sincronização já trouxe: o pedido volta a ser contato e o que foi decidido aqui fica', async () => {
 		const { ana, bia, caio } = await scene();
 		const backup = await buildBackup(ana.storage, ana.publicKey, clock);
@@ -197,5 +209,19 @@ describe('backup cifrado (RF-06)', () => {
 		expect(ana.vault.openBackup(events[0]!)).toBe('{"v":1,"a":2}');
 
 		expect((await fetchBackup(pool, ['ws://127.0.0.1:1'], ana.publicKey)).answered).toBe(false);
+	});
+
+	it('"não há backup" só com a resposta de todos os relays gerais (P5)', async () => {
+		// achado na revisão de prontidão (2026-11-05): um relay de DM respondia "nada" enquanto o que tinha o backup
+		// demorava, e o aparelho publicava um backup vazio por cima do bom
+		const ana = await person('Ana');
+		const dm = await new FakeRelay().start();
+		cleanup.push(() => dm.stop());
+		const pool = new RelayPool({ signer: async (t) => ana.vault.sign(t), socket, timeoutMs: 1000, reconnectDelaysMs: [50] });
+		cleanup.push(() => pool.close());
+		const general = 'ws://127.0.0.1:1'; // fora do ar
+
+		expect((await fetchBackup(pool, [dm.url], ana.publicKey, [general])).answered).toBe(false);
+		expect((await fetchBackup(pool, [dm.url, general], ana.publicKey, [dm.url])).answered).toBe(true);
 	});
 });

@@ -114,9 +114,9 @@ export class RelayPool {
 	 * Como `query`, contando quantos relays chegaram ao fim do histórico: "nenhum evento" só quer dizer "não existe"
 	 * se alguém respondeu (o backup não pode ser sobrescrito só porque a rede caiu, RF-06).
 	 */
-	async queryAnswered(urls: string[], filters: Filter[]): Promise<{ events: NostrEvent[]; answered: number }> {
+	async queryAnswered(urls: string[], filters: Filter[]): Promise<{ events: NostrEvent[]; answered: number; answeredBy: string[] }> {
 		const found = new Map<string, NostrEvent>();
-		let answered = 0;
+		const answeredBy: string[] = [];
 		await Promise.all(
 			urls.map(async (url) => {
 				try {
@@ -126,7 +126,7 @@ export class RelayPool {
 						const sub = conn.subscribe(filters, {
 							onevent: (e) => found.set(e.id, e),
 							oneose: () => {
-								answered++;
+								answeredBy.push(url);
 								done();
 							},
 							onclosed: done
@@ -144,7 +144,7 @@ export class RelayPool {
 				}
 			})
 		);
-		return { events: [...found.values()], answered };
+		return { events: [...found.values()], answered: answeredBy.length, answeredBy };
 	}
 
 	/**

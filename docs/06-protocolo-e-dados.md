@@ -161,7 +161,7 @@ Como ficou:
 - **Não contém** mensagens, mídia nem favoritas (decidido em 2026-10-29: texto de conversa nos relays sem prazo ampliaria a T11; o NIP-44 cifra no máximo ~64 KB).
 - Configurações no backup: confirmação de leitura e relays onde recebo. O tamanho da letra é do aparelho.
 - Publicado nos relays gerais e nos de DM do usuário, 5 s depois da última mudança e só se o conteúdo mudou (para economizar dados); republicado a cada 3 dias, para não sumir de relay que apaga eventos antigos.
-- **Nunca sobrescrever às cegas:** o aparelho só publica depois de saber se há backup nos relays (achou e juntou, ou algum relay respondeu que não há). Restaurar sem rede adia a publicação até a busca dar certo.
+- **Nunca sobrescrever às cegas:** o aparelho só publica depois de saber se há backup nos relays (achou e juntou, ou os três relays gerais responderam que não há; os de DM guardam só 7 dias e não bastam). Restaurar sem rede adia a publicação até a busca dar certo. Antes do primeiro backup que o aparelho publica, procura mais uma vez; se o achado tem contatos ou grupos que o aparelho não tem, não publica e pergunta: "Trazer para este aparelho" (o principal, junta e depois publica) ou "Descartar o backup antigo" (publica o deste aparelho por cima). Decidido em 2026-11-05 (P5).
 - **Restaurar:** depois da frase e do PIN o app busca o backup; achou, aplica e entra sem pedir o nome. Contato que a sincronização já trouxe como pedido volta ao estado do backup; o que foi decidido no aparelho novo prevalece. Grupo restaurado vira o ponto de partida do estado (ação local `restaurar`, que não chega pela rede), e os avisos seguintes valem sobre ele.
 
 ### 3.8 Antispam (RF-90)

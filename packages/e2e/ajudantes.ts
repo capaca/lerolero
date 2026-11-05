@@ -167,6 +167,55 @@ export async function recuperarConta(page: Page, frase: string[], pin = '246810'
 	await page.getByRole('button', { name: 'Recuperar conta' }).click();
 }
 
+/**
+ * P5: os relays locais "demoram" com o backup: o pedido do kind 30078 recebe o fim do histórico sem nada até
+ * `liberar()`, como o relay que tem o backup e passa do tempo enquanto outro responde que não há.
+ */
+export async function esconderBackup(page: Page): Promise<() => void> {
+	let escondido = true;
+	await page.routeWebSocket(
+		(url) => url.hostname === '127.0.0.1',
+		(ws) => {
+			const servidor = ws.connectToServer();
+			ws.onMessage((mensagem) => {
+				if (escondido && typeof mensagem === 'string') {
+					const [tipo, id, ...filtros] = JSON.parse(mensagem) as [string, string, ...{ kinds?: number[] }[]];
+					if (tipo === 'REQ' && filtros.some((f) => f.kinds?.includes(30078))) return ws.send(JSON.stringify(['EOSE', id]));
+				}
+				servidor.send(mensagem);
+			});
+		}
+	);
+	return () => {
+		escondido = false;
+	};
+}
+
+/**
+ * P5: o relay que tem o backup demorou na restauração e o aparelho seguiu sem ele. Antes do primeiro backup deste
+ * aparelho, procura de novo; achando contatos que não tem, pergunta em vez de gravar o quase vazio por cima do bom.
+ */
+export async function restaurarSemAcharOBackup(novaPessoa: (nome: string) => Promise<Pessoa>, novoAparelho: () => Promise<Page>) {
+	const [maria, joao] = await Promise.all(['Maria', 'João'].map(novaPessoa));
+	await maria.page.goto(await meuConvite(joao.page));
+	await confirmarConvite(maria.page);
+	await expect
+		.poll(async () => (await lerAjuste<{ content: string }>(maria.page, 'backupPublicado'))?.content ?? '', { timeout: 20_000 })
+		.toMatch(/"contacts":\[\{/);
+	const frase = await verFrase(maria.page);
+
+	const novo = await novoAparelho();
+	const liberar = await esconderBackup(novo);
+	await recuperarConta(novo, frase);
+	await expect(novo.getByText('Não achamos uma cópia dos seus contatos')).toBeVisible({ timeout: 20_000 });
+	liberar();
+	await novo.locator('#nome').fill('Maria');
+	await novo.getByRole('button', { name: 'Entrar' }).click();
+	const aviso = novo.getByRole('dialog', { name: 'Achamos um backup seu' });
+	await expect(aviso).toContainText('Ele tem 1 contato que não está neste aparelho.', { timeout: 20_000 });
+	return { novo, aviso };
+}
+
 /** Um "app antigo" (ou outro app Nostr): manda o embrulho direto ao relay, sem prova de trabalho. */
 export async function mandarSemProva(page: Page, texto: string) {
 	const { publicKey } = parseInvite(await meuConvite(page));

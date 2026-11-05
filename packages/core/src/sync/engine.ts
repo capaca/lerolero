@@ -152,13 +152,13 @@ export class SyncEngine {
 				oneose: () => void this.finishHistory(relay)
 			})
 		);
-		void this.storage.seenWraps.prune(this.seconds() - SEEN_RETENTION_S);
+		void this.storage.seenWraps.prune(this.seconds() - SEEN_RETENTION_S).catch(() => undefined);
 		void this.flush();
 	}
 
 	/**
-	 * Para de receber e espera o embrulho em processamento terminar (P3): o "Bloquear" tranca o cofre logo depois.
-	 * O que ainda estava na fila fica para a próxima sincronização, sem ser marcado como visto.
+	 * Para de receber e espera o embrulho em processamento e a rodada de envio terminarem (P3): o "Bloquear" tranca o
+	 * cofre logo depois. O que ainda estava na fila de recebimento fica para a próxima sincronização, sem ser marcado.
 	 */
 	async stop() {
 		this.run++;
@@ -167,7 +167,7 @@ export class SyncEngine {
 		this.histories.clear();
 		clearTimeout(this.retryTimer);
 		let timer: ReturnType<typeof setTimeout> | undefined;
-		await Promise.race([this.queue, new Promise((res) => (timer = setTimeout(res, STOP_WAIT_MS)))]);
+		await Promise.race([Promise.all([this.queue, this.flushing]), new Promise((res) => (timer = setTimeout(res, STOP_WAIT_MS)))]);
 		clearTimeout(timer);
 	}
 
@@ -206,9 +206,14 @@ export class SyncEngine {
 		await this.flush();
 	}
 
-	/** Tenta enviar o que está na fila e já pode ser tentado. Chamadas simultâneas esperam a mesma rodada. */
+	/**
+	 * Tenta enviar o que está na fila e já pode ser tentado. Chamadas simultâneas esperam a mesma rodada. Não lança:
+	 * quem chama não espera (`void`), e o que não saiu fica na fila para a próxima rodada.
+	 */
 	flush(): Promise<void> {
-		this.flushing ??= this.flushOnce().finally(() => (this.flushing = undefined));
+		this.flushing ??= this.flushOnce()
+			.catch(() => undefined)
+			.finally(() => (this.flushing = undefined));
 		return this.flushing;
 	}
 
