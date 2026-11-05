@@ -18,6 +18,10 @@ conhecidos".
   dispararia (o app só vê um backup quando já o juntou).
 - Testes: no core, a busca que exige os relays gerais e a contagem do que falta no aparelho; no e2e, o relay que
   "demora" com o backup na restauração (`esconderBackup`), com as duas escolhas, e o aviso no `textos`.
+- Achado na CI deste PR: o `sync.test.ts` deixava, em metade das rodadas, uma rejeição sem tratamento
+  (`DatabaseClosedError`). `stop()` esperava a fila de recebimento, mas não a rodada de envio em andamento, que seguia
+  gravando com o banco já fechado. Agora `stop()` espera as duas (o "Bloquear" também), e `flush()` não lança: o que
+  não saiu fica na fila para a próxima rodada.
 
 ## 2026-11-05: mensagem que ficou horas na fila de saída chega (P4)
 
