@@ -116,6 +116,15 @@ import {
 	profileEvent,
 	storeProfile,
 	type ProfileRecord,
+	myDeviceId,
+	myPushTarget,
+	myPushTargets,
+	PUSH_DEVICE_KIND,
+	pushDeviceTags,
+	PushNotifier,
+	renewPushTarget,
+	storePushDevice,
+	type OutboxRecord,
 	sessionIsOpen,
 	SyncEngine,
 	upgradeSyncGeneration,
@@ -135,6 +144,7 @@ import { prepareFromFile, prepareProfileFromFile } from './photo-encoder.ts';
 import { m } from '#lib/paraglide/messages.js';
 import { memberName } from './notices.ts';
 import { relayList } from './relays.ts';
+import { subscribePush } from './push-subscription.ts';
 
 export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
 
@@ -215,6 +225,8 @@ class Session {
 	/** a frase foi aceita, mas falta o nome: não havia backup com ele (restore → finishRestore) */
 	private pendingRestore?: { publicKey: string; phrase: IdentityRecord['phrase']; backup?: Backup; checked: boolean };
 	private backupTimer?: ReturnType<typeof setTimeout>;
+	/** avisos de mensagem nova para quem ativou as notificações (ADR-0010) */
+	private notifier?: PushNotifier;
 
 	async init() {
 		this.identity = await storage.identity.get();
@@ -377,11 +389,13 @@ class Session {
 					else if (item.messageId) {
 						await markSent(storage, item.messageId);
 						this.version++;
+						void this.notifyRecipient(item);
 					}
 				}
 			}
 		});
 		this.network = { pool, engine };
+		this.notifier = new PushNotifier({ storage, relay: __APP_REPASSADOR__, me: this.current.publicKey, myName: () => this.current.displayName });
 		// versão nova que entende tipos novos de mensagem: recupera o que a antiga ignorou
 		await upgradeSyncGeneration(storage);
 		await engine.start(await this.myDmRelays());
@@ -435,6 +449,8 @@ class Session {
 		this.network?.engine.stop();
 		this.network?.pool.close();
 		this.network = undefined;
+		this.notifier?.stop();
+		this.notifier = undefined;
 	}
 
 	/** O app voltou para a tela ou a internet voltou (RF-80). */
@@ -550,6 +566,7 @@ class Session {
 			return;
 		}
 		if (rumor.kind === RESEND_KIND) return this.answerResend(rumor);
+		if (rumor.kind === PUSH_DEVICE_KIND) return this.receivePushDevice(rumor);
 		if (rumor.kind === RECEIPT_KIND) {
 			const readReceipts = await this.readReceiptsOn();
 			if (await storeReceipt(storage, me, rumor, { readReceipts })) this.version++;
@@ -1258,6 +1275,7 @@ class Session {
 		await blockGroupRequest(storage, conversationId, (id) => this.discardUpload(id));
 		this.version++;
 		this.backupSoon();
+		void this.renewPush();
 	}
 
 	async acceptRequest(publicKey: string) {
@@ -1273,6 +1291,7 @@ class Session {
 		await blockContact(storage, publicKey, (id) => this.discardUpload(id));
 		this.version++;
 		this.backupSoon();
+		void this.renewPush();
 		await this.refreshPhoto(publicKey);
 	}
 
@@ -1298,13 +1317,21 @@ class Session {
 	async myProfile(): Promise<ProfileRecord> {
 		const me = this.current.publicKey;
 		const saved = await storage.profiles.get(me);
-		const fields = { name: this.current.displayName, relays: await this.myDmRelays(), app: __APP_RELEASE__, features: PROFILE_FEATURES };
+		const push = await myPushTargets(storage);
+		const fields = {
+			name: this.current.displayName,
+			relays: await this.myDmRelays(),
+			app: __APP_RELEASE__,
+			features: PROFILE_FEATURES,
+			push: push.length ? push : undefined
+		};
 		const same =
 			saved &&
 			saved.name === fields.name &&
 			saved.app === fields.app &&
 			saved.relays.join(' ') === fields.relays.join(' ') &&
-			saved.features.join(' ') === fields.features.join(' ');
+			saved.features.join(' ') === fields.features.join(' ') &&
+			JSON.stringify(saved.push ?? []) === JSON.stringify(push);
 		if (same) return saved;
 		const card: ProfileRecord = { ...saved, ...fields, publicKey: me, updatedAt: nextVersion(saved) };
 		await storage.profiles.put(card);
@@ -1362,6 +1389,51 @@ class Session {
 		this.backupSoon();
 		await this.refreshPhoto(me);
 		void this.sendProfile(await profileAudience(storage, me));
+	}
+
+	// ---------- notificações (ADR-0010, RF-82) ----------
+
+	/** A mensagem chegou a um relay: avisa os aparelhos de quem recebe, se a pessoa ativou as notificações. */
+	private async notifyRecipient(item: OutboxRecord) {
+		const recipient = item.event.tags.find((t) => t[0] === 'p')?.[1];
+		const message = item.messageId ? await storage.messages.get(item.messageId) : undefined;
+		if (!recipient || !message) return;
+		const group = message.conversationId.startsWith('grupo:') ? message.conversationId.slice('grupo:'.length) : undefined;
+		this.notifier?.notify(recipient, group);
+	}
+
+	/** Conta aos meus outros aparelhos onde este recebe avisos: só para mim mesmo, nos meus relays. */
+	private async announcePushDevice(tags: string[][]) {
+		const wrapped = await vault.wrapDirectMessage(this.current.publicKey, '', tags, PUSH_DEVICE_KIND);
+		await this.requireNetwork().engine.enqueue(wrapped.toRecipient, await this.myDmRelays());
+	}
+
+	/**
+	 * Outro aparelho meu ativou, desativou ou trocou as chaves: o cartão muda e sai de novo. Se eu não o conhecia,
+	 * ele também não conhece este, então este se apresenta de volta.
+	 */
+	private async receivePushDevice(rumor: Awaited<ReturnType<Vault['unwrap']>>) {
+		const me = this.current.publicKey;
+		const { changed, unknown } = await storePushDevice(storage, me, rumor);
+		const mine = unknown ? await myPushTarget(storage) : undefined;
+		if (mine) await this.announcePushDevice(pushDeviceTags(await myDeviceId(storage), mine));
+		if (changed) void this.sendProfile(await profileAudience(storage, me));
+	}
+
+	/**
+	 * Bloqueei alguém: inscrição e chave VAPID novas neste aparelho, e o cartão novo vai só a quem ficou (ADR-0010).
+	 * O bloqueado fica com um endereço que o serviço de push recusa. Os meus outros aparelhos não sabem do bloqueio
+	 * (ele não passa de um aparelho para o outro) e ficam com as chaves deles.
+	 */
+	private async renewPush() {
+		try {
+			const tags = await renewPushTarget(storage, subscribePush);
+			if (!tags) return;
+			await this.announcePushDevice(tags);
+			void this.sendProfile(await profileAudience(storage, this.current.publicKey));
+		} catch {
+			// sem permissão ou sem rede: os contatos recebem 410 da inscrição antiga e param de mandar
+		}
 	}
 
 	/** O cartão que a pessoa mandou, se chegou algum. */

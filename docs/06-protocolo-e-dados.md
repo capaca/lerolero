@@ -53,6 +53,7 @@ kind 1059  Gift wrap — assinado por chave descartável; tag ["p", <destinatár
 | Confirmação (entregue / lida) | `4441` | próprio | Uma tag `["e", <id>]` por mensagem (até 200), `["status", "entregue" ou "lida"]` e `alt`. Vai só a quem escreveu as mensagens (nos grupos também), sem cópia para mim. Seção 3.4 |
 | Controle de grupo | `4440` | próprio | Seção 3.3; tag `alt` "aviso de grupo do Lero-lero" |
 | Cartão de perfil | `4442` | próprio | Seção 3.10 |
+| Aparelho de aviso | `4445` | próprio | Decidido em 2026-11-04 ([ADR-0010](adr/0010-web-push-no-pwa.md)): só para mim mesmo, nos meus relays de DM, conta aos meus outros aparelhos onde este recebe notificações. Tags `["aparelho", <id sorteado>]` e, se ativo, uma `push` como a do cartão (seção 3.10); sem `push`, desativou. Seção 3.11 |
 | Pedido de reenvio | `4444` | próprio | Decidido em 2026-10-29 (RF-53): uma tag `["seq", <n>]` por número que falta (até 50), `alt` e, nos grupos, `g`. Vai só a quem escreveu, sem cópia para mim. Seção 3.5 |
 
 Os números dos kinds próprios devem ser escolhidos consultando o registro de kinds do repositório de NIPs, para evitar colisão (Q-P1). A faixa **4440–4449** fica reservada para os kinds próprios do Lero-lero (livre no registro em 2026-10-22).
@@ -196,6 +197,36 @@ como uma mensagem 1:1 (NIP-59), **um embrulho por pessoa**, para ninguém ver a 
   guardado (não vira pedido). A foto aparece só para contato aceito e quem está num grupo comigo; de pedido, só depois
   de aceitar (T9). De bloqueado, descartado.
 - A tag `nome` na primeira mensagem continua indo, para quem ainda usa uma versão sem o cartão.
+- **Notificações** ([ADR-0010](adr/0010-web-push-no-pwa.md), 2026-11-04): até 3 `["push", <endereço>, <p256dh>, <auth>,
+  <VAPID pública>, <VAPID privada>]`, uma por aparelho meu que ativou, os mais recentes primeiro. Quem recebe confere
+  cada uma (endereço https de um serviço conhecido, chaves P-256 de 65 bytes, `auth` de 16, VAPID privada de 32) e
+  descarta o que não bate. Muda o cartão quando um aparelho ativa, desativa ou troca as chaves.
+
+### 3.11 Notificações por Web Push ([ADR-0010](adr/0010-web-push-no-pwa.md), RF-82)
+
+Decidido em 2026-11-04 (`packages/core/src/push`).
+
+- **Quando sai:** depois que a mensagem (kind `14` ou `15`, no 1:1 ou no grupo, também a da fila offline) é aceita
+  pelo primeiro relay daquele destinatário; reação, edição, confirmação e aviso de grupo não avisam. Uma rajada para
+  a mesma pessoa vira dois avisos: um na hora e um ao fim de **15 s** com o que veio no meio, para poupar o limite do
+  repassador e a bateria de quem recebe.
+- **O pedido:** para cada aparelho do cartão da pessoa, o aviso cifrado (RFC 8291, `aes128gcm`, um registro de 4096) e
+  o JWT ES256 assinado com a VAPID privada daquele aparelho (RFC 8292, `aud` = origem do serviço, validade de 12 h,
+  `sub` = endereço do app), `TTL` de **1 dia** (depois disso o aviso perde o sentido; a mensagem continua nos relays) e
+  `Urgency: high`. Vai como JSON ao repassador (`packages/repassador`), que devolve o status do serviço de push; 404 ou
+  410 tiram aquele aparelho do cartão guardado da pessoa.
+- **O aviso:** `{"v": 1, "de": <chave pública de quem mandou>, "nome": <nome>, "grupo"?: <id do grupo>}`, nunca o
+  conteúdo (T6).
+- **Quem pode me avisar:** quem recebe o meu cartão, ou seja, os contatos aceitos e quem está num grupo comigo
+  (decidido em 2026-11-04: o grupo aceito conta como aceite dos membros; rejeitado mandar os aparelhos só a contatos
+  aceitos, que deixaria sem aviso as mensagens de grupo de quem não é contato e pediria duas versões do cartão).
+- **Até 3 aparelhos** (decidido em 2026-11-04; rejeitado "só o último que ativou", que tiraria o aviso do outro
+  aparelho). Cada aparelho tem a sua inscrição e o seu par VAPID, e conta aos outros pelo kind `4445`. Quem recebe o
+  aviso de um aparelho que não conhecia se apresenta de volta (o novo não viu os avisos antigos, que os relays já
+  apagaram). O aviso de cada aparelho mais novo vale; o desativado fica guardado, para um aviso velho não o trazer de
+  volta. O id do aparelho é sorteado e não vai no backup.
+- **Ao bloquear:** o aparelho onde se bloqueou gera par VAPID e inscrição novos, avisa os outros aparelhos e manda o
+  cartão novo só a quem ficou. O bloqueado fica com um endereço que o serviço recusa.
 
 ## 4. Dados no aparelho (IndexedDB)
 
@@ -235,7 +266,7 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 
 | # | Questão | Responsável |
 |---|---|---|
-| Q-P1 | Escolher os números dos kinds próprios (edição, confirmação, pedido de reenvio) no registro de NIPs (✅ controle de grupo = `4440`, confirmação = `4441`, cartão de perfil = `4442`, edição = `4443`, pedido de reenvio = `4444`, faixa 4440–4449 reservada, 2026-10-22); avaliar propor um NIP para confirmações de entrega, que hoje não têm padrão | Implementação |
+| Q-P1 | Escolher os números dos kinds próprios (edição, confirmação, pedido de reenvio) no registro de NIPs (✅ controle de grupo = `4440`, confirmação = `4441`, cartão de perfil = `4442`, edição = `4443`, pedido de reenvio = `4444`, aparelho de aviso = `4445` (2026-11-04), faixa 4440–4449 reservada, 2026-10-22); avaliar propor um NIP para confirmações de entrega, que hoje não têm padrão | Implementação |
 | Q-P2 | Formato da figurinha sonora (v1): provavelmente kind `15` com imagem + áudio Opus curto, e `alt` "figurinha sonora" para outros apps (Q-F5) | Pedro (v1) |
 | Q-P3 | Janela de espera antes de pedir reenvio por buraco na numeração | ✅ 30 segundos, até 3 pedidos com um dia entre eles (2026-10-29, seção 3.5) |
 | Q-P4 | ✅ Português. Interoperabilidade da identidade via exportação da chave privada | — |

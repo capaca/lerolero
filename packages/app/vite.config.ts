@@ -39,7 +39,15 @@ export default defineConfig(({ command }) => ({
 		__APP_HOMOLOG__: JSON.stringify(process.env.APP_AMBIENTE === 'homologacao'),
 		// `vite dev`: o app local, com moldura e nome próprios
 		__APP_LOCAL__: JSON.stringify(command === 'serve'),
-		__APP_LOCAL_COLOR__: JSON.stringify(LOCAL_COLOR)
+		__APP_LOCAL_COLOR__: JSON.stringify(LOCAL_COLOR),
+		// repassador de Web Push (ADR-0010): o da homologação aceita também localhost e a rede local; APP_REPASSADOR
+		// troca por outro (o e2e usa um local)
+		__APP_REPASSADOR__: JSON.stringify(
+			process.env.APP_REPASSADOR ??
+				(process.env.APP_AMBIENTE === 'homologacao' || command === 'serve'
+					? 'https://lerolero-repassador-homologacao.pedro-capaca.workers.dev'
+					: 'https://lerolero-repassador.pedro-capaca.workers.dev')
+		)
 	},
 	plugins: [
 		localManifest(),

@@ -66,6 +66,11 @@ para outro site não usá-lo pelo navegador dos visitantes (rejeitado aceitar qu
 outros domínios). Um worker para a homologação, a cada merge, e outro para a produção, na release; conta da
 Cloudflare que o Pedro já usa em outro projeto.
 
+Na etapa 2 (decidido em 2026-11-04, detalhes em [docs/06 §3.11](../06-protocolo-e-dados.md)): o cartão, e com ele
+os aparelhos de push, vai também a quem está num grupo comigo, porque o grupo aceito conta como aceite dos membros
+(rejeitado mandar só a contatos aceitos); e cada conta tem **até 3 aparelhos** no cartão, que combinam a lista entre
+si por um aviso só para mim mesmo (kind `4445`; rejeitado "só o último que ativou").
+
 Aceito: com o celular parado, o aviso pode ficar retido até o desbloqueio. Para o beta, ainda é melhor do que lembrar
 de abrir o app.
 

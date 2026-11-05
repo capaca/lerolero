@@ -5,6 +5,27 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-04: Web Push no core (item 25, etapa 2)
+
+- `packages/core/src/push`: a cifra do aviso (RFC 8291) e o JWT VAPID (RFC 8292) com o WebCrypto, portados de
+  `prototipos/push/comum.js`; o teste confere byte a byte com o exemplo do apêndice A do RFC 8291 e decifra como o
+  navegador (`testing/fake-push.ts`).
+- O cartão de perfil leva até 3 tags `push`, uma por aparelho meu que ativou; os aparelhos combinam a lista por um
+  rumor kind `4445` só para mim mesmo, e quem descobre um aparelho novo se apresenta de volta. Geração de
+  sincronização 9, para quem atualizar reler os cartões e avisos que a versão anterior ignorou.
+- O aviso sai depois que a mensagem chega ao primeiro relay do destinatário (`onSent` da fila), então vale também para
+  a fila offline e para cada membro do grupo. Rajada para a mesma pessoa: um aviso na hora e um ao fim de 15 s.
+  404 ou 410 do serviço tiram aquele aparelho do cartão guardado.
+- Bloquear troca a inscrição e o par VAPID do aparelho e manda o cartão novo a quem ficou.
+- Decisões do Pedro: o grupo aceito conta como aceite dos membros para avisos (rejeitado só contatos aceitos) e até 3
+  aparelhos por conta (rejeitado só o último que ativou).
+- O endereço do repassador vem do build (`__APP_REPASSADOR__`): o da homologação no `vite dev` e na homologação, o da
+  produção na release, ou `APP_REPASSADOR` (para o e2e da etapa 3).
+- Ainda sem efeito para ninguém: ativar as notificações (Ajustes, permissão, service worker) é a etapa 3; até lá
+  nenhum cartão leva `push` e nenhum aviso sai.
+- Ficou de fora: a troca de chaves ao bloquear só vale no aparelho onde se bloqueou (limite no roadmap); um contato
+  consegue forjar um aviso com o nome de outro (T25, aceito).
+
 ## 2026-11-04: repassador de Web Push (item 25, etapa 1)
 
 - `packages/repassador`, um Cloudflare Worker sem estado que recebe do app o aviso já cifrado e o JWT VAPID e só faz

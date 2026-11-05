@@ -42,6 +42,7 @@ export {
 	EDIT_KIND,
 	RESEND_KIND,
 	PROFILE_KIND,
+	PUSH_DEVICE_KIND,
 	RECEIPT_KIND,
 	REACTION_KIND,
 	type MessageKind,
@@ -71,6 +72,19 @@ export {
 	profileFromRumor,
 	storeProfile
 } from './contacts/profile.ts';
+export {
+	dropPushTarget,
+	MAX_PUSH_TARGETS,
+	myDeviceId,
+	myPushTarget,
+	myPushTargets,
+	pushDeviceTags,
+	renewPushTarget,
+	setMyPushTarget,
+	storePushDevice
+} from './push/targets.ts';
+export { PUSH_BURST_MS, PushNotifier, type PushNotifierOptions, type PushPayload } from './push/notifier.ts';
+export { fromBase64Url, generateVapid, pushRequest, validTarget, type PushRelayRequest, type PushTarget, type VapidKeys } from './push/webpush.ts';
 export { RelayConnection, RelayError, type PublishResult, type Signer, type SocketFactory } from './net/connection.ts';
 export { IDLE_CLOSE_MS, RECONNECT_DELAYS_MS, RelayPool, type PoolOptions } from './net/pool.ts';
 export {

@@ -4,7 +4,8 @@ import type { KdfParams } from '../crypto/seal.ts';
 import { createVault, PROFILE_KIND } from '../identity/vault.ts';
 import { directConversationId, storeOutgoing } from '../conversations/messaging.ts';
 import { openStorage } from '../storage/repositories.ts';
-import type { ConversationRecord, MessageMedia } from '../storage/records.ts';
+import type { ConversationRecord, MessageMedia, ProfileRecord } from '../storage/records.ts';
+import { fakePushDevice } from '../testing/fake-push.ts';
 import {
 	markProfileSent,
 	photoAllowed,
@@ -44,7 +45,12 @@ const PHOTO: MessageMedia = {
 };
 
 /** O cartão de `from` como chega a `to`. */
-function card(from: Person, to: Person, fields: { name: string; photo?: MessageMedia; relays?: string[] }, createdAt?: number) {
+function card(
+	from: Person,
+	to: Person,
+	fields: { name: string; photo?: MessageMedia; relays?: string[]; push?: ProfileRecord['push'] },
+	createdAt?: number
+) {
 	const { content, tags } = profileEvent({ relays: [], app: '0.8.0', features: PROFILE_FEATURES, ...fields });
 	return to.vault.unwrap(from.vault.wrapDirectMessage(to.publicKey, content, tags, PROFILE_KIND, createdAt).toRecipient);
 }
@@ -67,6 +73,19 @@ describe('cartão de perfil (Q-P5)', () => {
 		const got = profileFromRumor(card(alice, bob, { name: 'Alice', photo: PHOTO, relays: ['wss://relay.example'] }));
 		expect(got).toMatchObject({ publicKey: alice.publicKey, name: 'Alice', photo: PHOTO, relays: ['wss://relay.example'], app: '0.8.0' });
 		expect(got?.features).toEqual(PROFILE_FEATURES);
+	});
+
+	it('leva os aparelhos onde a pessoa recebe avisos (ADR-0010), no máximo 3, e descarta o que não confere', async () => {
+		const alice = await device();
+		const bob = await device();
+		const devices = await Promise.all([1, 2, 3, 4].map(() => fakePushDevice()));
+		const push = devices.map((d) => d.target);
+		const got = profileFromRumor(card(alice, bob, { name: 'Alice', push }));
+		expect(got?.push).toEqual(push.slice(0, 3));
+
+		const strange = [{ ...push[0]!, endpoint: 'https://exemplo.com/x' }, { ...push[1]!, auth: 'x' }, push[2]!];
+		expect(profileFromRumor(card(alice, bob, { name: 'Alice', push: strange }))?.push).toEqual([push[2]]);
+		expect(profileFromRumor(card(alice, bob, { name: 'Alice' }))?.push).toBeUndefined();
 	});
 
 	it('o cofre não embrulha cartão sem nome', async () => {
