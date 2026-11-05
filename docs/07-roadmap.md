@@ -31,7 +31,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; arquivos (item 18) e botão de emojis (item 19) feitos em 2026-11-02 |
 | M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo e gerenciador de senhas feitos; passkey (item 15) adiada para depois do beta |
 | M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade feita (item 22); linguagem simples feita (item 21); notificações feitas (item 25, v0.12.0, com o convite na tela inicial); a fazer: item 20 |
-| Revisão de prontidão | — | Em andamento, antes do beta: item 23; decisões de domínio, dados de uso e servidor tomadas em 2026-11-05 |
+| Revisão de prontidão | — | Em andamento, antes do beta: item 23; decisões de domínio, dados de uso e servidor tomadas em 2026-11-05; riscos levantados em [08](08-prontidao.md), com P1 a P9 por corrigir |
 | Beta fechado | 6 sem de uso | A fazer: item 24 |
 | v1 Android + desktop | 26 sem | Depois do beta |
 
@@ -69,7 +69,7 @@ do WhatsApp.
 21. Revisão dos textos para linguagem simples (M5; RNF-64). ✅ Feita em 2026-11-02
 22. Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (M5; RNF-60..63): axe-core e alvos de 48 dp em todas as telas no e2e `textos`; TalkBack e fonte a 200% conferidos no celular. ✅ Feita em 2026-11-03
 25. Notificações por Web Push no PWA (M5; RF-82, Q-M2, [ADR-0010](adr/0010-web-push-no-pwa.md)): decidido em 2026-11-04, antes do beta; o número 25 é para não renumerar os outros. Em três etapas, cada uma com o seu PR: (1) o repassador mínimo, sem estado, só para os serviços de push conhecidos e com limite de pedidos, no Cloudflare Workers gratuito (escolhido em 2026-11-04; feita em 2026-11-04, `packages/repassador`, 120 pedidos por minuto por IP e só as origens do app); (2) no core, chave VAPID por pessoa, inscrição no cartão de perfil, cifra do aviso (RFC 8291) e envio depois de cada mensagem (1:1, grupo, fila offline), com chaves novas ao bloquear (feita em 2026-11-04, `packages/core/src/push`, com até 3 aparelhos por conta); (3) no app, "Notificações" em Ajustes, o service worker que mostra "Mensagem de <nome>" e abre a conversa ao tocar, e o e2e (feita em 2026-11-04). ✅ Feita em 2026-11-04
-23. Revisão de prontidão para produção, com os seis temas, os [limites conhecidos](#limites-conhecidos) e a decisão do domínio (Q-N1). Decidido em 2026-11-05: `.com.br` comprado antes do beta (Q-N1), resumo técnico opt-in já no beta (Q-N6), sem servidor próprio no beta (Q-N7). Em etapas, cada uma com o seu PR: (1) as decisões (feita em 2026-11-05); (2) o domínio: o Pedro compra, o Pages e o repassador passam a atendê-lo e o endereço antigo avisa quem ainda está lá; (3) o levantamento dos riscos por tema, com mitigação ou aceite, e a correção dos críticos; (4) as sondas sintéticas na CI e o painel de saúde dos relays e Blossom; (5) o resumo técnico opt-in.
+23. Revisão de prontidão para produção, com os seis temas, os [limites conhecidos](#limites-conhecidos) e a decisão do domínio (Q-N1). Decidido em 2026-11-05: `.com.br` comprado antes do beta (Q-N1), resumo técnico opt-in já no beta (Q-N6), sem servidor próprio no beta (Q-N7). Em etapas, cada uma com o seu PR: (1) as decisões (feita em 2026-11-05); (2) o domínio: o Pedro compra, o Pages e o repassador passam a atendê-lo e o endereço antigo avisa quem ainda está lá; (3) o levantamento dos riscos por tema, com mitigação ou aceite, e a correção dos críticos (levantamento feito em 2026-11-05, em [08](08-prontidao.md): 36 riscos; o Pedro escolheu corrigir antes do beta os oito de perda e de chave, P1 a P8, e a faixa de avisos de incidente, P9, cada um com o seu PR); (4) as sondas sintéticas na CI e o painel de saúde dos relays e Blossom; (5) o resumo técnico opt-in.
 24. Beta fechado.
 
 Organizada em 2026-10-30 pelo Pedro: as funcionalidades novas (17 a 19) vêm antes das revisões, para que a medição,
@@ -234,7 +234,8 @@ Aceitos por ora; cada um tem a origem no [histórico](historico.md).
 - Fechar o app nos ~10 s em que o envio 1:1 busca os relays de alguém novo deixa a mensagem pendente sem entrada na
   fila. A mesma janela curta existe ao pôr avisos de grupo na fila.
 - Falha de gravação no banco (cota cheia, erro do navegador) ainda perde a mensagem recebida, porque o embrulho é
-  marcado como visto mesmo quando o processamento lança.
+  marcado como visto mesmo quando o processamento lança. Vale para qualquer erro, inclusive o cofre trancado no meio
+  da sincronização; a correção é o P3 da [prontidão](08-prontidao.md).
 - `markDeleted` grava a conversa sem esperar a vez (`conversations/lock.ts`), por ser chamada de dentro de
   `storeIncoming`.
 - A edição de uma mensagem não é reenviada: quem a recebe por um pedido de reenvio vê o texto original.
