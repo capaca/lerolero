@@ -15,6 +15,7 @@ import {
 	expect,
 	meuConvite,
 	PIN,
+	restaurarSemAcharOBackup,
 	test,
 	vencerSessao
 } from '../ajudantes.ts';
@@ -486,4 +487,12 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.goto(PSEUDO_URL + 'ajustes/comentario');
 	await expect(page.locator('pre.device')).toBeVisible();
 	await semTextoFixo(page);
+});
+
+test('aviso de backup achado depois de restaurar (P5): nenhum texto fixo', async ({ novaPessoa, novoAparelho }) => {
+	const { novo } = await restaurarSemAcharOBackup(novaPessoa, () => novoAparelho());
+	// recarregar não publica nada: a busca refeita acha o backup de novo e o aviso volta
+	await naPseudolingua(novo);
+	await expect(novo.getByRole('dialog')).toBeVisible({ timeout: 20_000 });
+	await semTextoFixo(novo, ['Maria']);
 });

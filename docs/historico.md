@@ -5,6 +5,20 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: backup quase vazio não substitui mais o bom (P5)
+
+- "Não há backup" só vale quando os três relays gerais responderam. Antes, bastava um relay de DM (que guarda só 7
+  dias) responder "nada" enquanto o que tinha o backup passava dos 8 s, e o aparelho publicava o seu, sem contatos
+  nem grupos, por cima do bom. Sem a resposta de todos, o aparelho não publica e procura de novo na próxima abertura.
+- Antes do primeiro backup que o aparelho publica, procura mais uma vez. Se o achado tem contatos ou grupos que o
+  aparelho não tem, não publica e pergunta: "Trazer para este aparelho" (junta e publica) ou "Descartar o backup
+  antigo" (publica o deste aparelho por cima). Fechar o aviso deixa a pergunta para a próxima abertura, sem publicar.
+- O Pedro escolheu as duas proteções e o aviso, com "Trazer" como principal. Rejeitados: só exigir os relays gerais;
+  juntar sozinho, sem perguntar; e o aviso por ter menos contatos que o último backup visto, que quase nunca
+  dispararia (o app só vê um backup quando já o juntou).
+- Testes: no core, a busca que exige os relays gerais e a contagem do que falta no aparelho; no e2e, o relay que
+  "demora" com o backup na restauração (`esconderBackup`), com as duas escolhas, e o aviso no `textos`.
+
 ## 2026-11-05: mensagem que ficou horas na fila de saída chega (P4)
 
 - A fila guarda o rumor de cada embrulho. Item que passou de 1 hora na fila sai num embrulho novo, com horário

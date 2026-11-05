@@ -10,6 +10,7 @@
 	import { savePendingRoute, takePendingRoute } from '#lib/pending-route.ts';
 	import { session, type Status } from '#lib/session.svelte.ts';
 	import { applyTextSize, readTextSize } from '#lib/text-size.ts';
+	import Sheet from '#lib/components/Sheet.svelte';
 	import type { LayoutProps } from './$types';
 
 	// app em dev: a barra do celular na cor do "Lero local" (o manifest já sai com ela, vite.config.ts)
@@ -21,6 +22,28 @@
 	// para não perder uma mensagem que a pessoa esteja digitando
 	let updateReady = $state(false);
 	const showOffline = $derived(session.status === 'desbloqueado' && session.offline);
+
+	// P5: backup nos relays com o que este aparelho não tem; fechar sem escolher deixa para a próxima abertura
+	let backupLater = $state(false);
+	let backupBusy = $state(false);
+	const backupConflict = $derived(session.status === 'desbloqueado' && !backupLater ? session.backupConflict : undefined);
+	const backupItems = $derived.by(() => {
+		if (!backupConflict) return '';
+		const parts = [
+			...(backupConflict.contacts ? [m.backup_achado_contatos({ count: backupConflict.contacts })] : []),
+			...(backupConflict.groups ? [m.backup_achado_grupos({ count: backupConflict.groups })] : [])
+		];
+		return parts.length === 2 ? m.backup_achado_e({ a: parts[0], b: parts[1] }) : parts[0];
+	});
+
+	async function resolveBackup(keep: boolean) {
+		backupBusy = true;
+		try {
+			await (keep ? session.keepOldBackup() : session.discardOldBackup());
+		} finally {
+			backupBusy = false;
+		}
+	}
 
 	const UPDATE_CHECK_MS = 5 * 60_000;
 
@@ -129,6 +152,17 @@
 		<span>{m.layout_versao_nova()}</span>
 		<button onclick={() => location.reload()}>{m.layout_atualizar()}</button>
 	</div>
+{/if}
+
+{#if backupConflict}
+	<Sheet label={m.backup_achado_titulo()} onclose={() => (backupLater = true)}>
+		<p><strong>{m.backup_achado_titulo()}</strong></p>
+		<p>{m.backup_achado_texto({ itens: backupItems, total: backupConflict.contacts + backupConflict.groups })}</p>
+		<div class="actions stack">
+			<button class="primary" disabled={backupBusy} onclick={() => resolveBackup(true)}>{m.backup_achado_trazer()}</button>
+			<button class="link" disabled={backupBusy} onclick={() => resolveBackup(false)}>{m.backup_achado_descartar()}</button>
+		</div>
+	</Sheet>
 {/if}
 
 {#if session.status !== 'carregando'}

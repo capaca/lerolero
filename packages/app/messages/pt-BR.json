@@ -7,6 +7,56 @@
 	"layout_atualizar": "Atualizar",
 	"layout_homologacao": "Homologação",
 	"layout_local": "Local",
+	"backup_achado_titulo": "Achamos um backup seu",
+	"backup_achado_texto": [
+		{
+			"declarations": [
+				"input itens",
+				"input total",
+				"local totalPlural = total: plural"
+			],
+			"selectors": [
+				"totalPlural"
+			],
+			"match": {
+				"totalPlural=one": "Ele tem {itens} que não está neste aparelho.",
+				"totalPlural=other": "Ele tem {itens} que não estão neste aparelho."
+			}
+		}
+	],
+	"backup_achado_contatos": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "1 contato",
+				"countPlural=other": "{count} contatos"
+			}
+		}
+	],
+	"backup_achado_grupos": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural"
+			],
+			"selectors": [
+				"countPlural"
+			],
+			"match": {
+				"countPlural=one": "1 grupo",
+				"countPlural=other": "{count} grupos"
+			}
+		}
+	],
+	"backup_achado_e": "{a} e {b}",
+	"backup_achado_trazer": "Trazer para este aparelho",
+	"backup_achado_descartar": "Descartar o backup antigo",
 	"comum_voltar": "Voltar",
 	"comum_continuar": "Continuar",
 	"comum_seu_nome": "Seu nome",

@@ -12,6 +12,7 @@ import {
 	BACKUP_SENT_KEY,
 	buildBackup,
 	fetchBackup,
+	missingFromDevice,
 	parseBackup,
 	type Backup,
 	blockContact,
@@ -211,6 +212,11 @@ class Session {
 	private delivering: Promise<unknown> = Promise.resolve();
 	/** sem internet, ou sem nenhum relay conectado há alguns segundos: a tela avisa que as mensagens ficam na fila */
 	offline = $state(false);
+	/**
+	 * P5: um backup nos relays com contatos ou grupos que este aparelho não tem, achado antes do primeiro backup daqui.
+	 * Até a pessoa escolher (keepOldBackup ou discardOldBackup), nada é publicado por cima.
+	 */
+	backupConflict = $state.raw<{ contacts: number; groups: number; backup: Backup }>();
 	private noRelaysSince?: number;
 	private connectionTimer?: ReturnType<typeof setInterval>;
 	private gapTimer?: ReturnType<typeof setInterval>;
@@ -494,7 +500,8 @@ class Session {
 		const own = !pool;
 		pool ??= new RelayPool({ signer: (template) => vault.sign(template), timeoutMs: 8_000 });
 		try {
-			const { events, answered } = await fetchBackup(pool, await this.backupRelays(publicKey, pool), publicKey);
+			// P5: "não há" só vale com a resposta dos relays gerais, que guardam por mais tempo
+			const { events, answered } = await fetchBackup(pool, await this.backupRelays(publicKey, pool), publicKey, (await relayList()).geral);
 			for (const event of events) {
 				try {
 					const backup = parseBackup(await vault.openBackup(event));
@@ -537,18 +544,44 @@ class Session {
 	}
 
 	/** Publica só se mudou desde o último, ou se o último já tem uns dias (relay que apaga o antigo). */
-	private async publishBackup() {
+	private async publishBackup(overwrite = false) {
 		const network = this.network;
-		if (!network || !(await storage.settings.get<boolean>(BACKUP_CHECKED_KEY))) return;
+		if (!network || this.backupConflict || !(await storage.settings.get<boolean>(BACKUP_CHECKED_KEY))) return;
 		const me = this.current.publicKey;
-		const backup = await buildBackup(storage, me);
 		const sent = await storage.settings.get<{ content: string; at: number }>(BACKUP_SENT_KEY);
+		// P5: antes do primeiro backup deste aparelho, procura de novo; o relay que tem o bom pode ter demorado antes
+		if (!sent && !overwrite) {
+			const { backup: found, checked } = await this.findBackup(me, network.pool);
+			if (!checked) return; // tenta de novo na próxima abertura
+			if (found) {
+				const missing = await missingFromDevice(storage, me, found);
+				if (missing.contacts || missing.groups) return void (this.backupConflict = { ...missing, backup: found });
+			}
+		}
+		const backup = await buildBackup(storage, me);
 		if (!backupChanged(sent?.content, backup) && Date.now() - (sent?.at ?? 0) < BACKUP_REFRESH_MS) return;
 		const content = backupContent(backup);
 		const event = await vault.sealBackup(content, backup.createdAt);
 		// a fila insiste até algum relay aceitar, mesmo se o app fechar: já conta como publicado
 		await network.engine.enqueue(event, await this.backupRelays(me, network.pool), BACKUP_ID);
 		await storage.settings.set(BACKUP_SENT_KEY, { content, at: Date.now() });
+	}
+
+	/** P5, "Trazer para este aparelho": junta o backup achado e publica o resultado. */
+	async keepOldBackup() {
+		const conflict = this.backupConflict;
+		if (!conflict) return;
+		await applyBackup(storage, this.current.publicKey, conflict.backup);
+		this.version++;
+		this.backupConflict = undefined;
+		await this.publishBackup(true);
+	}
+
+	/** P5, "Descartar o backup antigo": publica o deste aparelho por cima. */
+	async discardOldBackup() {
+		if (!this.backupConflict) return;
+		this.backupConflict = undefined;
+		await this.publishBackup(true);
 	}
 
 	// ---------- conversas ----------
