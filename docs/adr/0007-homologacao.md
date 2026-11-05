@@ -69,4 +69,5 @@ Escolhas do Pedro em 2026-10-22:
 - Com domínio próprio (Q-N1), rever: `homolog.<domínio>` na mesma organização.
 - **Mudar a produção de endereço muda a origem:** se um dia a produção sair de `capaca.github.io` (para a organização
   ou para um domínio), cada pessoa começa do zero no endereço novo e precisa recuperar a conta com a frase de 12
-  palavras; contatos e conversas ficam no endereço antigo. Planejar antes do beta, junto com a Q-N1.
+  palavras; contatos e conversas ficam no endereço antigo. Planejar antes do beta, junto com a Q-N1. Decidido em
+  2026-11-05: domínio `.com.br` antes do beta, para o beta já nascer no endereço final (item 23, etapa 2).

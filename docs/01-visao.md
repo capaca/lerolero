@@ -69,11 +69,11 @@ Princípios derivados do objetivo "alternativa brasileira às Big Techs". Servem
 
 1. **Sem dono central:** nenhuma peça do sistema pode ser desligada por uma única entidade, incluindo o próprio projeto.
 2. **Soberania:** nenhuma dependência essencial de empresas estrangeiras; preferência por infraestrutura operada no Brasil.
-3. **Custo zero para o projeto:** se uma funcionalidade exige um servidor pago, ela não entra ou é redesenhada.
+3. **Custo zero para o projeto:** se uma funcionalidade exige um servidor pago, ela não entra ou é redesenhada. A única exceção é o domínio próprio, ~R$ 40/ano (Q-N1, 2026-11-05).
 4. **Identidade do usuário, não da plataforma:** sem número de telefone ou e-mail obrigatório. A identidade é um par de chaves que o usuário controla e pode levar para outro app.
 5. **Código aberto:** necessário para que a independência possa ser verificada e para que outros possam continuar o projeto.
 6. **Protocolo aberto e interoperável** (preferência): usar um protocolo que outros apps também falam, para evitar criar um novo "jardim murado".
-7. **Mínimo de dados:** o app não coleta telemetria nem dados pessoais.
+7. **Mínimo de dados:** o app não coleta dados pessoais, e nada técnico sai do aparelho sem a pessoa pedir. A única coleta é o resumo técnico opcional, desligado por padrão, só com contagens e tempos (Q-N6, aprovada em 2026-11-05).
 8. **Leve e inclusivo:** toda funcionalidade precisa funcionar num celular simples, com rede ruim, e ser usável por quem tem pouca familiaridade com tecnologia.
 9. **Respeito à atenção:** o app não é desenhado para viciar. O usuário controla quando e com que frequência recebe mensagens e notificações. Nada de mecânicas de engajamento compulsivo.
 10. **Android primeiro:** o Android é a plataforma prioritária, por ser mais aberto e por ser o celular da maioria dos brasileiros. O iOS é suportado com as limitações que a Apple impõe.
