@@ -4,6 +4,9 @@ import { self } from '$app/service-worker';
 import { version } from '$app/env';
 import { immutable, assets, prerendered } from '$app/manifest';
 import { resolve } from '$app/paths';
+import { listenForPush } from './push.ts';
+
+listenForPush();
 
 const CACHE_NAME = `lerolero-${version}`;
 

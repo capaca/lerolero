@@ -5,6 +5,24 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-04: notificações no app (item 25, etapa 3)
+
+- Ajustes → Notificações liga e desliga os avisos neste aparelho: pede a permissão, gera o par VAPID, se inscreve e
+  manda o cartão novo a quem já conversou comigo. No iPhone fora da tela de início, a tela explica que é preciso
+  instalar; navegador sem Web Push vê só um aviso.
+- O service worker (`service-worker/push.ts`) mostra "Mensagem de <nome>" com o nome que o aparelho conhece (lê o
+  IndexedDB do app sem mudar a versão do banco) e, em grupo, o nome do grupo. Com o app visível não mostra nada.
+- Tocar abre a conversa: com o app aberto, o service worker pede a navegação à página (recarregar trancaria o cofre);
+  bloqueado, o PIN vem antes e depois abre a conversa pedida, não o início.
+- A cada abertura o app confere se a inscrição continua a mesma: a permissão retirada nas configurações desativa, e
+  a inscrição trocada pelo navegador (ou perdida numa troca de chaves que falhou) é refeita.
+- O guia de teste ganhou o passo de ativar as notificações, e a limitação "Sem notificações" virou "O aviso pode
+  atrasar" (com o celular parado, só ao desbloquear).
+- O e2e `notificacoes` simula a inscrição com as chaves do `fakePushDevice`, intercepta o repassador, decifra o aviso
+  (só `de` e `nome`, sem o texto) e o entrega ao service worker pelo DevTools com a página fechada; confere a
+  notificação, o PIN antes da conversa e que desativar tira o endereço do cartão.
+- Ficou de fora: o texto da notificação sai sempre em português (limite no roadmap).
+
 ## 2026-11-04: Web Push no core (item 25, etapa 2)
 
 - `packages/core/src/push`: a cifra do aviso (RFC 8291) e o JWT VAPID (RFC 8292) com o WebCrypto, portados de

@@ -62,6 +62,7 @@
 		<li><Rich text={m.guia_passo_apagar()} /></li>
 		<li><Rich text={m.guia_passo_selecionar()} /></li>
 		<li><Rich text={m.guia_passo_leitura()} /></li>
+		<li><Rich text={m.guia_passo_notificacoes()} /></li>
 	</ol>
 	<p><Rich text={m.guia_pin()} /></p>
 

@@ -11,6 +11,7 @@
 	import { READ_RECEIPTS_KEY, session } from '#lib/session.svelte.ts';
 	import { FEEDBACK_FORM_URL, FEEDBACK_INVITE } from '#lib/teste.ts';
 	import { readTextSize, saveTextSize, type TextSize } from '#lib/text-size.ts';
+	import { NoServiceWorkerError, pushSupport, PushPermissionError } from '#lib/push-subscription.ts';
 
 	const npub = $derived(session.identity ? toNpub(session.identity.publicKey) : '');
 
@@ -42,6 +43,35 @@
 	});
 	function toggleReceipts() {
 		void session.setSetting(READ_RECEIPTS_KEY, readReceipts);
+	}
+
+	// notificações (RF-82, ADR-0010): só deste aparelho, desligadas até a pessoa pedir
+	const support = pushSupport();
+	let pushOn = $state(false);
+	let pushBusy = $state(false);
+	let pushError = $state('');
+	$effect(() => {
+		void session.pushEnabled().then((on) => (pushOn = on));
+	});
+	async function togglePush() {
+		const want = pushOn;
+		pushBusy = true;
+		pushError = '';
+		try {
+			await (want ? session.enablePush() : session.disablePush());
+		} catch (e) {
+			pushOn = !want;
+			pushError =
+				e instanceof NoServiceWorkerError
+					? m.ajustes_notificacoes_sem_suporte()
+					: !(e instanceof PushPermissionError)
+						? m.ajustes_notificacoes_erro()
+						: e.blocked
+							? m.ajustes_notificacoes_bloqueada()
+							: m.ajustes_notificacoes_negada();
+		} finally {
+			pushBusy = false;
+		}
 	}
 
 	// tamanho da letra (RNF-65): só deste aparelho
@@ -118,6 +148,20 @@
 			</a>
 			<button onclick={lock}>{m.ajustes_bloquear_agora()}</button>
 		</div>
+	</section>
+
+	<section class="card">
+		<h2>{m.ajustes_notificacoes()}</h2>
+		{#if support === 'sim'}
+			<label class="check">
+				<input type="checkbox" bind:checked={pushOn} onchange={togglePush} disabled={pushBusy} />
+				<span>{m.ajustes_notificacoes_ativar()}</span>
+			</label>
+			<p class="hint">{m.ajustes_notificacoes_dica()}</p>
+			{#if pushError}<p class="error" role="alert">{pushError}</p>{/if}
+		{:else}
+			<p class="hint">{support === 'instalar' ? m.ajustes_notificacoes_instalar() : m.ajustes_notificacoes_sem_suporte()}</p>
+		{/if}
 	</section>
 
 	<section class="card">
