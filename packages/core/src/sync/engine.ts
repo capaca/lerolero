@@ -21,6 +21,11 @@ export const CURSOR_MARGIN_S = 2 * DAY;
 export const FIRST_SYNC_WINDOW_S = 9 * DAY;
 /** Ids de embrulhos já vistos são guardados por 7 dias de retenção + 2 de margem. */
 export const SEEN_RETENTION_S = 9 * DAY;
+/**
+ * O NIP-59 só recua o horário do embrulho; adiante do relógio, só o de quem mandou desacertado. Além desta
+ * folga o embrulho é descartado sem mexer no cursor (T26).
+ */
+export const FUTURE_TOLERANCE_S = 60 * 60;
 
 /** Espera antes de tentar de novo um envio; a última se repete. */
 export const RETRY_DELAYS_MS = [5_000, 15_000, 60_000, 5 * 60_000, 15 * 60_000];
@@ -107,8 +112,9 @@ export class SyncEngine {
 	async start(relays: string[]) {
 		this.stop();
 		for (const relay of relays) {
+			// cursor que já foi para o futuro (antes da correção do T26) volta ao relógio
 			const cursor = await this.storage.sync.getCursor(relay);
-			if (cursor !== undefined) this.cursors.set(relay, cursor);
+			if (cursor !== undefined) this.cursors.set(relay, Math.min(cursor, this.seconds()));
 		}
 		this.subscription = this.pool.subscribe(
 			relays,
@@ -177,6 +183,9 @@ export class SyncEngine {
 
 	private async process(relay: string, wrap: NostrEvent) {
 		if (wrap.kind !== 1059 || !wrap.tags.some((t) => t[0] === 'p' && t[1] === this.myPublicKey)) return;
+		// T26: datado do futuro, qualquer um com a npub publicaria um para travar o cursor deste relay
+		const now = this.seconds();
+		if (wrap.created_at > now + FUTURE_TOLERANCE_S) return;
 		if (!(await this.storage.seenWraps.has(wrap.id))) {
 			try {
 				await this.events.onWrap(wrap, relay);
@@ -187,10 +196,12 @@ export class SyncEngine {
 			// precisa vir de novo. O inválido também é marcado, para não ser tentado a cada sincronização.
 			await this.storage.seenWraps.add({ id: wrap.id, receivedAt: this.seconds() });
 		}
+		// o cursor nunca passa do relógio do aparelho, nem com o embrulho dentro da folga (T26)
+		const at = Math.min(wrap.created_at, now);
 		const cursor = this.cursors.get(relay);
-		if (cursor === undefined || wrap.created_at > cursor) {
-			this.cursors.set(relay, wrap.created_at);
-			await this.storage.sync.setCursor(relay, wrap.created_at);
+		if (cursor === undefined || at > cursor) {
+			this.cursors.set(relay, at);
+			await this.storage.sync.setCursor(relay, at);
 		}
 	}
 

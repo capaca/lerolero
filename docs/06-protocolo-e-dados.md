@@ -172,7 +172,7 @@ Como ficou:
 ### 3.9 Sincronização
 
 - **Assinatura:** `{"kinds": [1059], "#p": [<minha chave>], "since": <cursor − 2 dias>}` em cada relay de DM, com autenticação NIP-42 quando o relay exigir.
-- **Cursor por relay:** maior `created_at` processado; a margem de 2 dias compensa o embaralhamento de horário.
+- **Cursor por relay:** maior `created_at` processado, nunca além do relógio do aparelho; a margem de 2 dias compensa o embaralhamento de horário. Embrulho com `created_at` mais de 1 hora à frente do relógio é descartado sem mexer no cursor (T26).
 - **Deduplicação:** guardar os ids de gift wraps processados por 9 dias (7 de retenção + 2 de margem) e descartar repetidos.
 - **Fila de envio:** eventos prontos ficam na fila até ao menos um relay confirmar; novas tentativas com espera crescente (RNF-33).
 
