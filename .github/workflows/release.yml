@@ -72,20 +72,10 @@ jobs:
         env:
           BASE_PATH: /lerolero
           APP_RELEASE: ${{ steps.versao.outputs.versao }}
-      # o protótipo fica fora do workspace (npm); o cache evita baixar tudo a cada execução,
-      # e o fetch-timeout curto faz um download travado ser repetido em 30 s, não em 5 min
-      - uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: npm-medicao-${{ hashFiles('prototipos/medicao/package-lock.json') }}
-      - name: Build do protótipo de medição
-        working-directory: prototipos/medicao
-        run: npm ci --prefer-offline --no-audit --no-fund --fetch-timeout=30000 && npm run build
-      # o app ocupa a raiz do site; o protótipo fica em /medicao/
+      # P7: só o app na origem da produção. Os protótipos (outras dependências, `npm ci` com scripts de instalação)
+      # ficam na homologação: código comprometido ali rodaria na mesma origem da conta de verdade
       - name: Monta o site
-        run: |
-          cp -rL packages/app/build site
-          cp -r prototipos/medicao/dist site/medicao
+        run: cp -rL packages/app/build site
       # Mantém no ar o código da versão publicada até agora. Logo depois de publicar, páginas
       # antigas guardadas (no navegador, na CDN do GitHub ou no service worker) ainda pedem os
       # arquivos da versão anterior; sem isto eles somem e o app abre em branco. Os arquivos

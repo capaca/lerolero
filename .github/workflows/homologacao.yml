@@ -52,6 +52,15 @@ jobs:
             fs.writeFileSync("manifest.webmanifest", JSON.stringify(m, null, "\t"));
           '
           find . -name '*.html' -exec sed -i 's/name="theme-color" content="#1f6f5c"/name="theme-color" content="#c2410c"/' {} +
+      # o protótipo de medição (item 20) fica fora do workspace (npm) e, desde o P7, só na homologação; o cache evita
+      # baixar tudo a cada execução, e o fetch-timeout curto repete um download travado em 30 s, não em 5 min
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-medicao-${{ hashFiles('prototipos/medicao/package-lock.json') }}
+      - name: Build do protótipo de medição
+        working-directory: prototipos/medicao
+        run: npm ci --prefer-offline --no-audit --no-fund --fetch-timeout=30000 && npm run build
       # O token vai num cabeçalho, não na URL: um espaço ou uma quebra de linha colados junto com o secret
       # quebravam a URL ("Malformed input to a URL function") no primeiro deploy (2026-10-22).
       - name: Prepara o acesso ao repositório da homologação
@@ -93,6 +102,8 @@ jobs:
           cp -r prototipos/senha site/senha
           # protótipo de notificações por Web Push (Q-M2): HTML puro, sem build
           cp -r prototipos/push site/push
+          # protótipo de medição (item 20, ADR-0002): saiu da produção no P7
+          cp -r prototipos/medicao/dist site/medicao
           echo "arquivos da versão anterior mantidos: $(find anteriores -type f | wc -l)"
           # sem isto o Pages (Jekyll) ignora a pasta _app
           touch site/.nojekyll

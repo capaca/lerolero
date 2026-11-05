@@ -5,6 +5,15 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: só o app na origem da produção (P7)
+
+- A release deixou de montar e publicar o protótipo de medição em `/medicao/`. Ele tinha outro lockfile, `npm ci` com
+  scripts de instalação e outras versões de Vite e Svelte; uma dependência comprometida ali rodaria na mesma origem
+  da conta de verdade.
+- O protótipo continua necessário para o item 20 (medição no aparelho de 2 GB) e passou para a homologação, junto
+  de `/senha/` e `/push/`: https://lerolero-app.github.io/lerolero/medicao/. Lá só há contas de teste.
+- O `/medicao/` da produção some na próxima release (o Pages troca o site inteiro).
+
 ## 2026-11-05: a sessão aberta é só do cofre (P6)
 
 - O cofre grava, lê, renova e apaga a sessão aberta (recarregar sem o PIN por 5 minutos) num banco próprio, o
