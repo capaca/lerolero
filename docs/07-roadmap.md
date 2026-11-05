@@ -30,7 +30,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; arquivos (item 18) e botão de emojis (item 19) feitos em 2026-11-02 |
 | M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo e gerenciador de senhas feitos; passkey (item 15) adiada para depois do beta |
-| M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade feita (item 22); linguagem simples feita (item 21); a fazer: notificações (item 25) e item 20 |
+| M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade feita (item 22); linguagem simples feita (item 21); notificações feitas (item 25, v0.12.0, com o convite na tela inicial); a fazer: item 20 |
 | Revisão de prontidão | — | A fazer, antes do beta: item 23 |
 | Beta fechado | 6 sem de uso | A fazer: item 24 |
 | v1 Android + desktop | 26 sem | Depois do beta |
