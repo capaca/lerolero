@@ -133,8 +133,9 @@ jobs:
       - run: pnpm install --frozen-lockfile --filter @lerolero/repassador
       - name: Publica na produção
         working-directory: packages/repassador
-        # Espaço ou quebra de linha colados com o secret entram na URL da API. Suspeita do primeiro deploy (2026-11-04),
-        # em que o wrangler não achou o subdomínio workers.dev que a conta tem; já aconteceu com o HOMOLOG_TOKEN.
+        # Espaço ou quebra de linha colados com um secret entram na URL da API (já aconteceu com o HOMOLOG_TOKEN). No
+        # primeiro deploy (2026-11-04) o wrangler não achou o subdomínio workers.dev da conta; não eram espaços (o aviso
+        # não apareceu) e a nova tentativa passou sem mudar os secrets. Se voltar, rode com WRANGLER_LOG=debug.
         run: |
           conta=$(printf %s "$CONTA" | tr -d '[:space:]')
           token=$(printf %s "$TOKEN" | tr -d '[:space:]')
