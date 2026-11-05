@@ -83,6 +83,8 @@ export const PROFILE_KIND = 4442;
 export const EDIT_KIND = 4443;
 /** Pedido de reenvio (docs/06 §3.5, RF-53): os números (`seq`) que faltam de quem escreveu. */
 export const RESEND_KIND = 4444;
+/** Aviso entre os meus aparelhos de onde cada um recebe notificações (push/targets.ts, ADR-0010); só para mim mesmo. */
+export const PUSH_DEVICE_KIND = 4445;
 /** Números por pedido de reenvio: um buraco maior que isso é de quem trocou de aparelho, não de perda. */
 export const MAX_RESEND_SEQS = 50;
 /** Confirmações agrupadas: um evento cobre várias mensagens, mas não um número sem fim. */
@@ -90,7 +92,7 @@ export const MAX_RECEIPT_IDS = 200;
 export const MAX_REACTION_LENGTH = 16;
 
 /** Tipos de rumor que o app escreve. */
-export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND | typeof PROFILE_KIND | typeof EDIT_KIND | typeof RESEND_KIND;
+export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND | typeof PROFILE_KIND | typeof EDIT_KIND | typeof RESEND_KIND | typeof PUSH_DEVICE_KIND;
 
 /** Backup cifrado (RF-06, docs/06 §3.7): dado de aplicativo (NIP-78), um por pessoa, cifrado para mim mesmo. */
 export const BACKUP_KIND = 30078;
@@ -126,6 +128,7 @@ function checkMessage(kind: number, content: string, tags: string[][]) {
 		const seqs = tags.filter((t) => t[0] === 'seq').length;
 		if (seqs === 0 || seqs > MAX_RESEND_SEQS) throw new Error('pedido de reenvio sem números ou com números demais');
 	}
+	if (kind === PUSH_DEVICE_KIND && !tags.some((t) => t[0] === 'aparelho' && t[1])) throw new Error('aviso de aparelho sem o aparelho');
 	if (kind === PROFILE_KIND && !tags.some((t) => t[0] === 'nome' && t[1]?.trim())) throw new Error('cartão de perfil sem nome');
 }
 

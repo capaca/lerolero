@@ -3,6 +3,7 @@
 
 import type { NostrEvent } from 'nostr-tools/pure';
 import type { Sealed } from '../crypto/seal.ts';
+import type { PushTarget } from '../push/webpush.ts';
 
 export type IdentityRecord = {
 	/** sempre 'eu': uma identidade por aparelho */
@@ -246,6 +247,8 @@ export type ProfileRecord = {
 	/** versão do app de quem mandou e o que ele sabe ler (RNF-93) */
 	app?: string;
 	features: string[];
+	/** aparelhos que recebem avisos (ADR-0010, até 3): ausente, a pessoa não ativou as notificações */
+	push?: PushTarget[];
 	/** horário do cartão (rumor), em segundos: o mais novo vale */
 	updatedAt: number;
 };

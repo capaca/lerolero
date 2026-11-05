@@ -8,6 +8,7 @@ import { mediaFromRumor, mediaTags, NAME_TAG } from '../conversations/messaging.
 import type { Storage } from '../storage/repositories.ts';
 import type { ProfileRecord } from '../storage/records.ts';
 import { cleanName } from './invite.ts';
+import { pushTags, targetsFromTags } from '../push/targets.ts';
 
 /** O que este app sabe ler (RNF-93): quem recebe o cartão pode deixar de mandar o que eu não entendo. */
 export const PROFILE_FEATURES = ['texto', 'audio', 'foto', 'reacao', 'confirmacao', 'grupo', 'cartao'];
@@ -28,6 +29,8 @@ export function profileEvent(card: Omit<ProfileRecord, 'publicKey' | 'updatedAt'
 		...(card.app ? [['app', card.app]] : []),
 		...card.features.map((f) => ['recurso', f]),
 		...(card.photo ? mediaTags(card.photo) : []),
+		// os aparelhos onde recebo avisos (ADR-0010): o cartão só vai a contatos e a quem está num grupo comigo
+		...pushTags(card.push ?? []),
 		['alt', 'cartão de perfil do Lero-lero']
 	];
 	return { content: card.photo?.urls[0] ?? '', tags };
@@ -40,6 +43,7 @@ export function profileFromRumor(rumor: Rumor): ProfileRecord | undefined {
 	if (!name) return undefined;
 	const photo = rumor.content ? mediaFromRumor(rumor) : undefined;
 	const app = rumor.tags.find((t) => t[0] === 'app')?.[1];
+	const push = targetsFromTags(rumor.tags);
 	return {
 		publicKey: rumor.pubkey,
 		name,
@@ -50,6 +54,7 @@ export function profileFromRumor(rumor: Rumor): ProfileRecord | undefined {
 			.filter((t) => t[0] === 'recurso' && /^[a-z0-9-]{1,24}$/.test(t[1] ?? ''))
 			.map((t) => t[1])
 			.slice(0, MAX_FEATURES),
+		...(push.length ? { push } : {}),
 		updatedAt: rumor.created_at
 	};
 }
