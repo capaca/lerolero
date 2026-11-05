@@ -21,6 +21,14 @@ conhecidos".
   `wrangler dev` falhou com `BODY_MAX_BYTES`), então a lógica ficou em `repassador.ts` e a entrada em `index.ts`. O
   `pnpm check` do pacote roda o `wrangler deploy --dry-run` dos dois ambientes para pegar erro de configuração na CI.
 - Conferido localmente no `workerd`: o pedido chega ao FCM de verdade e o limite corta no 121º pedido do minuto.
+- No ar na homologação em https://lerolero-repassador-homologacao.pedro-capaca.workers.dev (subdomínio `workers.dev`
+  da conta que o Pedro já usa em outro projeto); a produção fica em `lerolero-repassador.pedro-capaca.workers.dev`
+  depois da próxima release. Token "lerolero-repassador-ci" com a permissão legacy Workers Scripts Read e Write na
+  conta inteira (a nova, por Worker, só vale para Workers que já existem), válido até 2027-11-04, com aviso no
+  `situacao.sh` 30 dias antes e na agenda do Pedro.
+- O primeiro deploy falhou dizendo que a conta não tinha subdomínio `workers.dev`, com token e conta conferidos pela
+  API. Não eram espaços nos secrets (o workflow agora limpa e avisa, e o aviso não apareceu); a nova tentativa passou
+  sem mudar nada. Causa não confirmada, provavelmente o token recém-criado.
 
 ## 2026-11-03: acessibilidade manual, com alvos de toque de 48 px
 
