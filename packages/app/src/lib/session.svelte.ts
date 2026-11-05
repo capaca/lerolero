@@ -117,12 +117,14 @@ import {
 	storeProfile,
 	type ProfileRecord,
 	myDeviceId,
+	generateVapid,
 	myPushTarget,
 	myPushTargets,
 	PUSH_DEVICE_KIND,
 	pushDeviceTags,
 	PushNotifier,
 	renewPushTarget,
+	setMyPushTarget,
 	storePushDevice,
 	type OutboxRecord,
 	sessionIsOpen,
@@ -144,7 +146,7 @@ import { prepareFromFile, prepareProfileFromFile } from './photo-encoder.ts';
 import { m } from '#lib/paraglide/messages.js';
 import { memberName } from './notices.ts';
 import { relayList } from './relays.ts';
-import { subscribePush } from './push-subscription.ts';
+import { currentPushEndpoint, subscribePush, unsubscribePush } from './push-subscription.ts';
 
 export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
 
@@ -406,6 +408,7 @@ class Session {
 		this.gapTimer = setInterval(() => void this.requestResends(), GAP_CHECK_MS);
 		await this.publishDmRelays();
 		await this.checkBackup();
+		void this.checkPush();
 	}
 
 	/**
@@ -1392,6 +1395,49 @@ class Session {
 	}
 
 	// ---------- notificações (ADR-0010, RF-82) ----------
+
+	/** As notificações estão ativas neste aparelho. */
+	async pushEnabled(): Promise<boolean> {
+		return !!(await myPushTarget(storage));
+	}
+
+	/**
+	 * Ativa as notificações neste aparelho: pede a permissão, gera a chave VAPID e se inscreve no navegador. O cartão
+	 * novo vai a quem já me conhece e os meus outros aparelhos ficam sabendo. Sem permissão, `PushPermissionError`.
+	 */
+	async enablePush() {
+		const vapid = await generateVapid();
+		const subscription = await subscribePush(vapid.publicKey);
+		await this.pushChanged(await setMyPushTarget(storage, { ...subscription, vapid }));
+	}
+
+	/** Desativa neste aparelho: o cartão sai sem ele, e a inscrição antiga passa a dar 410 a quem ainda mandar. */
+	async disablePush() {
+		await unsubscribePush().catch(() => {});
+		await this.pushChanged(await setMyPushTarget(storage, undefined));
+	}
+
+	private async pushChanged(tags: string[][]) {
+		await this.announcePushDevice(tags);
+		void this.sendProfile(await profileAudience(storage, this.current.publicKey));
+	}
+
+	/**
+	 * Ao abrir: a pessoa pode ter tirado a permissão nas configurações, ou o navegador ter trocado a inscrição
+	 * sozinho. Sem permissão, desativa; com ela, se inscreve de novo, para o cartão não ficar com um endereço morto.
+	 */
+	private async checkPush() {
+		try {
+			const mine = await myPushTarget(storage);
+			if (!mine) return;
+			const endpoint = await currentPushEndpoint();
+			if (endpoint === mine.endpoint) return;
+			const tags = Notification.permission === 'granted' ? await renewPushTarget(storage, subscribePush) : await setMyPushTarget(storage, undefined);
+			if (tags) await this.pushChanged(tags);
+		} catch {
+			// sem rede para a inscrição nova: tenta de novo na próxima abertura
+		}
+	}
 
 	/** A mensagem chegou a um relay: avisa os aparelhos de quem recebe, se a pessoa ativou as notificações. */
 	private async notifyRecipient(item: OutboxRecord) {

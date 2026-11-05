@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Icon from '#lib/components/Icon.svelte';
@@ -26,8 +25,8 @@
 		busy = true;
 		error = '';
 		try {
+			// o layout leva ao início, ou à conversa que a notificação pediu
 			await session.unlock(pin);
-			await goto(resolve('/'));
 		} catch (err) {
 			error = friendlyError(err);
 			pin = '';

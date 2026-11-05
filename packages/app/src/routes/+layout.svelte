@@ -7,6 +7,7 @@
 	import { language } from '#lib/i18n.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { savePendingInvite } from '#lib/pending-invite.ts';
+	import { savePendingRoute, takePendingRoute } from '#lib/pending-route.ts';
 	import { session, type Status } from '#lib/session.svelte.ts';
 	import { applyTextSize, readTextSize } from '#lib/text-size.ts';
 	import type { LayoutProps } from './$types';
@@ -65,6 +66,12 @@
 			controlled = true;
 		};
 		navigator.serviceWorker?.addEventListener('controllerchange', onControllerChange);
+		// toque numa notificação com o app já aberto: o service worker pede a conversa, sem recarregar (que tranca o cofre)
+		const onWorkerMessage = (event: MessageEvent<{ tipo?: string; caminho?: string }>) => {
+			const path = event.data?.caminho;
+			if (event.data?.tipo === 'abrir' && path?.startsWith(resolve('/'))) void goto(path);
+		};
+		navigator.serviceWorker?.addEventListener('message', onWorkerMessage);
 		const checkForUpdate = () => void navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => {});
 
 		const resume = () => {
@@ -88,6 +95,7 @@
 			clearInterval(updateTimer);
 			removeEventListener('pagehide', touch);
 			navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
+			navigator.serviceWorker?.removeEventListener('message', onWorkerMessage);
 			document.removeEventListener('visibilitychange', onVisibility);
 			removeEventListener('online', resume);
 		};
@@ -100,7 +108,10 @@
 		if (allowed.includes(route) || PUBLIC.includes(route)) return;
 		// convite aberto sem estar dentro do app: retomado no início, depois de entrar
 		if (route === '/convite') savePendingInvite(location.hash);
-		void goto(resolve(allowed[0] as '/'), { replaceState: true });
+		// conversa aberta pela notificação com o app bloqueado: abre depois do PIN
+		else if (session.status === 'bloqueado' && route !== '/' && ALLOWED.desbloqueado.includes(route)) savePendingRoute(location.pathname);
+		const next = session.status === 'desbloqueado' ? takePendingRoute() : undefined;
+		void goto(next ?? resolve(allowed[0] as '/'), { replaceState: true });
 	});
 </script>
 
