@@ -165,6 +165,8 @@ describe('motor de sincronização', () => {
 		cleanup.push(() => engine.stop());
 		await engine.start([r.url]);
 		await until(() => received.includes(good.id) && received.includes(near.id));
+		// o cursor só é gravado quando o histórico termina (P2), um instante depois de processar
+		await until(async () => (await bob.storage.sync.getCursor(r.url)) !== undefined);
 
 		expect(received).not.toContain(far.id);
 		const cursor = (await bob.storage.sync.getCursor(r.url))!;

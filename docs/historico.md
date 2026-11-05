@@ -22,6 +22,8 @@ conhecidos".
   (`DatabaseClosedError`). `stop()` esperava a fila de recebimento, mas não a rodada de envio em andamento, que seguia
   gravando com o banco já fechado. Agora `stop()` espera as duas (o "Bloquear" também), e `flush()` não lança: o que
   não saiu fica na fila para a próxima rodada.
+- Também achado: o teste do P1 lia o cursor logo que as mensagens chegavam, mas desde o P2 ele só é gravado quando o
+  histórico termina; agora espera o cursor.
 
 ## 2026-11-05: mensagem que ficou horas na fila de saída chega (P4)
 
