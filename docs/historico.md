@@ -5,6 +5,18 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: falha passageira não descarta mais a mensagem recebida (P3)
+
+- Só o embrulho que não abre (`InvalidWrapError`, cujo nome atravessa o worker) é marcado como visto depois de
+  falhar. Cota cheia, worker reiniciado, cofre trancado ou qualquer outro erro deixam o embrulho para a próxima
+  sincronização, e o cursor daquele relay não passa dele até uma leitura nova do histórico (reconexão ou reabrir).
+- O "Bloquear" espera o embrulho em processamento terminar (até 5 s, para um worker travado não travar o botão)
+  antes de trancar o cofre; o resto da fila fica para depois, sem ser marcado.
+- Considerado e rejeitado: listar os erros passageiros (cota, banco fechado, cofre trancado). Um erro não previsto
+  voltaria a perder mensagem; o custo do caminho escolhido é baixar de novo um trecho do histórico enquanto um
+  embrulho com bug continuar no relay (limite conhecido no roadmap).
+- Testes de regressão no `sync.test.ts`, que falham sem a correção.
+
 ## 2026-11-05: o cursor não pula mais o histórico (P2)
 
 - O cursor de cada relay só é gravado quando o histórico inteiro foi processado; até lá, o maior horário fica só

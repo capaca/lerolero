@@ -233,9 +233,9 @@ Aceitos por ora; cada um tem a origem no [histórico](historico.md).
 
 - Fechar o app nos ~10 s em que o envio 1:1 busca os relays de alguém novo deixa a mensagem pendente sem entrada na
   fila. A mesma janela curta existe ao pôr avisos de grupo na fila.
-- Falha de gravação no banco (cota cheia, erro do navegador) ainda perde a mensagem recebida, porque o embrulho é
-  marcado como visto mesmo quando o processamento lança. Vale para qualquer erro, inclusive o cofre trancado no meio
-  da sincronização; a correção é o P3 da [prontidão](08-prontidao.md).
+- Um embrulho que abre mas sempre lança ao ser guardado (um bug com aquele conteúdo) segura o cursor daquele relay
+  até o relay apagá-lo (7 dias): cada sincronização baixa de novo esse trecho, sem perder nada (P3 da
+  [prontidão](08-prontidao.md)).
 - `markDeleted` grava a conversa sem esperar a vez (`conversations/lock.ts`), por ser chamada de dentro de
   `storeIncoming`.
 - A edição de uma mensagem não é reenviada: quem a recebe por um pedido de reenvio vê o texto original.
