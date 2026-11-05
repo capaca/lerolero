@@ -5,6 +5,21 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: levantamento dos riscos de prontidão (item 23, etapa 3)
+
+- O código foi lido tema a tema (confiabilidade, escalabilidade, resiliência, segurança, monitoramento e lançamento),
+  e os 36 riscos achados estão em [08](08-prontidao.md), cada um com a decisão: corrigir antes do beta, planejado ou
+  aceito no beta.
+- **Críticos:** o Pedro escolheu corrigir antes do beta os oito de perda e de chave (P1 a P8): embrulho datado do
+  futuro que trava o recebimento (T26, novo), cursor que avança antes de o histórico terminar, embrulho descartado
+  por erro passageiro, mensagem que ficou dias na fila e não chega, backup quase vazio por cima do bom, sessão
+  aberta que expõe a chave à interface (muda o T16), protótipos na origem da produção e tela branca quando o banco
+  não abre. Rejeitados: incluir também os altos, que atrasariam o beta, e corrigir só os de perda de mensagem.
+- **Incidentes:** faixa de avisos no app, lida de um `avisos.json` republicado sem release nova (P9). Rejeitado por
+  ora: um grupo de WhatsApp ou Telegram com quem testa.
+- O limite conhecido da falha de gravação é mais largo do que estava escrito: vale para qualquer erro, inclusive o
+  cofre trancado no meio da sincronização (P3).
+
 ## 2026-11-05: decisões da revisão de prontidão (item 23, etapa 1)
 
 - **Domínio próprio (Q-N1):** o Pedro decidiu comprar um `.com.br` (~R$ 40/ano, registro.br) antes do beta, apontado

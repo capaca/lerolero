@@ -15,6 +15,7 @@ Lero-lero é um app de mensagens com criptografia ponta a ponta, para o público
 | 05 | [Arquitetura](05-arquitetura.md) | ✅ aprovado |
 | 06 | [Protocolo e dados](06-protocolo-e-dados.md) | ✅ aprovado |
 | 07 | [Roadmap](07-roadmap.md) | ✅ aprovado |
+| 08 | [Prontidão para produção](08-prontidao.md) | ✏️ rascunho |
 | — | [Histórico de entregas](historico.md) | ✅ aprovado |
 | — | [Glossário](glossario.md) | ✅ aprovado |
 
