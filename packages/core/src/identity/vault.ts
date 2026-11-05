@@ -93,6 +93,7 @@ export const MAX_REACTION_LENGTH = 16;
 
 /** Tipos de rumor que o app escreve. */
 export type MessageKind = 14 | 15 | 5 | typeof REACTION_KIND | typeof RECEIPT_KIND | typeof PROFILE_KIND | typeof EDIT_KIND | typeof RESEND_KIND | typeof PUSH_DEVICE_KIND;
+const MESSAGE_KINDS = new Set<number>([14, 15, 5, REACTION_KIND, RECEIPT_KIND, PROFILE_KIND, EDIT_KIND, RESEND_KIND, PUSH_DEVICE_KIND]);
 
 /** Backup cifrado (RF-06, docs/06 §3.7): dado de aplicativo (NIP-78), um por pessoa, cifrado para mim mesmo. */
 export const BACKUP_KIND = 30078;
@@ -102,6 +103,20 @@ export const BACKUP_D_TAG = 'lerolero/backup';
 const MAX_GROUP_RECIPIENTS = 20;
 
 const isPublicKey = (v: string) => /^[0-9a-f]{64}$/.test(v);
+
+/** Embrulho com prova de trabalho (RF-90); o horário continua sorteado (NIP-59). */
+async function provenWrap(rumor: Rumor, secretKey: Uint8Array, recipient: string, difficulty: number): Promise<NostrEvent> {
+	const key = generateSecretKey();
+	const template = {
+		kind: 1059,
+		created_at: Math.round(Date.now() / 1000 - Math.random() * TWO_DAYS_S),
+		tags: [['p', recipient]],
+		content: encrypt(JSON.stringify(createSeal(rumor, secretKey, recipient)), getConversationKey(key, recipient)),
+		pubkey: getPublicKey(key)
+	};
+	const tags = await mine(template, difficulty);
+	return finalizeEvent({ kind: template.kind, created_at: template.created_at, tags, content: template.content }, key);
+}
 
 /** O NIP-59 sorteia o horário do embrulho em até 2 dias para trás. */
 const TWO_DAYS_S = 2 * 24 * 60 * 60;
@@ -330,16 +345,25 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 			if (!secretKey) throw new LockedError();
 			if (rumor.pubkey !== getPublicKey(secretKey) || getEventHash(rumor) !== rumor.id) throw new Error('só embrulho mensagens minhas');
 			if (!isPublicKey(recipient) || !rumor.tags.some((t) => t[0] === 'p' && t[1] === recipient)) throw new Error('destinatário inválido');
-			const key = generateSecretKey();
-			const template = {
-				kind: 1059,
-				created_at: Math.round(Date.now() / 1000 - Math.random() * TWO_DAYS_S),
-				tags: [['p', recipient]],
-				content: encrypt(JSON.stringify(createSeal(rumor, secretKey, recipient)), getConversationKey(key, recipient)),
-				pubkey: getPublicKey(key)
-			};
-			const tags = await mine(template, difficulty);
-			return finalizeEvent({ kind: template.kind, created_at: template.created_at, tags, content: template.content }, key);
+			return provenWrap(rumor, secretKey, recipient, difficulty);
+		},
+
+		/**
+		 * P4: o mesmo rumor meu num embrulho com horário novo, para o item que ficou horas na fila de saída. O horário do
+		 * embrulho é recuado em até 2 dias na hora de escrever, e quem recebe busca só até 2 dias antes do cursor: saindo
+		 * tarde, ele cairia antes da busca. Vale o que `wrapDirectMessage` e `wrapGroupMessage` aceitam, para quem estava
+		 * na mensagem ou para mim (a cópia dos meus aparelhos); o aviso de grupo, para qualquer um, como no repasse.
+		 */
+		async refreshWrap(rumor: Rumor, recipient: string, difficulty = 0): Promise<NostrEvent> {
+			if (!secretKey) throw new LockedError();
+			const me = getPublicKey(secretKey);
+			if (rumor.pubkey !== me || getEventHash(rumor) !== rumor.id) throw new Error('só embrulho de novo mensagens minhas');
+			if (!MESSAGE_KINDS.has(rumor.kind) && rumor.kind !== 4440) throw new Error(`o cofre não embrulha o tipo ${rumor.kind}`);
+			checkMessage(rumor.kind, rumor.content, rumor.tags);
+			const addressed = recipient === me || rumor.kind === 4440 || rumor.tags.some((t) => t[0] === 'p' && t[1] === recipient);
+			if (!isPublicKey(recipient) || !addressed) throw new Error('destinatário fora da mensagem');
+			if (difficulty > 0) return provenWrap(rumor, secretKey, recipient, difficulty);
+			return createWrap(createSeal(rumor, secretKey, recipient), recipient);
 		},
 
 		/**

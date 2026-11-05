@@ -369,6 +369,48 @@ describe('motor de sincronização', () => {
 		for (const w of wraps.filter((w) => w.id !== processed[0])) expect(await bob.storage.seenWraps.has(w.id)).toBe(false);
 	});
 
+	it('item que ficou horas na fila sai num embrulho novo; o recente sai como foi escrito (P4)', async () => {
+		// achado na revisão de prontidão (2026-11-05): o embrulho nasce recuado em até 2 dias e quem recebe busca só
+		// até 2 dias antes do cursor; saindo um dia depois, metade se perdia
+		const r = await relay();
+		const alice = await person();
+		const bob = await person();
+		const old = alice.vault.wrapDirectMessage(bob.publicKey, 'escrita ontem');
+		const recent = alice.vault.wrapDirectMessage(bob.publicKey, 'escrita agora');
+		const now = Date.now();
+		const record = (w: typeof old, queuedAt: number) => ({
+			id: w.toRecipient.id,
+			event: w.toRecipient,
+			rumor: w.rumor,
+			relays: [r.url],
+			acceptedBy: [],
+			attempts: 0,
+			nextAttemptAt: now,
+			queuedAt
+		});
+		await alice.storage.outbox.put(record(old, now - 24 * 60 * 60_000));
+		await alice.storage.outbox.put(record(recent, now - 60_000));
+
+		const engine = new SyncEngine({
+			storage: alice.storage,
+			pool: alice.pool,
+			myPublicKey: alice.publicKey,
+			events: {
+				onWrap: async () => {},
+				rewrap: async ({ event, rumor }) => alice.vault.refreshWrap(rumor, event.tags.find((t) => t[0] === 'p')![1])
+			}
+		});
+		cleanup.push(() => engine.stop());
+		await engine.start([]);
+		await until(() => r.events.length === 2);
+
+		const ids = r.events.map((e) => e.id);
+		expect(ids).toContain(recent.toRecipient.id);
+		expect(ids).not.toContain(old.toRecipient.id);
+		const renewed = r.events.find((e) => e.id !== recent.toRecipient.id)!;
+		expect(bob.vault.unwrap(renewed).id).toBe(old.rumor.id);
+	});
+
 	it('volta a receber depois de uma queda de conexão', async () => {
 		const r = await relay();
 		const bob = await person();

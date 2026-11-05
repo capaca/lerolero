@@ -250,7 +250,7 @@ Esquema inicial (Dexie). `PK` = chave primária, `idx` = índice.
 | `reactions` | mensagem, autor, emoji | idx: mensagem |
 | `profiles` | cartão de perfil mais recente de cada pessoa (o meu também): nome, foto, relays, versão do app, recursos, horário (versão 7 do Dexie) | PK: chave pública |
 | `media` | `ox` (hash original), tipo, tamanho, arquivo (Blob), URLs Blossom, chave, nonce, `x`, guardar (sim/não), último acesso | PK: `ox`; idx: último acesso |
-| `outbox` | eventos prontos, relays de destino, tentativas, próxima tentativa | idx: próxima tentativa |
+| `outbox` | eventos prontos, relays de destino, tentativas, próxima tentativa; o rumor dos embrulhos, para refazê-los com horário novo se ficarem mais de 1 hora na fila (P4) | idx: próxima tentativa |
 | `sync` | relay, cursor | PK: relay |
 | `seen_wraps` | id do gift wrap, recebido em | PK: id; idx: recebido em (limpeza após 9 dias) |
 | `relays` | URL, papel (`dm`, `geral`, `blossom`), origem (`padrão`, `usuário`) | PK: URL |

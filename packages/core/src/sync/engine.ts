@@ -36,6 +36,11 @@ export const RETRY_DELAYS_MS = [5_000, 15_000, 60_000, 5 * 60_000, 15 * 60_000];
 export const EXTRA_ATTEMPTS_AFTER_ACCEPTED = 3;
 /** Quantos itens da fila saem ao mesmo tempo: não espera um por um o tempo esgotado de relays fora do ar. */
 export const FLUSH_CONCURRENCY = 5;
+/**
+ * Item da fila mais velho que isto sai num embrulho novo (P4): o horário do embrulho é recuado em até 2 dias na hora
+ * de escrever e quem recebe busca só até 2 dias antes do cursor; com 1 hora, a chance de cair antes é de 2%.
+ */
+export const REWRAP_AFTER_MS = 60 * 60_000;
 /** Quanto `stop()` espera o embrulho em processamento antes de seguir (um worker travado não trava o "Bloquear"). */
 export const STOP_WAIT_MS = 5_000;
 
@@ -77,6 +82,8 @@ export type SyncEvents = {
 	onWrap: (wrap: NostrEvent, relay: string) => Promise<void>;
 	/** um item da fila foi aceito pelo primeiro relay (a mensagem passa a "enviada") */
 	onSent?: (item: OutboxRecord) => Promise<void>;
+	/** o mesmo rumor num embrulho com horário novo, para o item que ficou horas na fila (P4) */
+	rewrap?: (item: OutboxRecord & { rumor: NonNullable<OutboxRecord['rumor']> }) => Promise<NostrEvent>;
 };
 
 export type SyncOptions = {
@@ -181,8 +188,8 @@ export class SyncEngine {
 		}
 	}
 
-	/** Coloca na fila e tenta enviar já. */
-	async enqueue(event: NostrEvent, relays: string[], messageId?: string) {
+	/** Coloca na fila e tenta enviar já. Com o `rumor`, o embrulho é refeito se demorar a sair (P4). */
+	async enqueue(event: NostrEvent, relays: string[], messageId?: string, rumor?: OutboxRecord['rumor']) {
 		const queuedAt = Math.max(this.now(), this.lastQueuedAt + 1);
 		this.lastQueuedAt = queuedAt;
 		await this.storage.outbox.put({
@@ -191,6 +198,7 @@ export class SyncEngine {
 			relays: [...new Set(relays)],
 			acceptedBy: [],
 			messageId,
+			rumor,
 			attempts: 0,
 			nextAttemptAt: this.now(),
 			queuedAt
@@ -315,7 +323,8 @@ export class SyncEngine {
 		await this.scheduleNextRetry();
 	}
 
-	private async sendItem(item: OutboxRecord) {
+	private async sendItem(original: OutboxRecord) {
+		const item = await this.refreshed(original);
 		const pending = item.relays.filter((r) => !item.acceptedBy.includes(r));
 		// "enviada" assim que o primeiro relay aceita, sem esperar o mais lento (a tela mostra antes)
 		let firstAccept: Promise<void> | undefined;
@@ -334,6 +343,18 @@ export class SyncEngine {
 		const enoughExtra = item.acceptedBy.length > 0 && attempts >= EXTRA_ATTEMPTS_AFTER_ACCEPTED;
 		if (allAccepted || enoughExtra) await this.storage.outbox.delete(item.id);
 		else await this.storage.outbox.put(updated);
+	}
+
+	/** P4: o item que ficou horas na fila sai num embrulho novo; se não der (cofre trancado), vai o antigo. */
+	private async refreshed(item: OutboxRecord): Promise<OutboxRecord> {
+		const { rumor } = item;
+		if (!rumor || !this.events.rewrap || this.now() - (item.wrappedAt ?? item.queuedAt ?? this.now()) < REWRAP_AFTER_MS) return item;
+		try {
+			const event = await this.events.rewrap({ ...item, rumor });
+			return { ...item, event, wrappedAt: this.now() };
+		} catch {
+			return item;
+		}
 	}
 
 	private async scheduleNextRetry() {
