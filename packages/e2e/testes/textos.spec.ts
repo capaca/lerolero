@@ -195,7 +195,7 @@ test('guia de teste e roteiro de aceite: nenhum texto fixo', async ({ novoAparel
 	await expect(page.locator('h1')).toBeVisible();
 	await semTextoFixo(page);
 	await page.goto('./teste/roteiro');
-	await expect(page.locator('tbody tr')).toHaveCount(26);
+	await expect(page.locator('tbody tr')).toHaveCount(27);
 	await semTextoFixo(page);
 });
 

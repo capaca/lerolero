@@ -5,6 +5,19 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: convite para ativar as notificações (depois da v0.12.0)
+
+- Decisão do Pedro: a ativação só em Ajustes deixaria quase todo mundo sem aviso, então a tela inicial convida
+  ("Quer ser avisado quando chegar mensagem?", com **Ativar** e **Agora não**). Muda o RF-82, que dizia só Ajustes.
+- Aparece depois da primeira conversa, nunca junto do lembrete da frase (que vem antes), e não aparece com as
+  notificações já ativas, com a permissão bloqueada, sem suporte ou no iPhone sem o app instalado. "Agora não" vale
+  para sempre neste aparelho (`localStorage`, como o tamanho da letra); Ajustes continua com a opção.
+- Também proposta, e não escolhida: uma mensagem pronta para o grupo de testadores.
+- Roteiro de aceite: passo 24 (extra) com o aviso chegando e o toque abrindo a conversa.
+- No e2e, o Chrome da suíte responde "bloqueada" para a permissão não concedida (o convite some, como devia); o teste
+  dá a permissão. A entrega do aviso pelo DevTools logo depois de sair da página às vezes caía com a página ainda
+  visível: o teste entrega de novo até a notificação aparecer.
+
 ## 2026-11-04: notificações no app (item 25, etapa 3)
 
 - Ajustes → Notificações liga e desliga os avisos neste aparelho: pede a permissão, gera o par VAPID, se inscreve e

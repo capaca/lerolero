@@ -227,7 +227,8 @@ Decidido em 2026-11-04 (`packages/core/src/push`).
   volta. O id do aparelho é sorteado e não vai no backup.
 - **Ao bloquear:** o aparelho onde se bloqueou gera par VAPID e inscrição novos, avisa os outros aparelhos e manda o
   cartão novo só a quem ficou. O bloqueado fica com um endereço que o serviço recusa.
-- **No aparelho que recebe** (etapa 3, 2026-11-04): ativado em Ajustes → Notificações, só neste aparelho. O service
+- **No aparelho que recebe** (etapa 3, 2026-11-04): ativado em Ajustes → Notificações, só neste aparelho, ou pelo
+  convite da tela inicial (2026-11-05, RF-82). O service
   worker mostra "Mensagem de <nome>", com o nome que este aparelho deu ao contato (o do aviso só sem contato
   guardado) e, em grupo, "No grupo <nome>"; uma notificação por conversa, a mais nova no lugar da anterior. Com o app
   visível, nenhuma (a mensagem já aparece nele). Tocar abre a conversa, depois do PIN se o app estiver bloqueado, sem
