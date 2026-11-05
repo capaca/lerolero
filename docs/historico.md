@@ -5,6 +5,22 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: decisões da revisão de prontidão (item 23, etapa 1)
+
+- **Domínio próprio (Q-N1):** o Pedro decidiu comprar um `.com.br` (~R$ 40/ano, registro.br) antes do beta, apontado
+  para o GitHub Pages. É a única exceção ao custo zero (RNF-84, princípio 3 da Visão). O motivo é a origem: conta,
+  conversas e mídia ficam no IndexedDB do endereço, e os convites levam o endereço; quem entrasse no beta pelo
+  `github.io` perderia tudo na troca e teria de restaurar pelo código. Também destrava a passkey (item 15).
+  Rejeitados: beta no `github.io` e subdomínio gratuito (eu.org, is-a.dev), que depende de terceiros e parece menos
+  confiável a leigos. Quem usa hoje o `capaca.github.io` restaura pelo código no endereço novo.
+- **Dados técnicos de uso (Q-N6):** aprovado o resumo opt-in automático, já no beta, como proposto em 2026-10-22:
+  desligado por padrão, só contagens e tempos, cifrado pela própria rede com chave descartável, com tela "ver o que é
+  enviado". O RNF-50 e o princípio 7 da Visão foram reescritos. Rejeitados: só o diagnóstico enviado à mão e nenhum
+  dado.
+- **Servidor próprio (Q-N7):** não no beta. 20 pessoas cabem nos relays públicos, e as sondas sintéticas mostram se
+  faltar capacidade; reavaliar antes do lançamento público.
+- O resto do item segue em etapas: domínio, levantamento dos riscos por tema, sondas e painel, resumo opt-in.
+
 ## 2026-11-05: convite para ativar as notificações (depois da v0.12.0)
 
 - Decisão do Pedro: a ativação só em Ajustes deixaria quase todo mundo sem aviso, então a tela inicial convida
