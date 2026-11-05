@@ -3,7 +3,7 @@
 // ao service worker pelo DevTools, como o navegador faria com o app fechado.
 import type { Page } from '@playwright/test';
 import { fakePushDevice } from '../../core/src/testing/fake-push.ts';
-import { abrirAjustes, abrirConversaQuandoChegar, adicionarUmAoOutro, digitarPin, enviarTexto, expect, PIN, test } from '../ajudantes.ts';
+import { abrirAjustes, abrirConversaQuandoChegar, adicionarUmAoOutro, apagarSessao, digitarPin, enviarTexto, expect, PIN, test } from '../ajudantes.ts';
 
 /** Troca a inscrição do navegador por uma com as chaves do `fakePushDevice` (vale para as próximas páginas). */
 async function simularInscricao(page: Page, inscricao: { endpoint: string; p256dh: string; auth: string }) {
@@ -97,17 +97,7 @@ test('com as notificações ativas, a mensagem gera um aviso só com o nome, e t
 	}).toPass({ timeout: 20_000 });
 
 	// tocar abre a conversa; passou o prazo da sessão aberta, então o PIN vem antes
-	await worker.evaluate(
-		() =>
-			new Promise<void>((ok) => {
-				const req = indexedDB.open('lerolero');
-				req.onsuccess = () => {
-					const tx = req.result.transaction('settings', 'readwrite');
-					tx.objectStore('settings').delete('sessaoAberta');
-					tx.oncomplete = () => ok();
-				};
-			})
-	);
+	await worker.evaluate(apagarSessao);
 	await ana.page.goto((await mostradas())[0].url);
 	await expect(ana.page).toHaveURL(/\/desbloquear$/, { timeout: 20_000 });
 	await digitarPin(ana.page, 'pin', PIN);

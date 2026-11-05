@@ -148,22 +148,70 @@ function checkMessage(kind: number, content: string, tags: string[][]) {
 }
 
 /**
- * Sessão aberta: a chave privada cifrada com uma chave AES não exportável, que o
- * app guarda no aparelho para recarregar a página sem pedir o PIN de novo. Nem o
- * código do app consegue ler a chave AES, só usá-la; quem copia os dados do
- * navegador consegue (T15, já aceito no PWA). `lastSeen` é quando o app saiu da tela.
+ * Sessão aberta: a chave privada cifrada com uma chave AES não exportável, guardada no aparelho para recarregar a
+ * página sem pedir o PIN de novo. Só o cofre a grava e lê (P6): a interface nunca recebe a chave AES nem a cifrada.
+ * Não é uma barreira contra script na origem, que abriria o mesmo banco (a defesa é o P7 e o P23); quem copia os
+ * dados do navegador também a usa (T15, T16). `lastSeen` é quando o app saiu da tela.
  */
 export type OpenSession = { key: CryptoKey; iv: Uint8Array<ArrayBuffer>; ciphertext: Uint8Array<ArrayBuffer>; lastSeen: number };
 
 /** Sem uso por mais que isto, o PIN volta a ser pedido. */
 export const SESSION_IDLE_MS = 5 * 60_000;
 
+/** Onde o cofre guarda a sessão aberta. */
+export type SessionStore = { get(): Promise<OpenSession | undefined>; set(session: OpenSession): Promise<void>; clear(): Promise<void> };
+
+/** Banco só da sessão, separado do `lerolero` (Dexie, da interface), para o worker não disputar as versões dele. */
+export const SESSION_DB = 'lerolero-sessao';
+
+export function indexedDbSessionStore(name = SESSION_DB, factory: IDBFactory = indexedDB): SessionStore {
+	const STORE = 'sessao';
+	const KEY = 'atual';
+	const open = () =>
+		new Promise<IDBDatabase>((ok, fail) => {
+			const req = factory.open(name, 1);
+			req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+			req.onsuccess = () => ok(req.result);
+			req.onerror = () => fail(req.error);
+		});
+	const run = async <T>(mode: IDBTransactionMode, action: (store: IDBObjectStore) => IDBRequest) => {
+		const db = await open();
+		try {
+			return await new Promise<T>((ok, fail) => {
+				const req = action(db.transaction(STORE, mode).objectStore(STORE));
+				req.onsuccess = () => ok(req.result as T);
+				req.onerror = () => fail(req.error);
+			});
+		} finally {
+			db.close();
+		}
+	};
+	return {
+		get: () => run<OpenSession | undefined>('readonly', (s) => s.get(KEY)),
+		set: async (session) => void (await run('readwrite', (s) => s.put(session, KEY))),
+		clear: async () => void (await run('readwrite', (s) => s.delete(KEY)))
+	};
+}
+
+/** Sem IndexedDB (testes): a sessão vive enquanto o objeto existir. */
+export function memorySessionStore(): SessionStore {
+	let saved: OpenSession | undefined;
+	return {
+		get: async () => saved,
+		set: async (session) => void (saved = session),
+		clear: async () => void (saved = undefined)
+	};
+}
+
 /** A sessão ainda vale? Um `lastSeen` no futuro (relógio mexido) não vale. */
 export function sessionIsOpen(session: OpenSession, now: number): boolean {
 	return session.lastSeen <= now && now - session.lastSeen < SESSION_IDLE_MS;
 }
 
-export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
+export function createVault({
+	kdf = DEFAULT_KDF,
+	sessions = typeof indexedDB === 'undefined' ? memorySessionStore() : indexedDbSessionStore()
+}: { kdf?: KdfParams; sessions?: SessionStore } = {}) {
 	let secretKey: Uint8Array | undefined;
 
 	const unlockWith = (words: string[]) => {
@@ -382,20 +430,44 @@ export function createVault({ kdf = DEFAULT_KDF }: { kdf?: KdfParams } = {}) {
 			return times;
 		},
 
-		/** Guarda a chave desbloqueada numa sessão (ver OpenSession). */
-		async openSession(now: number): Promise<OpenSession> {
+		/** Guarda a chave desbloqueada numa sessão (ver OpenSession). Nada dela sai do cofre (P6). */
+		async openSession(now: number): Promise<void> {
 			if (!secretKey) throw new LockedError();
 			const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 			const iv = crypto.getRandomValues(new Uint8Array(12));
 			const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new Uint8Array(secretKey)));
-			return { key, iv, ciphertext, lastSeen: now };
+			await sessions.set({ key, iv, ciphertext, lastSeen: now });
 		},
 
-		/** Desbloqueia por uma sessão aberta, sem PIN. Devolve a chave pública. */
-		async resumeSession(session: OpenSession): Promise<string> {
-			const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: session.iv }, session.key, session.ciphertext);
-			secretKey = new Uint8Array(raw);
-			return getPublicKey(secretKey);
+		/**
+		 * Desbloqueia pela sessão aberta, sem PIN, se ela ainda vale. Devolve a chave pública, ou nada se não há sessão;
+		 * a vencida ou estragada é apagada.
+		 */
+		async resumeSession(now: number): Promise<string | undefined> {
+			const session = await sessions.get();
+			if (!session) return undefined;
+			try {
+				if (sessionIsOpen(session, now)) {
+					const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: session.iv }, session.key, session.ciphertext);
+					secretKey = new Uint8Array(raw);
+					return getPublicKey(secretKey);
+				}
+			} catch {
+				// sessão estragada: cai no PIN
+			}
+			await sessions.clear();
+			return undefined;
+		},
+
+		/** O app está em uso: o prazo da sessão conta a partir de agora. */
+		async touchSession(now: number): Promise<void> {
+			const session = await sessions.get();
+			if (session) await sessions.set({ ...session, lastSeen: now });
+		},
+
+		/** "Bloquear agora" e o PIN volta a ser pedido (T16). */
+		closeSession(): Promise<void> {
+			return sessions.clear();
 		},
 
 		lock() {
