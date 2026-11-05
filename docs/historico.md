@@ -5,6 +5,14 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: embrulho datado do futuro não trava mais o recebimento (P1, T26)
+
+- O cursor de cada relay nunca passa do relógio do aparelho, e o embrulho mais de 1 hora à frente é descartado sem
+  ser aberto nem mexer no cursor. A folga de 1 hora deixa chegar a mensagem de quem tem o relógio um pouco adiantado
+  (o NIP-59 só recua o horário, e os relays costumam recusar o que vem muito à frente).
+- Aparelho que já estava travado volta a receber: o cursor guardado no futuro volta ao relógio ao abrir.
+- Testes de regressão no `sync.test.ts`, que falham sem a correção.
+
 ## 2026-11-05: levantamento dos riscos de prontidão (item 23, etapa 3)
 
 - O código foi lido tema a tema (confiabilidade, escalabilidade, resiliência, segurança, monitoramento e lançamento),

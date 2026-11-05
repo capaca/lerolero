@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocket as NodeWebSocket } from 'ws';
-import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
+import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { wrapEvent } from 'nostr-tools/nip59';
 import type { KdfParams } from '../crypto/seal.ts';
 import { createVault } from '../identity/vault.ts';
@@ -145,6 +145,47 @@ describe('motor de sincronização', () => {
 		// a assinatura refeita depois de uma queda usa o cursor salvo
 		const filters = (engine as unknown as { filterFor(u: string): { since: number } }).filterFor(r.url);
 		expect(filters.since).toBe(cursor - CURSOR_MARGIN_S);
+	});
+
+	it('embrulho datado do futuro não leva o cursor para lá (P1, T26)', async () => {
+		// achado na revisão de prontidão (2026-11-05): um kind 1059 de 2030 levava o cursor junto e, na próxima
+		// conexão, o relay não entregava mais nada guardado
+		const r = await relay();
+		const bob = await person();
+		const now = Math.floor(Date.now() / 1000);
+		const future = (created_at: number) =>
+			finalizeEvent({ kind: 1059, created_at, tags: [['p', bob.publicKey]], content: 'x' }, generateSecretKey());
+		const far = future(Math.floor(Date.UTC(2030, 0, 1) / 1000));
+		const near = future(now + 10 * 60); // relógio de quem mandou adiantado 10 min: ainda chega
+		const good = wrapFor(bob.publicKey, 'boa');
+		r.events.push(far, near, good);
+
+		const received: string[] = [];
+		const engine = new SyncEngine({ storage: bob.storage, pool: bob.pool, myPublicKey: bob.publicKey, events: { onWrap: async (w) => void received.push(w.id) } });
+		cleanup.push(() => engine.stop());
+		await engine.start([r.url]);
+		await until(() => received.includes(good.id) && received.includes(near.id));
+
+		expect(received).not.toContain(far.id);
+		const cursor = (await bob.storage.sync.getCursor(r.url))!;
+		expect(cursor).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+		expect(cursor).toBeGreaterThanOrEqual(now);
+	});
+
+	it('cursor guardado no futuro volta ao relógio ao abrir (P1, T26)', async () => {
+		// aparelhos travados antes da correção voltam a receber o histórico
+		const r = await relay();
+		const bob = await person();
+		await bob.storage.sync.setCursor(r.url, Math.floor(Date.UTC(2030, 0, 1) / 1000));
+		const wrap = wrapFor(bob.publicKey, 'guardada');
+		r.events.push(wrap);
+
+		const received: string[] = [];
+		const engine = new SyncEngine({ storage: bob.storage, pool: bob.pool, myPublicKey: bob.publicKey, events: { onWrap: async (w) => void received.push(w.id) } });
+		cleanup.push(() => engine.stop());
+		await engine.start([r.url]);
+		await until(() => received.length > 0);
+		expect(received).toEqual([wrap.id]);
 	});
 
 	it('descarta embrulhos que não abrem sem travar os outros', async () => {
