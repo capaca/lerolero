@@ -237,7 +237,24 @@ export async function mandarSemProva(page: Page, texto: string) {
 }
 
 /** Esquece a sessão aberta (vale 5 min): a próxima abertura do app pede o PIN. */
-export const vencerSessao = (page: Page) => esquecerAjuste(page, 'sessaoAberta');
+/** Apaga a sessão aberta, que o cofre guarda no banco dele (P6): a próxima recarga pede o PIN. */
+export const vencerSessao = (page: Page) => page.evaluate(apagarSessao);
+
+/** Roda na página ou no service worker (mesma origem). */
+export function apagarSessao() {
+	return new Promise<void>((ok, falha) => {
+		// como o cofre abre (indexedDbSessionStore): sem a versão, criaria o banco vazio e a sessão não seria mais gravada
+		const req = indexedDB.open('lerolero-sessao', 1);
+		req.onupgradeneeded = () => req.result.createObjectStore('sessao');
+		req.onerror = () => falha(req.error);
+		req.onsuccess = () => {
+			const db = req.result;
+			const tx = db.transaction('sessao', 'readwrite');
+			tx.objectStore('sessao').delete('atual');
+			tx.oncomplete = () => (db.close(), ok());
+		};
+	});
+}
 
 /** Endereços de relays de fora (ex.: os do convite de comentários) que a suíte desviou para o relay local. */
 export const desviados: string[] = [];

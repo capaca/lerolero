@@ -128,7 +128,6 @@ import {
 	setMyPushTarget,
 	storePushDevice,
 	type OutboxRecord,
-	sessionIsOpen,
 	SyncEngine,
 	upgradeSyncGeneration,
 	waitTime,
@@ -139,7 +138,6 @@ import {
 	type MessageMedia,
 	type MessageRecord,
 	type Invite,
-	type OpenSession,
 	type Vault
 } from '@lerolero/core';
 import { FileRefusedError, NoRelaysError, NotInGroupError, PinLockedError } from './errors.ts';
@@ -152,7 +150,8 @@ import { currentPushEndpoint, subscribePush, unsubscribePush } from './push-subs
 export type Status = 'carregando' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
 
 const ATTEMPTS_KEY = 'tentativasPin';
-const OPEN_SESSION_KEY = 'sessaoAberta';
+/** Onde a interface guardava a sessão aberta antes do P6; hoje é o cofre que a guarda, e esta é apagada ao abrir. */
+const LEGACY_OPEN_SESSION_KEY = 'sessaoAberta';
 export const READ_RECEIPTS_KEY = 'confirmacaoLeitura';
 /** Espera para juntar as confirmações que chegam em sequência num evento só. */
 const ACK_DELAY_MS = 1500;
@@ -237,6 +236,8 @@ class Session {
 	private notifier?: PushNotifier;
 
 	async init() {
+		// P6: a sessão de antes, com a chave AES e a cifrada nas mãos da interface, some (o PIN é pedido uma vez)
+		await storage.settings.set(LEGACY_OPEN_SESSION_KEY, undefined);
 		this.identity = await storage.identity.get();
 		if (!this.identity) this.status = 'sem-identidade';
 		else if (await this.resumeOpenSession()) this.unlocked();
@@ -248,31 +249,29 @@ class Session {
 		this.status = 'desbloqueado';
 		void requestPersistence();
 		void this.startNetwork();
-		this.savingSession = vault
-			.openSession(Date.now())
-			.then((open) => storage.settings.set(OPEN_SESSION_KEY, open))
-			.catch(() => {}); // sem sessão, só pede o PIN na próxima recarga
+		// só o cofre guarda a sessão (P6); sem ela, só pede o PIN na próxima recarga
+		this.savingSession = vault.openSession(Date.now()).catch(() => {});
 	}
 
 	/** Recarregou a página pouco depois de usar o app (SESSION_IDLE_MS): entra sem o PIN. */
 	private async resumeOpenSession(): Promise<boolean> {
-		const open = await storage.settings.get<OpenSession>(OPEN_SESSION_KEY);
-		if (!open) return false;
 		try {
-			if (sessionIsOpen(open, Date.now()) && (await vault.resumeSession(open)) === this.current.publicKey) return true;
+			const publicKey = await vault.resumeSession(Date.now());
+			if (!publicKey) return false;
+			if (publicKey === this.current.publicKey) return true;
 		} catch {
-			// sessão estragada: cai no PIN
+			// cofre que não responde: cai no PIN
 		}
+		// sessão de outra conta: não serve
 		await vault.lock();
-		await storage.settings.set(OPEN_SESSION_KEY, undefined);
+		await vault.closeSession().catch(() => {});
 		return false;
 	}
 
 	/** O app está em uso: o prazo da sessão aberta conta a partir de agora. */
 	async touchSession() {
 		if (this.status !== 'desbloqueado') return;
-		const open = await storage.settings.get<OpenSession>(OPEN_SESSION_KEY);
-		if (open) await storage.settings.set(OPEN_SESSION_KEY, { ...open, lastSeen: Date.now() });
+		await vault.touchSession(Date.now());
 	}
 
 	private async save(identity: IdentityRecord) {
@@ -356,7 +355,7 @@ class Session {
 		// o embrulho em processamento termina antes de o cofre trancar (P3)
 		await this.stopNetwork();
 		await this.savingSession;
-		await storage.settings.set(OPEN_SESSION_KEY, undefined);
+		await vault.closeSession();
 		await vault.lock();
 		this.clearPhotos();
 		this.status = 'bloqueado';

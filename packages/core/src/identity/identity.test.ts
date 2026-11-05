@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { IDBFactory } from 'fake-indexeddb';
 import { WrongPinError, type KdfParams } from '../crypto/seal.ts';
 import {
 	InvalidPhraseError,
@@ -19,6 +20,8 @@ import {
 	LockedError,
 	PhraseMismatchError,
 	SESSION_IDLE_MS,
+	indexedDbSessionStore,
+	memorySessionStore,
 	sessionIsOpen
 } from './vault.ts';
 import { getEventHash, getPublicKey, generateSecretKey, finalizeEvent } from 'nostr-tools/pure';
@@ -153,34 +156,62 @@ describe('cofre da identidade', () => {
 
 describe('cofre: sessão aberta (recarregar sem PIN)', () => {
 	it('desbloqueia pela sessão depois de recarregar, sem o PIN', async () => {
-		const vault = createVault({ kdf: FAST });
+		const sessions = memorySessionStore();
+		const vault = createVault({ kdf: FAST, sessions });
 		const { publicKey } = await vault.create('123456');
-		const session = await vault.openSession(1000);
+		await vault.openSession(1000);
 		// recarregar a página: um cofre novo, que só tem a sessão guardada
-		const reloaded = createVault({ kdf: FAST });
-		expect(await reloaded.resumeSession(session)).toBe(publicKey);
+		const reloaded = createVault({ kdf: FAST, sessions });
+		expect(await reloaded.resumeSession(2000)).toBe(publicKey);
 		expect(reloaded.isUnlocked()).toBe(true);
 	});
 
-	it('a chave da sessão não sai do navegador', async () => {
-		const vault = createVault({ kdf: FAST });
+	it('a interface não recebe nada da sessão, e a chave dela não sai do navegador (P6)', async () => {
+		const sessions = memorySessionStore();
+		const vault = createVault({ kdf: FAST, sessions });
 		await vault.create('123456');
-		const { key } = await vault.openSession(0);
+		expect(await vault.openSession(0)).toBeUndefined();
+		const { key } = (await sessions.get())!;
 		expect(key.extractable).toBe(false);
 		await expect(crypto.subtle.exportKey('raw', key)).rejects.toThrow();
 	});
 
-	it('só abre sessão desbloqueado', async () => {
-		await expect(createVault({ kdf: FAST }).openSession(0)).rejects.toBeInstanceOf(LockedError);
+	it('guarda no IndexedDB do próprio cofre', async () => {
+		const sessions = indexedDbSessionStore('sessao-teste', new IDBFactory());
+		const vault = createVault({ kdf: FAST, sessions });
+		const { publicKey } = await vault.create('123456');
+		await vault.openSession(1000);
+		expect(await createVault({ kdf: FAST, sessions }).resumeSession(2000)).toBe(publicKey);
 	});
 
-	it('vale por alguns minutos sem uso, e não com o relógio voltado', async () => {
-		const vault = createVault({ kdf: FAST });
+	it('só abre sessão desbloqueado', async () => {
+		await expect(createVault({ kdf: FAST, sessions: memorySessionStore() }).openSession(0)).rejects.toBeInstanceOf(LockedError);
+	});
+
+	it('vale por alguns minutos sem uso, e não com o relógio voltado; a vencida é apagada', async () => {
+		const sessions = memorySessionStore();
+		const vault = createVault({ kdf: FAST, sessions });
 		await vault.create('123456');
-		const session = await vault.openSession(10_000);
+		await vault.openSession(10_000);
+		const session = (await sessions.get())!;
 		expect(sessionIsOpen(session, 10_000 + SESSION_IDLE_MS - 1)).toBe(true);
 		expect(sessionIsOpen(session, 10_000 + SESSION_IDLE_MS)).toBe(false);
 		expect(sessionIsOpen(session, 9_000)).toBe(false);
+
+		// usar o app renova o prazo
+		await vault.touchSession(20_000);
+		expect(await createVault({ kdf: FAST, sessions }).resumeSession(20_000 + SESSION_IDLE_MS - 1)).toBeDefined();
+		expect(await createVault({ kdf: FAST, sessions }).resumeSession(20_000 + SESSION_IDLE_MS)).toBeUndefined();
+		expect(await sessions.get()).toBeUndefined();
+	});
+
+	it('"Bloquear agora" fecha a sessão', async () => {
+		const sessions = memorySessionStore();
+		const vault = createVault({ kdf: FAST, sessions });
+		await vault.create('123456');
+		await vault.openSession(0);
+		await vault.closeSession();
+		expect(await createVault({ kdf: FAST, sessions }).resumeSession(1)).toBeUndefined();
 	});
 });
 

@@ -5,6 +5,20 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: a sessão aberta é só do cofre (P6)
+
+- O cofre grava, lê, renova e apaga a sessão aberta (recarregar sem o PIN por 5 minutos) num banco próprio, o
+  `lerolero-sessao`, separado do banco da interface para o worker não disputar as versões do Dexie. A interface só
+  pede para abrir, retomar, renovar e fechar, e recebe a chave pública; nunca mais a chave AES nem a cifrada. A
+  sessão vencida ou estragada é apagada ao retomar.
+- A sessão antiga, que a interface guardava em `sessaoAberta`, é apagada ao abrir: depois da atualização, o PIN é
+  pedido uma vez.
+- Na análise, a correção prevista não fechava o risco: um script na origem abre o mesmo banco e usa a chave AES, e
+  poderia capturar o PIN digitado. O Pedro escolheu fazer a mudança e tirar o P6 dos críticos; a defesa contra
+  script na origem fica com o P7 e o P23. Rejeitados: acabar com a entrada sem PIN e só reclassificar.
+- Testes no `identity.test.ts` (a sessão no IndexedDB do cofre, renovar, vencer, fechar); os e2e que vencem a sessão
+  apagam no banco novo.
+
 ## 2026-11-05: backup quase vazio não substitui mais o bom (P5)
 
 - "Não há backup" só vale quando os três relays gerais responderam. Antes, bastava um relay de DM (que guarda só 7
