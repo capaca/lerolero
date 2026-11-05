@@ -386,6 +386,11 @@ class Session {
 			canSend: () => navigator.onLine,
 			events: {
 				onWrap: (wrap) => this.receive(wrap),
+				// P4: o item que ficou horas na fila sai com horário novo; com prova de trabalho se o original tinha
+				rewrap: ({ event, rumor }) => {
+					const recipient = event.tags.find((t) => t[0] === 'p')?.[1] ?? '';
+					return vault.refreshWrap(rumor, recipient, powOf(event.id) >= POW_DIFFICULTY ? POW_DIFFICULTY : 0);
+				},
 				onSent: async (item) => {
 					if (item.messageId === DM_LIST_ID) await storage.settings.set('relaysDmPublicados', relaysOf(item.event.tags));
 					else if (item.messageId === BACKUP_ID) return;
@@ -645,7 +650,7 @@ class Session {
 		const network = this.requireNetwork();
 		const tags = [...ids.map((id) => ['e', id]), ['status', status], ['alt', 'confirmação de entrega do Lero-lero']];
 		const wrapped = await vault.wrapDirectMessage(recipient, '', tags, RECEIPT_KIND);
-		await network.engine.enqueue(wrapped.toRecipient, await this.relaysOrDefault(recipient));
+		await network.engine.enqueue(wrapped.toRecipient, await this.relaysOrDefault(recipient), undefined, wrapped.rumor);
 	}
 
 	/** A conversa apareceu na tela: confirma como lidas as mensagens dos outros que ainda não confirmei. */
@@ -662,7 +667,7 @@ class Session {
 		for (const request of await resendRequestsDue(storage, now)) {
 			try {
 				const wrapped = await vault.wrapDirectMessage(request.sender, '', resendTags(request), RESEND_KIND);
-				await this.requireNetwork().engine.enqueue(wrapped.toRecipient, await this.relaysOrDefault(request.sender));
+				await this.requireNetwork().engine.enqueue(wrapped.toRecipient, await this.relaysOrDefault(request.sender), undefined, wrapped.rumor);
 				await markAsked(storage, request, now);
 			} catch {
 				// sem rede ou sem relays: a próxima volta tenta de novo
@@ -693,7 +698,7 @@ class Session {
 				direct && (await needsProof(storage, recipient))
 					? await vault.proveWrap(original, recipient, POW_DIFFICULTY)
 					: (await vault.rewrap(original, [recipient]))[0].wrap;
-			await this.enqueueTo(recipient, wrap);
+			await this.enqueueTo(recipient, wrap, undefined, original);
 		}
 	}
 
@@ -734,7 +739,7 @@ class Session {
 		// o cartão vai junto da apresentação (Q-P5)
 		void this.sendProfile(joined ? conversation.members : newMembers);
 		for (const { rumor, to } of await takeForwards(storage, conversation, this.current.publicKey)) {
-			for (const { recipient, wrap } of await vault.rewrap(rumor, to)) void this.enqueueTo(recipient, wrap);
+			for (const { recipient, wrap } of await vault.rewrap(rumor, to)) void this.enqueueTo(recipient, wrap, undefined, rumor);
 		}
 	}
 
@@ -756,8 +761,8 @@ class Session {
 		const wraps = await Promise.all(
 			wrapped.toRecipients.map(({ recipient, wrap }) => (proofFor.has(recipient) ? vault.proveWrap(wrapped.rumor, recipient, POW_DIFFICULTY) : wrap))
 		);
-		wraps.forEach((wrap, i) => void network.engine.enqueue(wrap, relays[i]));
-		void network.engine.enqueue(wrapped.toSelf, mine);
+		wraps.forEach((wrap, i) => void network.engine.enqueue(wrap, relays[i], undefined, wrapped.rumor));
+		void network.engine.enqueue(wrapped.toSelf, mine, undefined, wrapped.rumor);
 	}
 
 	/** Cria um grupo (RF-31) e devolve o id da conversa. */
@@ -802,8 +807,8 @@ class Session {
 	 * vai para a lista padrão, que quase todo mundo usa, em vez de não ir: um aviso de grupo
 	 * perdido deixa o grupo diferente no celular dele.
 	 */
-	private async enqueueTo(recipient: string, wrap: Parameters<SyncEngine['enqueue']>[0], messageId?: string) {
-		await this.requireNetwork().engine.enqueue(wrap, await this.relaysOrDefault(recipient), messageId);
+	private async enqueueTo(recipient: string, wrap: Parameters<SyncEngine['enqueue']>[0], messageId?: string, rumor?: Parameters<SyncEngine['enqueue']>[3]) {
+		await this.requireNetwork().engine.enqueue(wrap, await this.relaysOrDefault(recipient), messageId, rumor);
 	}
 
 	/** Onde o contato recebe; sem saber, os relays padrão. */
@@ -860,8 +865,8 @@ class Session {
 				await storeOutgoing(storage, wrapped.rumor);
 				this.version++;
 			}
-			for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap, store ? wrapped.rumor.id : undefined);
-			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+			for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap, store ? wrapped.rumor.id : undefined, wrapped.rumor);
+			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays(), undefined, wrapped.rumor);
 			if (store) void this.sendProfile(conversation.members);
 			return { rumor: wrapped.rumor };
 		}
@@ -892,8 +897,8 @@ class Session {
 			// quem nunca me escreveu recebe com prova de trabalho (RF-90); a mensagem já está na tela enquanto ela é feita
 			const toRecipient = (await needsProof(storage, recipient)) ? await vault.proveWrap(wrapped.rumor, recipient, POW_DIFFICULTY) : wrapped.toRecipient;
 			// a fila guarda e tenta de novo sozinha: a tela não espera a rede
-			void network.engine.enqueue(toRecipient, relays, store ? wrapped.rumor.id : undefined);
-			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays());
+			void network.engine.enqueue(toRecipient, relays, store ? wrapped.rumor.id : undefined, wrapped.rumor);
+			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays(), undefined, wrapped.rumor);
 			if (store) void this.sendProfile([recipient]);
 		};
 		return { rumor: wrapped.rumor, deliver };
@@ -1353,7 +1358,7 @@ class Session {
 			const { content, tags } = profileEvent(card);
 			for (const recipient of due) {
 				const wrapped = await vault.wrapDirectMessage(recipient, content, tags, PROFILE_KIND, card.updatedAt);
-				await this.enqueueTo(recipient, wrapped.toRecipient);
+				await this.enqueueTo(recipient, wrapped.toRecipient, undefined, wrapped.rumor);
 			}
 			await markProfileSent(storage, due, card.updatedAt);
 		} catch {
@@ -1453,7 +1458,7 @@ class Session {
 	/** Conta aos meus outros aparelhos onde este recebe avisos: só para mim mesmo, nos meus relays. */
 	private async announcePushDevice(tags: string[][]) {
 		const wrapped = await vault.wrapDirectMessage(this.current.publicKey, '', tags, PUSH_DEVICE_KIND);
-		await this.requireNetwork().engine.enqueue(wrapped.toRecipient, await this.myDmRelays());
+		await this.requireNetwork().engine.enqueue(wrapped.toRecipient, await this.myDmRelays(), undefined, wrapped.rumor);
 	}
 
 	/**

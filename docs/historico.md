@@ -5,6 +5,21 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: mensagem que ficou horas na fila de saída chega (P4)
+
+- A fila guarda o rumor de cada embrulho. Item que passou de 1 hora na fila sai num embrulho novo, com horário
+  novo, para os relays que ainda não o aceitaram; o id do item na fila não muda. O horário do embrulho é recuado em
+  até 2 dias na hora de escrever e quem recebe busca só até 2 dias antes do cursor: com 1 dia na fila, metade se
+  perdia; com 1 hora, a chance cai para 2%.
+- Vale para tudo o que vai embrulhado, inclusive o que não tem `seq` e nem o reenvio recupera (confirmações,
+  reações, avisos de grupo, apagar, editar) e a cópia dos meus aparelhos. O embrulho com prova de trabalho é refeito
+  com prova.
+- O cofre ganhou `refreshWrap`: só rumor meu, com o id certo, que passe nas mesmas checagens de `wrapDirectMessage` e
+  `wrapGroupMessage`, para quem estava na mensagem ou para mim. Não dá à interface nada que ela já não pudesse pedir.
+- Se o cofre não refizer (trancado), sai o embrulho antigo. Itens que já estavam na fila antes da atualização não
+  têm o rumor e saem como estão.
+- Testes de regressão no `sync.test.ts` (falha sem a correção) e no `identity.test.ts`.
+
 ## 2026-11-05: falha passageira não descarta mais a mensagem recebida (P3)
 
 - Só o embrulho que não abre (`InvalidWrapError`, cujo nome atravessa o worker) é marcado como visto depois de

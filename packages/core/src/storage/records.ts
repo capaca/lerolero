@@ -171,9 +171,13 @@ export type MessageRecord = {
 export type GroupNotice = { action: string; targets: string[]; subject?: string };
 
 export type OutboxRecord = {
-	/** id do gift wrap */
+	/** id do primeiro gift wrap (o embrulho pode ser refeito, P4) */
 	id: string;
 	event: NostrEvent;
+	/** o rumor de dentro do embrulho, para refazê-lo com horário novo se ficar horas na fila (P4) */
+	rumor?: Omit<NostrEvent, 'sig'>;
+	/** quando o embrulho atual foi feito (ms); sem isto, vale `queuedAt` */
+	wrappedAt?: number;
 	relays: string[];
 	/** relays que já confirmaram com OK */
 	acceptedBy: string[];

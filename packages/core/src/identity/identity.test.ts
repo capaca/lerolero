@@ -229,4 +229,24 @@ describe('cofre: assinar e abrir mensagens', () => {
 		const wrap = wrapEvent({ kind: 14, content: 'oi', tags: [] }, generateSecretKey(), other);
 		expect(() => vault.unwrap(wrap)).toThrow(InvalidWrapError);
 	});
+
+	it('refaz o embrulho de um rumor meu, para quem estava nele ou para mim, e de mais nada (P4)', async () => {
+		const ana = createVault({ kdf: FAST });
+		const bia = createVault({ kdf: FAST });
+		const { publicKey: anaKey } = await ana.create('123456');
+		const { publicKey: biaKey } = await bia.create('123456');
+		const caio = getPublicKey(generateSecretKey());
+		// confirmação de entrega: não passa pelo `rewrap`, mas também precisa sair com horário novo
+		const receipt = ana.wrapDirectMessage(biaKey, '', [['e', 'a'.repeat(64)], ['status', 'entregue']], 4441);
+
+		const fresh = await ana.refreshWrap(receipt.rumor, biaKey);
+		expect(fresh.id).not.toBe(receipt.toRecipient.id);
+		expect(bia.unwrap(fresh).id).toBe(receipt.rumor.id);
+		expect(ana.unwrap(await ana.refreshWrap(receipt.rumor, anaKey)).id).toBe(receipt.rumor.id);
+
+		await expect(ana.refreshWrap(receipt.rumor, caio)).rejects.toThrow('destinatário fora da mensagem');
+		await expect(ana.refreshWrap({ ...receipt.rumor, content: 'outro' }, biaKey)).rejects.toThrow();
+		const fromBia = bia.wrapDirectMessage(anaKey, 'oi');
+		await expect(ana.refreshWrap(fromBia.rumor, anaKey)).rejects.toThrow('mensagens minhas');
+	});
 });
