@@ -1,7 +1,7 @@
 # 07 — Roadmap
 
 - **Status:** ✅ aprovado
-- **Última atualização:** 2026-10-30
+- **Última atualização:** 2026-11-06
 
 Aqui ficam o plano e o estado de cada item. Como cada coisa ficou pronta (escolhas, alternativas, bugs achados no
 caminho) está no [histórico de entregas](historico.md).
@@ -10,7 +10,7 @@ caminho) está no [histórico de entregas](historico.md).
 
 - **Feito:** M0 (menos uma espera: o aparelho de 2 GB), M1, M2 e M3 inteiros; do M4,
   tudo menos a passkey, adiada para depois do beta.
-- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 25: o item 20 espera o aparelho).
+- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 26: o item 20 espera o aparelho).
 - **Em produção:** https://capaca.github.io/lerolero/; homologação em https://lerolero-app.github.io/lerolero/.
 
 ## Premissas
@@ -32,6 +32,7 @@ caminho) está no [histórico de entregas](historico.md).
 | M4 Segurança e confiança | 4 sem | Pedidos, bloqueio, backup, prova de trabalho, detecção de perdas e arquivo e gerenciador de senhas feitos; passkey (item 15) adiada para depois do beta |
 | M5 Polimento | 4 sem | Velocidade da suíte e2e (item 16) e aviso de versão (item 17) feitos; acessibilidade feita (item 22); linguagem simples feita (item 21); notificações feitas (item 25, v0.12.0, com o convite na tela inicial); a fazer: item 20 |
 | Revisão de prontidão | — | Em andamento, antes do beta: item 23; decisões de domínio, dados de uso e servidor tomadas em 2026-11-05; riscos levantados em [08](08-prontidao.md), com P1 a P9 corrigidos em 2026-11-05; faltam o domínio, as sondas e o resumo técnico |
+| Identidade visual e app nativo | — | Decididos em 2026-11-06 para antes do beta: itens 26 e 27 |
 | Beta fechado | 6 sem de uso | A fazer: item 24 |
 | v1 Android + desktop | 26 sem | Depois do beta |
 
@@ -69,12 +70,15 @@ do WhatsApp.
 21. Revisão dos textos para linguagem simples (M5; RNF-64). ✅ Feita em 2026-11-02
 22. Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (M5; RNF-60..63): axe-core e alvos de 48 dp em todas as telas no e2e `textos`; TalkBack e fonte a 200% conferidos no celular. ✅ Feita em 2026-11-03
 25. Notificações por Web Push no PWA (M5; RF-82, Q-M2, [ADR-0010](adr/0010-web-push-no-pwa.md)): decidido em 2026-11-04, antes do beta; o número 25 é para não renumerar os outros. Em três etapas, cada uma com o seu PR: (1) o repassador mínimo, sem estado, só para os serviços de push conhecidos e com limite de pedidos, no Cloudflare Workers gratuito (escolhido em 2026-11-04; feita em 2026-11-04, `packages/repassador`, 120 pedidos por minuto por IP e só as origens do app); (2) no core, chave VAPID por pessoa, inscrição no cartão de perfil, cifra do aviso (RFC 8291) e envio depois de cada mensagem (1:1, grupo, fila offline), com chaves novas ao bloquear (feita em 2026-11-04, `packages/core/src/push`, com até 3 aparelhos por conta); (3) no app, "Notificações" em Ajustes, o service worker que mostra "Mensagem de <nome>" e abre a conversa ao tocar, e o e2e (feita em 2026-11-04). ✅ Feita em 2026-11-04
+26. Revisão da identidade visual e da UX (decidido em 2026-11-06, antes do beta): logo, ícone, cores, tipografia e tom, talvez o nome (Q4 da [Visão](01-visao.md)), e os fluxos que mudarem com isso. Vem antes do app nativo para que ele já nasça com a marca nova, sem refazer ícone, abertura e páginas de loja.
+27. App nativo com Capacitor antes do beta (decidido em 2026-11-06; antes era da v1, [ADR-0002](adr/0002-stack-do-cliente.md)): notificações confiáveis (o aviso retido com o celular parado, Q-M2), instalar como app de verdade em vez de "Adicionar à tela inicial", recursos do aparelho (câmera na hora, chave no cofre do sistema, RF-07) e iPhone no beta. Começa pelo Android. Falta decidir: o iPhone (conta da Apple, US$ 99/ano, para o TestFlight; Q-N9), o push nativo (Q-N10) e a distribuição no Android (Q-N2). Depende do item 26.
 23. Revisão de prontidão para produção, com os seis temas, os [limites conhecidos](#limites-conhecidos) e a decisão do domínio (Q-N1). Decidido em 2026-11-05: `.com.br` comprado antes do beta (Q-N1), resumo técnico opt-in já no beta (Q-N6), sem servidor próprio no beta (Q-N7). Em etapas, cada uma com o seu PR: (1) as decisões (feita em 2026-11-05); (2) o domínio: o Pedro compra, o Pages e o repassador passam a atendê-lo e o endereço antigo avisa quem ainda está lá; (3) o levantamento dos riscos por tema, com mitigação ou aceite, e a correção dos críticos (levantamento feito em 2026-11-05, em [08](08-prontidao.md): 36 riscos; o Pedro escolheu corrigir antes do beta os oito de perda e de chave, P1 a P8, e a faixa de avisos de incidente, P9, cada um com o seu PR; os nove corrigidos em 2026-11-05); (4) as sondas sintéticas na CI e o painel de saúde dos relays e Blossom; (5) o resumo técnico opt-in.
 24. Beta fechado.
 
 Organizada em 2026-10-30 pelo Pedro: as funcionalidades novas (17 a 19) vêm antes das revisões, para que a medição,
 a linguagem e a acessibilidade já as cubram; o polimento vem antes da prontidão. Os outros pedidos ficam fora da ordem
-e voltam a ser avaliados com o retorno do beta.
+e voltam a ser avaliados com o retorno do beta. Em 2026-11-06 entraram, antes do beta e nesta ordem, a identidade
+visual (26) e o app nativo (27).
 
 ## MVP (PWA) por marco
 
@@ -250,7 +254,7 @@ Aceitos por ora; cada um tem a origem no [histórico](historico.md).
 
 | Item | Requisitos |
 |---|---|
-| App Android com Capacitor; APK direto assinado | RNF-02, 81 |
+| App Android com Capacitor; APK direto assinado (➡️ adiantado para antes do beta em 2026-11-06, item 27) | RNF-02, 81 |
 | Notificações com UnifiedPush; decidir quem dispara o "acorde" ([ADR-0005](adr/0005-notificacoes.md)) | RF-82 |
 | App desktop com Tauri: bandeja, conexão própria, notificações | RNF-03, 83 |
 | Chave no cofre do sistema; PIN/biometria opcional | RF-07, RNF-42 |
@@ -313,6 +317,8 @@ a Q-N7 (custo zero × servidor de referência) e a Q-N8 (teto de usuários); as 
 |---|---|---|
 | Q-M1 | Refazer as estimativas e a projeção de datas com base no ritmo real | Pedro |
 | Q-M2 | ✅ Notificações antes do beta? Decidido em 2026-11-04, sem o teste da noite: **Web Push no PWA com um repassador mínimo** ([ADR-0010](adr/0010-web-push-no-pwa.md), item 25), aceitando que, com o celular parado, o aviso fique retido até o desbloqueio (medido no Motorola, mesmo com `Urgency: high`). Rejeitados: nada antes do beta (depender de lembrar de abrir o app) e o app nativo com FCM (~2 semanas, gateway com credencial do Firebase, APK ou Play Store, duas versões). Medições em [prototipos/push](../prototipos/push/README.md) | Pedro |
+| Q-N9 | iPhone nativo no beta (item 27): pagar a conta de desenvolvedor da Apple (US$ 99/ano) para o TestFlight, contra o orçamento zero (Q3 da Visão), ou deixar o iPhone no PWA. Decidir com o Android nativo pronto (2026-11-06) | Pedro |
+| Q-N10 | Push no app nativo (item 27): FCM no Android e APNs no iPhone (funciona sem passo extra, mas passa pelo Google e pela Apple, como o Web Push de hoje) ou UnifiedPush, do [ADR-0005](adr/0005-notificacoes.md) (o testador instala o ntfy à parte). Decidir ao começar o item 27 | Pedro |
 | Q-U2 | Proteção da conta em camadas ([ADR-0009](adr/0009-protecao-e-recuperacao-da-conta.md)): ✅ o arquivo de recuperação fica em **texto aberto**, num `.txt` (decidido em 2026-10-29; ver a regra 4 do ADR). ✅ A D1 entra no Android (decidido em 2026-10-29, com a medição do protótipo `prototipos/senha` no Motorola: o aviso aparece no PWA instalado e a frase volta inteira), salvando por `PasswordCredential` e com o formulário que some de reserva (rejeitado: só o formulário, que depende de o navegador adivinhar o envio). Falta: medir no iPhone, quando houver um aparelho. | Pedro (ao implementar o item 14) |
 
 Resolvidas: Q-I1 (internacionalização, 2026-10-27, [ADR-0008](adr/0008-internacionalizacao.md)) e Q-U1 (cadastro sem a

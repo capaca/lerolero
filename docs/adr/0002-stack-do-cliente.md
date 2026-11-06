@@ -1,6 +1,6 @@
 # ADR-0002: Stack do cliente
 
-- **Status:** aceito
+- **Status:** aceito; em 2026-11-06 o Capacitor foi adiantado da v1 para antes do beta (item 27 do [roadmap](../07-roadmap.md))
 - **Data:** 2026-10-16
 
 ## Contexto
