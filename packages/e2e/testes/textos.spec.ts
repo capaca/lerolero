@@ -168,15 +168,17 @@ test('entrada (boas-vindas, cadastro, PIN, recuperar, esqueci o PIN): nenhum tex
 	await expect(page.locator('#nome')).toBeVisible({ timeout: 20_000 });
 	await semTextoFixo(page, frase);
 
-	// cadastro: nome, PIN com os dois campos diferentes
+	// cadastro: nome, PIN e a confirmação diferente
 	await page.goto('./cadastro');
 	await semTextoFixo(page);
 	await page.locator('#nome').fill('Maria');
 	await page.locator('button[type="submit"]').click();
 	await digitarPin(page, 'pin', PIN);
+	await semTextoFixo(page); // a confirmação
 	await page.keyboard.type('654321');
 	await expect(page.getByRole('alert')).toBeVisible();
 	await semTextoFixo(page);
+	await page.keyboard.type(PIN);
 	await page.keyboard.type(PIN);
 	await expect(page).toHaveURL(PSEUDO_URL);
 

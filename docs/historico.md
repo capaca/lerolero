@@ -5,6 +5,19 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-06: cadastro e PIN novos (item 26, etapa 3b)
+
+- Propostas comparadas com capturas do app; o Pedro aprovou as três telas e pediu a foto já no cadastro.
+- Boas-vindas: o ícone grande, o nome e o lema no centro; o parágrafo virou três promessas com ícone (sem telefone
+  nem e-mail; a conta fica no aparelho, com PIN; volta com 12 palavras) e os botões desceram para perto do polegar.
+  "Já tenho uma conta (tenho a frase)" ficou só "Já tenho uma conta".
+- Nome: "Passo 1 de 2" com barra e seta de voltar; a bolinha mostra a inicial ou a foto escolhida (opcional), que sobe
+  em segundo plano depois que a conta é criada, sem prender a entrada. Se falhar, a pessoa põe depois em Ajustes.
+- PIN: um por vez, no mesmo campo (o foco não sai dele); sem o botão "Criar conta". Se a confirmação não bate, treme e
+  volta ao começo, porque não dá para saber qual dos dois saiu errado.
+- Achado no caminho: no e2e, recarregar a página logo depois do cadastro interrompia o envio da foto; o teste abre os
+  Ajustes pela interface.
+
 ## 2026-11-06: barra em pedra em todas as telas (item 26, etapa 3a)
 
 - O Pedro escolheu a barra em pedra em todas as telas, não só na conversa. Um componente `TopBar` (voltar, título e
