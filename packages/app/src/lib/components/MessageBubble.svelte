@@ -279,8 +279,22 @@
 	}
 	.row.mine {
 		justify-content: flex-end;
-		--bubble: color-mix(in srgb, var(--accent) 18%, var(--surface));
+		--bubble: var(--mine);
 		--bubble-line: transparent;
+	}
+	/* o balão enviado é anil sólido: o que vai dentro dele passa para as cores claras, com 4,5:1 (WCAG 1.4.3) */
+	.row.mine .bubble {
+		--fg: #ffffff;
+		--muted: #dfe4fa;
+		--accent: #ffffff;
+		--accent-fg: var(--mine);
+		/* "lida" em amarelo: o azul dos outros apps sumiria no anil */
+		--read: #ffd166;
+		--danger: #ffe0dc;
+		--danger-fg: var(--mine);
+		--line: rgb(255 255 255 / 40%);
+		--surface: var(--mine);
+		color: var(--fg);
 	}
 	.bubble {
 		position: relative;
@@ -434,7 +448,7 @@
 	.row.mine .pick {
 		margin-right: auto;
 	}
-	/* entregue: tom do texto, bem mais escuro que o cinza do horário, que sumia no verde do balão */
+	/* entregue: tom do texto, bem mais escuro que o cinza do horário, que sumia no balão colorido */
 	.status.delivered {
 		color: var(--fg);
 	}
@@ -465,7 +479,7 @@
 	.quote-name {
 		display: block;
 		font-weight: 700;
-		/* o fundo da citação escurece o balão: o verde puro não chega a 4,5:1 (WCAG 1.4.3) */
+		/* o fundo da citação escurece o balão: o anil puro não chega a 4,5:1 (WCAG 1.4.3) */
 		color: color-mix(in srgb, var(--accent) 80%, var(--fg));
 	}
 	.quote-text {

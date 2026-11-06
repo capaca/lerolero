@@ -5,6 +5,31 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-06: identidade visual nova (item 26, etapas 1 e 2)
+
+- O nome Lero-lero fica (Q4) e o tom é brincalhão e brasileiro. O que incomodava: ícone de balão genérico, verde
+  parecido demais com o do WhatsApp e a fonte do sistema, com cara de protótipo.
+- Três direções foram comparadas numa página com ícone, cores, fonte e uma conversa nos dois temas: **Fuxico**
+  (tangerina e azul de caneta, Bricolage Grotesque), **Maracujá** (roxo e amarelo, Baloo 2) e **Calçadão** (anil e
+  pedra portuguesa, Outfit). O Pedro escolheu as cores e a fonte do Calçadão com o ícone do Maracujá.
+- Numa segunda rodada, ícones sem balão (monograma "ll", telefone de lata, orelhão, aspas, dois falando) foram
+  testados nas cores novas; rejeitados, porque o balão com "ll" continuou o melhor.
+- No app: anil `#2847c9` (no escuro `#8fa6ff`), fundos e textos com um leve tom azulado; o cinza secundário e o azul
+  do tique de "lida" foram escurecidos (e clareados no escuro) para passar de 4,5:1 no balão azulado, o que o axe do
+  e2e `textos` pegou na citação dentro do balão enviado.
+- A Outfit vem do `@fontsource-variable/outfit` (OFL), embutida no build: um CDN de fontes saberia quem abre o app e
+  não funcionaria sem rede. São 32 KB para o alfabeto latino, mais 15 KB baixados só se aparecer letra de outros
+  alfabetos latinos.
+- O ícone tem a fonte em `static/icon.svg` (também usado como favicon) e os PNGs saem dele por `scripts/icones.js`,
+  que desenha no Chrome pelo Playwright do e2e. O desenho fica dentro do círculo do recorte do Android.
+- Com só a cor trocada, o Pedro quase não viu diferença; capturas do app ao lado da referência mostraram o que
+  faltava. Entraram o balão enviado em anil sólido (o mesmo nos dois temas, com as cores de dentro trocadas para
+  claras) e a barra do topo da conversa em pedra, que também virou a cor da barra do celular (`theme-color`).
+- O tique de "lida" no balão anil é amarelo: o azul dos outros apps sumiria no fundo azul.
+- Ícones: gravar virou a onda de voz e enviar, a seta cheia. Rejeitados o microfone cheio, a seta para cima e o avião
+  de papel (o do Telegram). O emoji de microfone da página de referência foi descartado logo de cara.
+- A homologação continua com a barra laranja, que contrasta com a pedra da produção.
+
 ## 2026-11-05: faixa de avisos para incidentes (P9)
 
 - O Pedro publica um aviso pelo workflow `avisos.yml` (no Actions, também pelo celular): texto de até 280

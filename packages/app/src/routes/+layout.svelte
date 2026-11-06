@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '@fontsource-variable/outfit';
 	import '../app.css';
 	import { goto } from '$app/navigation';
 	import { asset, resolve } from '$app/paths';
@@ -147,7 +148,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={asset('icon-192.png')} />
+	<link rel="icon" href={asset('icon.svg')} type="image/svg+xml" />
 	{#if session.status === 'erro'}<title>{m.titulo_pagina({ pagina: m.erro_abrir_titulo() })}</title>{/if}
 </svelte:head>
 

@@ -31,6 +31,7 @@
 	},
 	"license": "AGPL-3.0-or-later",
 	"dependencies": {
+		"@fontsource-variable/outfit": "5.3.0",
 		"@lerolero/core": "workspace:*",
 		"jsqr": "1.4.0",
 		"uqr": "0.1.3"
