@@ -15,6 +15,7 @@ import {
 	expect,
 	meuConvite,
 	PIN,
+	quebrarBanco,
 	restaurarSemAcharOBackup,
 	test,
 	vencerSessao
@@ -188,6 +189,17 @@ test('entrada (boas-vindas, cadastro, PIN, recuperar, esqueci o PIN): nenhum tex
 	await page.locator('a.forgot').click();
 	await expect(page).toHaveURL(/\/esqueci-pin$/);
 	await semTextoFixo(page);
+});
+
+test('banco que não abre (P8): nenhum texto fixo', async ({ novoAparelho }) => {
+	const page = await novoAparelho(PSEUDO_URL);
+	await page.goto('./');
+	await expect(page).toHaveURL(/\/bem-vindo$/);
+	await quebrarBanco(page);
+	await page.reload();
+	await expect(page.locator('pre')).toContainText('QuotaExceededError');
+	// o texto do erro e a versão (no "Lero-lero {versao}" traduzido) são dados
+	await semTextoFixo(page, await dados(page, 'pre'));
 });
 
 test('guia de teste e roteiro de aceite: nenhum texto fixo', async ({ novoAparelho }) => {

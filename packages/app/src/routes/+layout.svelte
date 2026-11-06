@@ -48,7 +48,7 @@
 	const UPDATE_CHECK_MS = 5 * 60_000;
 
 	// rotas permitidas em cada estado; fora delas, vai para a primeira
-	const ALLOWED: Record<Exclude<Status, 'carregando'>, string[]> = {
+	const ALLOWED: Record<Exclude<Status, 'carregando' | 'erro'>, string[]> = {
 		'sem-identidade': ['/bem-vindo', '/cadastro', '/restaurar'],
 		bloqueado: ['/desbloquear', '/esqueci-pin'],
 		desbloqueado: [
@@ -125,7 +125,7 @@
 	});
 
 	$effect(() => {
-		if (session.status === 'carregando') return;
+		if (session.status === 'carregando' || session.status === 'erro') return;
 		const allowed = ALLOWED[session.status];
 		const route = page.route.id ?? '';
 		if (allowed.includes(route) || PUBLIC.includes(route)) return;
@@ -140,6 +140,7 @@
 
 <svelte:head>
 	<link rel="icon" href={asset('icon-192.png')} />
+	{#if session.status === 'erro'}<title>{m.titulo_pagina({ pagina: m.erro_abrir_titulo() })}</title>{/if}
 </svelte:head>
 
 {#if showOffline}
@@ -165,7 +166,21 @@
 	</Sheet>
 {/if}
 
-{#if session.status !== 'carregando'}
+{#if session.status === 'erro'}
+	<!-- P8: o banco não abriu. Os dados continuam no aparelho: nunca oferecer apagar, só tentar de novo -->
+	<main>
+		<h1>{m.erro_abrir_titulo()}</h1>
+		<p>{m.erro_abrir_texto()}</p>
+		<p class="hint">{m.erro_abrir_avisar()}</p>
+		<pre class="error-detail">{session.initError}</pre>
+		<p class="hint">
+			{(__APP_HOMOLOG__ ? m.ajustes_versao_homologacao : __APP_LOCAL__ ? m.ajustes_versao_local : m.ajustes_versao)({ versao: __APP_RELEASE__ })}
+		</p>
+		<div class="actions">
+			<button class="primary" onclick={() => location.reload()}>{m.erro_abrir_tentar()}</button>
+		</div>
+	</main>
+{:else if session.status !== 'carregando'}
 	<!-- a conversa ocupa a altura da tela; com a faixa de sem conexão ela encolhe o mesmo tanto -->
 	<div style:--offline-bar={showOffline ? '1.75rem' : '0px'}>
 		<!-- trocar a língua redesenha a tela sem recarregar, que trancaria o cofre (ADR-0008) -->
@@ -223,6 +238,16 @@
 		border: none;
 		background: var(--accent);
 		color: var(--accent-fg);
+	}
+	.error-detail {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		padding: 0.6rem 0.8rem;
+		border-radius: 8px;
+		background: var(--warn-bg);
+		color: var(--warn-fg);
+		font-size: 0.85rem;
+		user-select: all;
 	}
 	.homolog {
 		position: fixed;

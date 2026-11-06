@@ -5,6 +5,16 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: tela de erro quando o banco não abre (P8)
+
+- `session.init()` passou a tratar a falha ao abrir o banco (migração que lança, cota cheia, banco corrompido): em
+  vez da tela branca para sempre, aparece "O Lero-lero não abriu", com o texto do erro, a versão e "Tentar de novo"
+  (recarrega a página). A tela diz que nada foi apagado e não oferece apagar dados.
+- Como o "Enviar comentário" precisa do app aberto, a tela pede uma foto dela para quem convidou para o teste. A
+  faixa de avisos do P9 entra nesta tela junto com o P9.
+- O e2e `erro-ao-abrir` faz o banco do app falhar ao abrir (o do cofre, no worker, segue normal) e confere que,
+  consertado, "Tentar de novo" entra na conta; a tela entrou no e2e `textos`.
+
 ## 2026-11-05: só o app na origem da produção (P7)
 
 - A release deixou de montar e publicar o protótipo de medição em `/medicao/`. Ele tinha outro lockfile, `npm ci` com
