@@ -25,8 +25,12 @@
 		align-items: center;
 		gap: 0.8rem;
 		padding: 0.5rem 1rem;
-		border-bottom: 1px solid var(--line);
-		background: var(--surface);
+		/* barra em pedra (item 26): o que vai nela passa para as cores claras */
+		--fg: #ffffff;
+		--muted: #b3b8c8;
+		--surface: var(--bar);
+		background: var(--bar);
+		color: var(--fg);
 	}
 	header a {
 		text-decoration: none;

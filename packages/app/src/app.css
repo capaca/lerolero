@@ -1,31 +1,37 @@
 :root {
-	--bg: #fafaf7;
+	/* cores do Calçadão (item 26): anil, pedra e areia */
+	--bg: #f7f8fc;
 	--surface: #ffffff;
-	--fg: #1d1d1b;
-	/* contraste de 4,5:1 também no balão verde e na citação dentro dele (WCAG 1.4.3) */
-	--muted: #5a5a55;
-	--line: #deded8;
-	--accent: #1f6f5c;
+	--fg: #10131c;
+	/* contraste de 4,5:1 também no balão azulado e na citação dentro dele (WCAG 1.4.3) */
+	--muted: #4f5466;
+	--line: #dfe2ec;
+	--accent: #2847c9;
 	--accent-fg: #ffffff;
-	/* o tique de "lida": azul, para não se perder no verde do balão */
-	--read: #1769d6;
+	/* balão enviado e barra do topo da conversa: as mesmas cores nos dois temas */
+	--mine: #2847c9;
+	--bar: #10131c;
+	/* o tique de "lida": azul mais fundo que o anil, para passar de 4,5:1 no balão azulado */
+	--read: #0a58a8;
 	--warn-bg: #fff4d6;
 	--warn-fg: #6b4e00;
 	--danger: #b3261e;
 	--danger-fg: #ffffff;
-	font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	/* embutida no app, não de um CDN: ninguém de fora fica sabendo quem abre o app, e funciona sem rede */
+	font-family: 'Outfit Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 	line-height: 1.5;
 	color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
 	:root {
-		--bg: #161615;
-		--surface: #1f1f1d;
-		--fg: #ececea;
-		--muted: #b4b4ae;
-		--line: #34342f;
-		--accent: #5cc2a6;
-		--accent-fg: #0f2a23;
+		--bg: #10131c;
+		--surface: #191d29;
+		--fg: #eef0f7;
+		--muted: #b3b8c8;
+		--line: #2a2f3e;
+		--accent: #8fa6ff;
+		--accent-fg: #0b1440;
+		--bar: #0b0d14;
 		--read: #6db3ff;
 		--warn-bg: #3a3014;
 		--warn-fg: #f3d98a;
