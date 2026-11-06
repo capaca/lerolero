@@ -7,6 +7,7 @@
 	import Icon from '#lib/components/Icon.svelte';
 	import Rich from '#lib/components/Rich.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import { formatWhen } from '#lib/format.ts';
 	import { previewText, type NameOf } from '#lib/notices.ts';
 	import { m } from '#lib/paraglide/messages.js';
@@ -90,7 +91,6 @@
 			})
 		);
 	}
-	let moreOpen = $state(false);
 	let showInstallWarning = $state(false);
 
 	onMount(async () => {
@@ -133,19 +133,19 @@
 
 <svelte:head><title>{m.app_nome()}</title></svelte:head>
 
+<!-- Favoritas e Ajustes direto na barra, sem o menu ⋮ que só tinha os dois (item 26): um toque a menos -->
+<TopBar title={m.app_nome()}>
+	{#snippet actions()}
+		<a class="icon-button" href={hasRequests ? `${resolve('/contatos')}?aba=pedidos` : resolve('/contatos')} aria-label={hasRequests ? m.inicio_contatos_pedidos() : m.inicio_contatos()}>
+			<Icon name="users" size={22} />
+			{#if hasRequests}<span class="dot" aria-hidden="true"></span>{/if}
+		</a>
+		<a class="icon-button" href={resolve('/favoritas')} aria-label={m.inicio_favoritas()}><Icon name="star" size={22} /></a>
+		<a class="icon-button" href={resolve('/ajustes')} aria-label={m.inicio_ajustes()}><Icon name="settings" size={22} /></a>
+	{/snippet}
+</TopBar>
+
 <main class="home">
-	<header>
-		<h1>{m.app_nome()}</h1>
-		<nav>
-			<a class="icon-button" href={hasRequests ? `${resolve('/contatos')}?aba=pedidos` : resolve('/contatos')} aria-label={hasRequests ? m.inicio_contatos_pedidos() : m.inicio_contatos()}>
-				<Icon name="users" size={22} />
-				{#if hasRequests}<span class="dot" aria-hidden="true"></span>{/if}
-			</a>
-			<button class="icon-button" aria-label={m.inicio_mais()} aria-haspopup="dialog" onclick={() => (moreOpen = true)}>
-				<Icon name="more-vertical" size={22} />
-			</button>
-		</nav>
-	</header>
 
 	{#if showInstallWarning}
 		<div class="banner" role="status">
@@ -263,14 +263,6 @@
 		</Sheet>
 	{/if}
 
-	{#if moreOpen}
-		<Sheet label={m.inicio_mais()} onclose={() => (moreOpen = false)}>
-			<a class="item" href={resolve('/favoritas')}><Icon name="star" /> {m.inicio_favoritas()}</a>
-			<a class="item" href={resolve('/ajustes')}><Icon name="settings" /> {m.inicio_ajustes()}</a>
-			<button class="item cancel" onclick={() => (moreOpen = false)}>{m.comum_cancelar()}</button>
-		</Sheet>
-	{/if}
-
 	{#if newChatOpen}
 		<Sheet label={m.inicio_nova_conversa()} onclose={() => (newChatOpen = false)}>
 			<a class="item" href={resolve('/contatos')}><Icon name="message" /> {m.inicio_novo_contato()}</a>
@@ -291,19 +283,6 @@
 	.home {
 		/* espaço para o botão flutuante não cobrir a última conversa */
 		padding-bottom: 6rem;
-	}
-	header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-	}
-	header h1 {
-		margin: 0.3rem 0;
-	}
-	nav {
-		display: flex;
-		gap: 0.2rem;
 	}
 	.icon-button {
 		border: 0;
@@ -326,7 +305,7 @@
 		height: 0.65rem;
 		border-radius: 50%;
 		background: var(--danger);
-		border: 2px solid var(--bg, white);
+		border: 2px solid var(--bar);
 	}
 	.icon-button:hover {
 		background: var(--line);

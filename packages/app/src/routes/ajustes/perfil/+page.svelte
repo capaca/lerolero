@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Meu cartão de perfil (Q-P5, RF-02): nome e foto, que vão cifrados só para quem conversa comigo.
 	import Avatar from '#lib/components/Avatar.svelte';
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import { resolve } from '$app/paths';
 	import { friendlyError } from '#lib/errors.ts';
 	import { m } from '#lib/paraglide/messages.js';
@@ -61,9 +61,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.perfil_titulo() })}</title></svelte:head>
 
+<TopBar title={m.perfil_titulo()} back={resolve('/ajustes')} backTo={m.inicio_ajustes()} />
+
 <main>
-	<BackLink href={resolve('/ajustes')} label={m.inicio_ajustes()} />
-	<h1>{m.perfil_titulo()}</h1>
 
 	<form onsubmit={submit}>
 		<div class="photo">

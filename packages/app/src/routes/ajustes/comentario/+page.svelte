@@ -1,5 +1,5 @@
 <script lang="ts">
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { version } from '$app/env';
@@ -44,9 +44,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.comentario_titulo() })}</title></svelte:head>
 
+<TopBar title={m.comentario_titulo()} back={resolve('/ajustes')} backTo={m.inicio_ajustes()} />
+
 <main>
-	<BackLink href={resolve('/ajustes')} label={m.inicio_ajustes()} />
-	<h1>{m.comentario_titulo()}</h1>
 	{#if !FEEDBACK_INVITE}
 		<p class="hint">{m.comentario_nao_configurado()}</p>
 	{:else}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { parseInvite } from '@lerolero/core';
@@ -51,9 +51,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.contatos_adicionar() })}</title></svelte:head>
 
+<TopBar title={m.contatos_adicionar()} back={resolve('/contatos')} backTo={m.contatos_titulo()} />
+
 <main>
-	<BackLink href={resolve('/contatos')} label={m.contatos_titulo()} />
-	<h1>{m.contatos_adicionar()}</h1>
 
 	<section>
 		<h2>{m.ler_qr_titulo()}</h2>

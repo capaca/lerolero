@@ -1,5 +1,5 @@
 <script lang="ts">
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import { resolve } from '$app/paths';
 	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
 	import PhraseBackup from '#lib/components/PhraseBackup.svelte';
@@ -21,9 +21,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.frase_titulo() })}</title></svelte:head>
 
+<TopBar title={m.frase_titulo()} back={resolve('/ajustes')} backTo={m.inicio_ajustes()} />
+
 <main>
-	<BackLink href={resolve('/ajustes')} label={m.inicio_ajustes()} />
-	<h1>{m.frase_titulo()}</h1>
 
 	{#if words.length === 0}
 		<PhraseReveal onrevealed={(w) => (words = w)} />

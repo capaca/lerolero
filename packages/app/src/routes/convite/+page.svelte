@@ -1,5 +1,5 @@
 <script lang="ts">
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import Rich from '#lib/components/Rich.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -53,13 +53,12 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.convite_titulo() })}</title></svelte:head>
 
+<TopBar title={error ? m.convite_titulo() : existing ? m.convite_atualizar() : m.contatos_adicionar()} back={resolve('/contatos')} backTo={m.contatos_titulo()} />
+
 <main>
-	<BackLink href={resolve('/contatos')} label={m.contatos_titulo()} />
 	{#if error}
-		<h1>{m.convite_titulo()}</h1>
 		<p class="error" role="alert">{error}</p>
 	{:else if invite}
-		<h1>{existing ? m.convite_atualizar() : m.contatos_adicionar()}</h1>
 		{#if existing}
 			<p><Rich text={m.convite_ja_contato({ nome: contactName(existing) })} /></p>
 		{/if}
