@@ -99,6 +99,7 @@ Princípios derivados do objetivo "alternativa brasileira às Big Techs". Servem
 - **MVP:** Web/PWA (instalável, sem custo de lojas). Ao voltar para a aba ou abrir o app, ele reconecta aos relays e busca tudo o que chegou desde a última sincronização. Desde 2026-11-04, notificações opcionais por Web Push, com o aviso enviado pelo app de quem manda ([ADR-0010](adr/0010-web-push-no-pwa.md)); antes, o MVP não teria notificação em segundo plano.
 - **Prioridade seguinte:** Android nativo (plataforma principal, ver princípio 10) e desktop nativo (Windows, macOS, Linux), ambos reaproveitando o código web (ex.: Capacitor no Android, Tauri no desktop).
 - **Futuro:** iOS.
+- **Mudou em 2026-11-06:** o app nativo com Capacitor (Android primeiro, iPhone se a Q-N9 for aceita) entra antes do beta, depois da revisão da identidade visual (itens 26 e 27 do [roadmap](07-roadmap.md)).
 
 No desktop nativo, notificações não são problema: o sistema não mata o app em segundo plano, então ele pode manter a própria conexão com os relays (ícone na bandeja), sem depender de serviço de push de terceiros.
 
