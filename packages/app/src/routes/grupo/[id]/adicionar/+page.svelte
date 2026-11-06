@@ -4,7 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { contactName, groupConversationId, MAX_GROUP_MEMBERS, type ContactRecord, type GroupState } from '@lerolero/core';
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import ContactPicker from '#lib/components/ContactPicker.svelte';
 	import { friendlyError } from '#lib/errors.ts';
 	import { intlLocale } from '#lib/i18n.svelte.ts';
@@ -52,9 +52,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.grupo_adicionar_pessoas() })}</title></svelte:head>
 
+<TopBar title={m.grupo_adicionar_pessoas()} back={resolve('/grupo/[id]/detalhes', { id: groupId })} backTo={groupState?.name ?? m.grupo_titulo_pagina()} />
+
 <main>
-	<BackLink href={resolve('/grupo/[id]/detalhes', { id: groupId })} label={groupState?.name ?? m.grupo_titulo_pagina()} />
-	<h1>{m.grupo_adicionar_pessoas()}</h1>
 
 	<form onsubmit={add}>
 		{#if contacts === undefined}

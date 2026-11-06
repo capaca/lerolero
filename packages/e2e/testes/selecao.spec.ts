@@ -32,10 +32,9 @@ test('favoritar, copiar e encaminhar várias; favoritas listadas em Ajustes', as
 	await selecionar(maria, 'primeira', 'segunda');
 	await maria.page.getByRole('button', { name: 'Favoritar', exact: true }).click();
 	await expect(maria.page.locator('.row .star')).toHaveCount(2);
-	// a tela Favoritas fica no menu ⋮ da tela inicial
+	// a tela Favoritas abre pela estrela na barra da tela inicial
 	await maria.page.goto('./');
-	await maria.page.getByRole('button', { name: 'Mais opções' }).click();
-	await maria.page.getByRole('dialog', { name: 'Mais opções' }).getByRole('link', { name: 'Favoritas' }).click();
+	await maria.page.getByRole('link', { name: 'Favoritas', exact: true }).click();
 	await expect(maria.page.locator('.starred li')).toHaveCount(2);
 	await expect(maria.page.locator('.starred li').first()).toContainText('João');
 

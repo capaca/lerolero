@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { contactName, MAX_GROUP_MEMBERS, type ContactRecord } from '@lerolero/core';
 	import { onMount } from 'svelte';
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import ContactPicker from '#lib/components/ContactPicker.svelte';
 	import { friendlyError } from '#lib/errors.ts';
 	import { intlLocale } from '#lib/i18n.svelte.ts';
@@ -42,9 +42,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.inicio_novo_grupo() })}</title></svelte:head>
 
+<TopBar title={m.inicio_novo_grupo()} back={resolve('/')} backTo={m.comum_inicio()} />
+
 <main>
-	<BackLink href={resolve('/')} label={m.comum_inicio()} />
-	<h1>{m.inicio_novo_grupo()}</h1>
 
 	<form onsubmit={create}>
 		<label for="nome">{m.grupo_nome_rotulo()}</label>

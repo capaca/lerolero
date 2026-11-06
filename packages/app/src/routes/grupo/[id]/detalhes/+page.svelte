@@ -6,7 +6,7 @@
 	import { page } from '$app/state';
 	import { canDo, groupConversationId, MAX_GROUP_MEMBERS, successor, type ConversationRecord } from '@lerolero/core';
 	import Avatar from '#lib/components/Avatar.svelte';
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
 	import StarredList from '#lib/components/StarredList.svelte';
@@ -109,8 +109,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: groupState?.name ?? m.grupo_titulo_pagina() })}</title></svelte:head>
 
+<TopBar back={resolve('/grupo/[id]', { id: groupId })} backTo={m.conversa_titulo_pagina()} />
+
 <main>
-	<BackLink href={resolve('/grupo/[id]', { id: groupId })} label={m.conversa_titulo_pagina()} />
 
 	{#if conversation === null}
 		<p class="hint">{m.grupo_nao_esta()}</p>

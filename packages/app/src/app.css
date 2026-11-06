@@ -43,6 +43,18 @@
 * {
 	box-sizing: border-box;
 }
+/* barra do topo em pedra (item 26): o que vai nela passa para as cores claras */
+.on-bar {
+	--fg: #ffffff;
+	--muted: #b3b8c8;
+	--surface: var(--bar);
+	--line: rgb(255 255 255 / 18%);
+	--accent: #8fa6ff;
+	--accent-fg: #0b1440;
+	--danger: #ff8a80;
+	background: var(--bar);
+	color: var(--fg);
+}
 /* só para o leitor de tela: fora da vista, mas no nome acessível */
 .sr-only {
 	position: absolute;

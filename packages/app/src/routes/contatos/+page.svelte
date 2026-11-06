@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Avatar from '#lib/components/Avatar.svelte';
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -55,9 +55,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.contatos_titulo() })}</title></svelte:head>
 
+<TopBar title={m.contatos_titulo()} back={resolve('/')} backTo={m.comum_inicio()} />
+
 <main>
-	<BackLink href={resolve('/')} label={m.comum_inicio()} />
-	<h1>{m.contatos_titulo()}</h1>
 
 	<div class="actions">
 		<a class="button primary" href={resolve('/contatos/ler')}>{m.contatos_adicionar()}</a>

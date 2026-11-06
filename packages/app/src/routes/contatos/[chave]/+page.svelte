@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Avatar from '#lib/components/Avatar.svelte';
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
 	import StarredList from '#lib/components/StarredList.svelte';
 	import { resolve } from '$app/paths';
@@ -42,8 +42,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: contact ? contactName(contact) : m.contato_titulo_pagina() })}</title></svelte:head>
 
+<TopBar back={resolve('/contatos')} backTo={m.contatos_titulo()} />
+
 <main>
-	<BackLink href={resolve('/contatos')} label={m.contatos_titulo()} />
 	{#if contact === null}
 		<p>{m.contato_nao_encontrado()}</p>
 	{:else if contact}

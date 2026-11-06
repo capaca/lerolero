@@ -1,5 +1,5 @@
 <script lang="ts">
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import { resolve } from '$app/paths';
 	import { inviteLink } from '@lerolero/core';
 	import { onMount } from 'svelte';
@@ -30,9 +30,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.contatos_meu_convite() })}</title></svelte:head>
 
+<TopBar title={m.contatos_meu_convite()} back={resolve('/contatos')} backTo={m.contatos_titulo()} />
+
 <main>
-	<BackLink href={resolve('/contatos')} label={m.contatos_titulo()} />
-	<h1>{m.contatos_meu_convite()}</h1>
 	<p>{m.meuconvite_dica()}</p>
 	{#if link}
 		<QrCode text={link} label={m.meuconvite_qr()} />

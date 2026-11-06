@@ -5,6 +5,17 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-06: barra em pedra em todas as telas (item 26, etapa 3a)
+
+- O Pedro escolheu a barra em pedra em todas as telas, não só na conversa. Um componente `TopBar` (voltar, título e
+  ações) substituiu o link "← Início" e o título soltos de cada tela; as cores claras da barra ficaram numa classe
+  comum (`.on-bar`), usada também pelo topo da conversa.
+- O menu ⋮ da tela inicial só tinha Favoritas e Ajustes: os dois viraram ícones na barra, um toque a menos (pedido
+  antigo do Pedro).
+- A seta de voltar não mostra mais o texto; o leitor de tela ouve "Voltar para …". Perfil do contato e detalhes do
+  grupo têm só a seta, com o nome grande embaixo da foto.
+- Ficaram de fora o cadastro, o PIN e a frase (próximo PR) e o guia de teste, que não é tela do app.
+
 ## 2026-11-06: identidade visual nova (item 26, etapas 1 e 2)
 
 - O nome Lero-lero fica (Q4) e o tom é brincalhão e brasileiro. O que incomodava: ícone de balão genérico, verde

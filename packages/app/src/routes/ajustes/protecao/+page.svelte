@@ -1,7 +1,7 @@
 <script lang="ts">
 	// "Proteção da conta" (RF-09, ADR-0009): o estado numa tela só e as camadas para proteger. Uma camada concluída
 	// basta para o lembrete do RF-04 parar: o gerenciador de senhas (D1), o arquivo ou cartão (D2) e as palavras anotadas à mão.
-	import BackLink from '#lib/components/BackLink.svelte';
+	import TopBar from '#lib/components/TopBar.svelte';
 	import { resolve } from '$app/paths';
 	import PasswordSave from '#lib/components/PasswordSave.svelte';
 	import PhraseReveal from '#lib/components/PhraseReveal.svelte';
@@ -22,9 +22,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.protecao_titulo() })}</title></svelte:head>
 
+<TopBar title={m.protecao_titulo()} back={resolve('/ajustes')} backTo={m.inicio_ajustes()} />
+
 <main>
-	<BackLink href={resolve('/ajustes')} label={m.inicio_ajustes()} />
-	<h1>{m.protecao_titulo()}</h1>
 
 	{#if done}
 		<p class="ok" role="status"><Rich text={m.protecao_pronto()} /></p>

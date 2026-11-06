@@ -8,7 +8,7 @@
 	let { name, subtitle, href, avatar }: { name: string; subtitle?: string; href?: string; avatar: Snippet } = $props();
 </script>
 
-<header>
+<header class="on-bar">
 	<a class="back" href={resolve('/')} aria-label={m.conversa_voltar()}><Icon name="back" size={22} /></a>
 	<svelte:element this={href ? 'a' : 'span'} class="who" {href}>
 		{@render avatar()}
@@ -25,12 +25,6 @@
 		align-items: center;
 		gap: 0.8rem;
 		padding: 0.5rem 1rem;
-		/* barra em pedra (item 26): o que vai nela passa para as cores claras */
-		--fg: #ffffff;
-		--muted: #b3b8c8;
-		--surface: var(--bar);
-		background: var(--bar);
-		color: var(--fg);
 	}
 	header a {
 		text-decoration: none;
