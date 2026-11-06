@@ -1,0 +1,11 @@
+{
+  "versao": 1,
+  "avisos": [
+    {
+      "id": "42190228146",
+      "nivel": "problema",
+      "texto": "Teste da faixa de avisos (P9). Pode fechar.",
+      "ate": "2026-11-06T10:47:43Z"
+    }
+  ]
+}
