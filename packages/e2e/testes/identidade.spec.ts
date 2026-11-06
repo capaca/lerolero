@@ -1,27 +1,63 @@
 // Cadastro, PIN e recuperação da conta (RF-01..06): o caminho de quem chega no app pela primeira vez.
 import { abrirAjustes, criarConta, digitarPin, esquecerAjuste, expect, meuConvite, noInicio, PIN, recuperarConta, test, vencerSessao, verFrase } from '../ajudantes.ts';
 
-test('cadastro: PINs diferentes avisam, iguais criam a conta sem tocar em botão e sem pedir a frase', async ({ novoAparelho }) => {
+test('cadastro: um PIN por vez; diferentes avisam e voltam ao começo, iguais criam a conta sem botão e sem a frase', async ({ novoAparelho }) => {
 	const page = await novoAparelho();
 	await page.goto('./');
 	await expect(page).toHaveURL(/\/bem-vindo$/);
 	// a moldura "Homologação" (ADR-0007) só existe no build da homologação
 	await expect(page.locator('.homolog')).toHaveCount(0);
-	await page.getByRole('link', { name: 'Criar minha conta' }).or(page.getByRole('button', { name: 'Criar minha conta' })).click();
+	await page.getByRole('link', { name: 'Criar minha conta' }).click();
+	await expect(page.getByText('Passo 1 de 2')).toBeVisible();
 	await page.locator('#nome').fill('Maria');
 	await page.getByRole('button', { name: 'Continuar' }).click();
 
+	await expect(page.getByText('Passo 2 de 2')).toBeVisible();
 	await digitarPin(page, 'pin', PIN);
-	await expect(page.locator('#pin2')).toBeFocused();
+	// a confirmação usa o mesmo campo, que continua com o foco
+	await expect(page.getByRole('heading', { name: 'Digite o PIN de novo' })).toBeVisible();
+	await expect(page.locator('#pin')).toBeFocused();
 	await page.keyboard.type('654321');
 	await expect(page.getByText('Os dois PINs não são iguais')).toBeVisible();
-	await expect(page.locator('#pin2')).toHaveValue('');
-	await expect(page.locator('#pin2')).toBeFocused();
+	await expect(page.getByRole('heading', { name: 'Crie um PIN de 6 números' })).toBeVisible();
+	await expect(page.locator('#pin')).toHaveValue('');
+	await expect(page.locator('#pin')).toBeFocused();
 
+	await page.keyboard.type(PIN);
 	await page.keyboard.type(PIN);
 	// a frase fica para o primeiro contato (Q-U1): sem ele, nem o aviso aparece
 	await noInicio(page);
 	await expect(page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+});
+
+test('cadastro: a seta volta do PIN para o nome, e a foto escolhida no nome vira a do perfil', async ({ novoAparelho }) => {
+	const page = await novoAparelho();
+	await page.goto('./cadastro');
+	const base64 = await page.evaluate(async () => {
+		const canvas = document.createElement('canvas');
+		canvas.width = 300;
+		canvas.height = 200;
+		const context = canvas.getContext('2d')!;
+		context.fillStyle = '#3a3';
+		context.fillRect(0, 0, 300, 200);
+		const blob: Blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
+		let binary = '';
+		for (const byte of new Uint8Array(await blob.arrayBuffer())) binary += String.fromCharCode(byte);
+		return btoa(binary);
+	});
+	await page.getByTestId('foto-cadastro').setInputFiles({ name: 'eu.png', mimeType: 'image/png', buffer: Buffer.from(base64, 'base64') });
+	await expect(page.getByRole('button', { name: 'Trocar foto' })).toBeVisible();
+	await page.locator('#nome').fill('Bia');
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	await page.getByRole('button', { name: 'Voltar' }).click();
+	await expect(page.locator('#nome')).toHaveValue('Bia');
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	await digitarPin(page, 'pin', PIN);
+	await page.keyboard.type(PIN);
+	await noInicio(page);
+	// pela interface, sem recarregar: a foto sobe em segundo plano depois que a conta é criada
+	await abrirAjustes(page);
+	await expect(page.locator('img.avatar')).toBeVisible({ timeout: 30_000 });
 });
 
 test('o código vem com o primeiro contato: anotar as palavras confere e some; depois adia', async ({ novaPessoa }) => {
