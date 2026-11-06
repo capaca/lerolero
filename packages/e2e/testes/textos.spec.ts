@@ -17,6 +17,7 @@ import {
 	PIN,
 	quebrarBanco,
 	restaurarSemAcharOBackup,
+	publicarAvisos,
 	test,
 	vencerSessao
 } from '../ajudantes.ts';
@@ -200,6 +201,18 @@ test('banco que não abre (P8): nenhum texto fixo', async ({ novoAparelho }) => 
 	await expect(page.locator('pre')).toContainText('QuotaExceededError');
 	// o texto do erro e a versão (no "Lero-lero {versao}" traduzido) são dados
 	await semTextoFixo(page, await dados(page, 'pre'));
+});
+
+test('faixa de avisos (P9), nos dois níveis: nenhum texto fixo', async ({ novoAparelho }) => {
+	const page = await novoAparelho(PSEUDO_URL);
+	const ate = new Date(Date.now() + 86_400_000).toISOString();
+	// o texto do aviso é dado: vem do avisos.json como o Pedro escreveu
+	for (const nivel of ['info', 'problema']) {
+		await publicarAvisos(page, [{ id: nivel, nivel, texto: 'Relay fora', ate }]);
+		await page.goto('./bem-vindo');
+		await expect(page.getByText('Relay fora')).toBeVisible();
+		await semTextoFixo(page, ['Relay fora']);
+	}
 });
 
 test('guia de teste e roteiro de aceite: nenhum texto fixo', async ({ novoAparelho }) => {

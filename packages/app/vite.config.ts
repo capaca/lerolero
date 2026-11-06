@@ -47,6 +47,13 @@ export default defineConfig(({ command }) => ({
 				(process.env.APP_AMBIENTE === 'homologacao' || command === 'serve'
 					? 'https://lerolero-repassador-homologacao.pedro-capaca.workers.dev'
 					: 'https://lerolero-repassador.pedro-capaca.workers.dev')
+		),
+		// faixa de avisos (P9): o branch `avisos` do repositório, gravado pelo workflow avisos.yml; a homologação e o
+		// app em dev leem um arquivo próprio, para testar o aviso sem que ele apareça para quem usa a produção
+		__APP_AVISOS__: JSON.stringify(
+			`https://raw.githubusercontent.com/capaca/lerolero/avisos/${
+				process.env.APP_AMBIENTE === 'homologacao' || command === 'serve' ? 'avisos-homologacao.json' : 'avisos.json'
+			}`
 		)
 	},
 	plugins: [

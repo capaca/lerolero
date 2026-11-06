@@ -50,6 +50,7 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
   build) roda a cada commit; `testes-sob-demanda.yml` roda pelos rótulos `integration-tests` e `e2e-tests`; cada merge
   vai para a homologação (`homologacao.yml`, https://lerolero-app.github.io/lerolero/, outra origem e outra conta);
   só `release.yml` (manual, SemVer 0.x) publica no Pages da produção, e publica o commit que está na homologação.
+  `avisos.yml` (manual) põe ou tira a faixa de avisos do app (P9) sem release, pelo branch `avisos`.
 
 ## Convenções
 

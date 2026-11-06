@@ -5,6 +5,25 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-05: faixa de avisos para incidentes (P9)
+
+- O Pedro publica um aviso pelo workflow `avisos.yml` (no Actions, também pelo celular): texto de até 280
+  caracteres, nível (informação ou problema, em vermelho e na frente) e quantas horas ele vale. O workflow grava o
+  `avisos.json` (ou o `avisos-homologacao.json`, lido pela homologação e pelo app em dev) num branch `avisos` sem
+  histórico, e o app o lê de `raw.githubusercontent.com`: não depende dos relays, que podem ser o que quebrou, nem de
+  release ou deploy do Pages. Um aviso por vez; publicar de novo substitui, e "apagar" tira.
+- A faixa fica presa no topo de todas as telas, inclusive antes de entrar na conta e na tela de erro do P8, e a
+  conversa encolhe a altura dela (como já fazia com a de sem conexão). "Fechar" esconde aquele aviso só no aparelho;
+  um aviso novo tem outro id e aparece de novo.
+- O app busca ao abrir, ao voltar para a tela e a cada 5 minutos, com o cache do GitHub de até 5 minutos. A última
+  lista fica no `localStorage`: sem internet, com o GitHub fora ou com o banco quebrado, o aviso continua.
+- O texto é só texto (nunca HTML nem link clicável), validado no core (`announcements.ts`), para um aviso forjado
+  não levar ninguém a lugar nenhum (T27).
+- Rejeitados ao começar: refazer o deploy do Pages da produção com o arquivo novo, servir pelo repassador na
+  Cloudflare, só o texto sem nível nem validade, e um campo de versões afetadas.
+- O e2e `avisos` simula o arquivo do GitHub; a suíte inteira responde "não há avisos", para um aviso de verdade não
+  aparecer nas telas dela. A faixa entrou no e2e `textos`, nos dois níveis.
+
 ## 2026-11-05: tela de erro quando o banco não abre (P8)
 
 - `session.init()` passou a tratar a falha ao abrir o banco (migração que lança, cota cheia, banco corrompido): em

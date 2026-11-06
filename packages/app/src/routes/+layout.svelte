@@ -4,12 +4,14 @@
 	import { asset, resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { announcements } from '#lib/announcements.svelte.ts';
 	import { language } from '#lib/i18n.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { savePendingInvite } from '#lib/pending-invite.ts';
 	import { savePendingRoute, takePendingRoute } from '#lib/pending-route.ts';
 	import { session, type Status } from '#lib/session.svelte.ts';
 	import { applyTextSize, readTextSize } from '#lib/text-size.ts';
+	import Icon from '#lib/components/Icon.svelte';
 	import Sheet from '#lib/components/Sheet.svelte';
 	import type { LayoutProps } from './$types';
 
@@ -22,6 +24,8 @@
 	// para não perder uma mensagem que a pessoa esteja digitando
 	let updateReady = $state(false);
 	const showOffline = $derived(session.status === 'desbloqueado' && session.offline);
+	// altura das faixas do topo (sem conexão e aviso), que a conversa desconta da tela
+	let barsHeight = $state(0);
 
 	// P5: backup nos relays com o que este aparelho não tem; fechar sem escolher deixa para a próxima abertura
 	let backupLater = $state(false);
@@ -81,6 +85,7 @@
 		document.documentElement.lang = language.current;
 		applyTextSize(readTextSize());
 		void session.init();
+		void announcements.refresh();
 		// RF-80: ao voltar para o app ou quando a internet volta, reconecta e esvazia a fila
 		// a primeira troca de controle numa página sem worker é a instalação, não uma versão nova
 		let controlled = !!navigator.serviceWorker?.controller;
@@ -101,6 +106,7 @@
 			if (document.visibilityState !== 'visible') return;
 			session.resumeNetwork();
 			checkForUpdate();
+			void announcements.refresh();
 		};
 		// sessão aberta (recarregar sem PIN): o prazo conta de quando o app saiu da tela
 		const touch = () => void session.touchSession();
@@ -108,7 +114,9 @@
 		const touchTimer = setInterval(touch, 60_000);
 		// com o app sempre aberto, as correções não esperariam a pessoa sair e voltar; fora da tela não gasta franquia
 		const updateTimer = setInterval(() => {
-			if (document.visibilityState === 'visible') checkForUpdate();
+			if (document.visibilityState !== 'visible') return;
+			checkForUpdate();
+			void announcements.refresh();
 		}, UPDATE_CHECK_MS);
 		document.addEventListener('visibilitychange', onVisibility);
 		addEventListener('pagehide', touch);
@@ -143,10 +151,20 @@
 	{#if session.status === 'erro'}<title>{m.titulo_pagina({ pagina: m.erro_abrir_titulo() })}</title>{/if}
 </svelte:head>
 
-{#if showOffline}
-	<!-- faixa fina presa no topo, no fluxo da página: não cobre nada nem fica no meio da tela -->
-	<p class="offline" role="status">{m.layout_sem_conexao()}</p>
-{/if}
+<!-- faixas presas no topo, no fluxo da página: não cobrem nada nem ficam no meio da tela -->
+<div class="bars" bind:clientHeight={barsHeight}>
+	{#if showOffline}
+		<p class="offline" role="status">{m.layout_sem_conexao()}</p>
+	{/if}
+	<!-- P9: aviso do Pedro a todos, em qualquer tela, inclusive antes de entrar e na de erro do P8 -->
+	{#if announcements.current}
+		{@const notice = announcements.current}
+		<div class="notice" class:problem={notice.nivel === 'problema'} role="status">
+			<p>{notice.texto}</p>
+			<button type="button" onclick={() => announcements.dismiss(notice.id)} aria-label={m.layout_aviso_fechar()}><Icon name="x" /></button>
+		</div>
+	{/if}
+</div>
 
 {#if updateReady}
 	<div class="update" role="status">
@@ -181,8 +199,8 @@
 		</div>
 	</main>
 {:else if session.status !== 'carregando'}
-	<!-- a conversa ocupa a altura da tela; com a faixa de sem conexão ela encolhe o mesmo tanto -->
-	<div style:--offline-bar={showOffline ? '1.75rem' : '0px'}>
+	<!-- a conversa ocupa a altura da tela; com as faixas do topo ela encolhe o mesmo tanto -->
+	<div style:--top-bars="{barsHeight}px">
 		<!-- trocar a língua redesenha a tela sem recarregar, que trancaria o cofre (ADR-0008) -->
 		{#key language.current}
 			{@render children()}
@@ -199,10 +217,12 @@
 {/if}
 
 <style>
-	.offline {
+	.bars {
 		position: sticky;
 		top: 0;
 		z-index: 20;
+	}
+	.offline {
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -215,6 +235,41 @@
 		font-size: 0.8rem;
 		white-space: nowrap;
 		overflow: hidden;
+	}
+	.notice {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+		padding: 0.5rem 0.25rem 0.5rem 0.75rem;
+		background: var(--surface);
+		color: var(--fg);
+		border-bottom: 1px solid var(--line);
+		border-left: 4px solid var(--accent);
+		font-size: 0.9rem;
+	}
+	.notice.problem {
+		background: var(--danger);
+		color: var(--danger-fg);
+		border-left-color: var(--danger);
+	}
+	.notice p {
+		flex: 1;
+		margin: 0;
+		padding-top: 0.15rem;
+		white-space: pre-line;
+		overflow-wrap: anywhere;
+	}
+	.notice button {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 3rem;
+		height: 3rem;
+		margin: -0.6rem 0;
+		padding: 0;
+		border: none;
+		background: none;
+		color: inherit;
 	}
 	.update {
 		position: fixed;
