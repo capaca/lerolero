@@ -1,0 +1,92 @@
+name: Avisos
+
+# Faixa de avisos do app (P9): o jeito de falar com todos num incidente (versão ruim, relay fora do ar) sem release
+# nova e sem depender dos relays. Disparo manual no Actions (pelo celular também) ou, por exemplo:
+#   gh workflow run avisos.yml -f ambiente=producao -f texto='O relay X está fora do ar.' -f nivel=info -f horas=24
+# Grava o avisos.json (ou o avisos-homologacao.json) no branch `avisos`, que o app lê de raw.githubusercontent.com
+# ao abrir, ao voltar para a tela e a cada 5 minutos; o cache do GitHub leva até 5 minutos. Um aviso por vez: o
+# novo substitui o anterior, e "apagar" tira o que estiver lá. Teste na homologação antes de mandar para a produção.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: 'Onde o aviso aparece'
+        type: choice
+        options: [homologacao, producao]
+        default: homologacao
+      acao:
+        description: 'publicar um aviso novo ou apagar o atual'
+        type: choice
+        options: [publicar, apagar]
+        default: publicar
+      texto:
+        description: 'Texto do aviso (até 280 caracteres, só texto: link não vira link)'
+        type: string
+      nivel:
+        description: 'info = recado; problema = algo quebrado (faixa vermelha, aparece antes)'
+        type: choice
+        options: [info, problema]
+        default: info
+      horas:
+        description: 'Some sozinho depois de quantas horas'
+        type: number
+        default: 24
+
+permissions:
+  contents: write
+
+concurrency:
+  group: avisos
+  cancel-in-progress: false
+
+jobs:
+  gravar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AMBIENTE: ${{ inputs.ambiente }}
+      ACAO: ${{ inputs.acao }}
+      TEXTO: ${{ inputs.texto }}
+      NIVEL: ${{ inputs.nivel }}
+      HORAS: ${{ inputs.horas }}
+    steps:
+      - name: Busca o branch dos avisos
+        run: |
+          url="https://x-access-token:${{ github.token }}@github.com/$GITHUB_REPOSITORY.git"
+          if git ls-remote --exit-code "$url" avisos >/dev/null; then
+            git clone -q --depth 1 --branch avisos "$url" avisos
+          else
+            # primeiro aviso: um branch sem histórico, só com os arquivos de avisos
+            git init -q -b avisos avisos && git -C avisos remote add origin "$url"
+          fi
+      - name: Grava o arquivo
+        working-directory: avisos
+        run: |
+          arquivo=$([ "$AMBIENTE" = producao ] && echo avisos.json || echo avisos-homologacao.json)
+          if [ "$ACAO" = apagar ]; then
+            jq -n '{versao: 1, avisos: []}' > "$arquivo"
+            echo "Aviso apagado em $arquivo." >> "$GITHUB_STEP_SUMMARY"
+          else
+            # o mesmo limite que o app confere (ANNOUNCEMENT_MAX_LENGTH): maior, ele ignora o aviso
+            texto=$(printf %s "$TEXTO" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            [ -n "$texto" ] || { echo "::error::Falta o texto do aviso"; exit 1; }
+            [ "$(printf %s "$texto" | wc -m)" -le 280 ] || { echo "::error::O texto passa de 280 caracteres"; exit 1; }
+            [[ "$HORAS" =~ ^[0-9]+$ && "$HORAS" -ge 1 ]] || { echo "::error::Horas precisa ser um número inteiro a partir de 1"; exit 1; }
+            ate=$(date -u -d "+$HORAS hours" +%Y-%m-%dT%H:%M:%SZ)
+            # id novo a cada publicação: quem fechou o aviso anterior vê este
+            jq -n --arg id "$GITHUB_RUN_ID" --arg nivel "$NIVEL" --arg texto "$texto" --arg ate "$ate" \
+              '{versao: 1, avisos: [{id: $id, nivel: $nivel, texto: $texto, ate: $ate}]}' > "$arquivo"
+            echo "Aviso publicado em $arquivo, até $ate (UTC): $texto" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          cat "$arquivo"
+      - name: Publica
+        working-directory: avisos
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo "Nada mudou."; exit 0; }
+          git commit -q -m "Avisos ($AMBIENTE): $ACAO"
+          git push -q origin avisos
+          echo "O app vê o aviso em até 5 minutos (cache do GitHub), ao abrir ou voltar para a tela." >> "$GITHUB_STEP_SUMMARY"

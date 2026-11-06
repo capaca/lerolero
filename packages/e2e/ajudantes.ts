@@ -307,6 +307,15 @@ async function desviarRelaysDeFora(contexto: BrowserContext, baseURL: string) {
 	);
 }
 
+/** Os arquivos da faixa de avisos (P9), no GitHub: a produção e a homologação. */
+export const AVISOS = 'https://raw.githubusercontent.com/capaca/lerolero/avisos/*.json';
+
+/** Publica estes avisos (o formato do workflow avisos.yml) para o aparelho; `undefined` deixa sem rede. */
+export async function publicarAvisos(page: Page, avisos: object[] | undefined) {
+	await page.unroute(AVISOS);
+	await page.route(AVISOS, (rota) => (avisos ? rota.fulfill({ json: { versao: 1, avisos } }) : rota.abort()));
+}
+
 type Fixtures = {
 	/** aparelho sem conta: um contexto novo do navegador (`baseURL` para outro servidor do app) */
 	novoAparelho: (baseURL?: string) => Promise<Page>;
@@ -324,6 +333,8 @@ export const test = base.extend<Fixtures>({
 			await contexto.grantPermissions(['clipboard-read', 'clipboard-write', 'microphone']);
 			contextos.push(contexto);
 			await desviarRelaysDeFora(contexto, baseURL!);
+			// sem isto um aviso de verdade publicado pelo Pedro apareceria nas telas da suíte
+			await contexto.route(AVISOS, (rota) => rota.fulfill({ status: 404 }));
 			const page = await contexto.newPage();
 			page.on('pageerror', (e) => erros.push(e.message));
 			return page;

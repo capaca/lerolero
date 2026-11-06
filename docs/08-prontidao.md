@@ -26,6 +26,13 @@ Gravidade: **crítico** perde mensagem, contatos ou a conta sem aviso, expõe a 
   script; e só reclassificar, sem mudar o código.
 - **Incidentes:** uma faixa de avisos no próprio app (P9), também antes do beta. Rejeitado por ora: um grupo de
   WhatsApp ou Telegram fora do app com quem testa.
+- **P9, decidido em 2026-11-05 ao começar:** o `avisos.json` fica num branch `avisos` do próprio repositório, gravado
+  por um workflow manual, e o app o lê de `raw.githubusercontent.com`: não mexe no Pages nem no app publicado, e o
+  arquivo da homologação é outro, para testar. Cada aviso tem texto, nível (informação ou problema) e validade, e
+  "Fechar" o esconde naquele aparelho; aparece em todas as telas, inclusive na de erro do P8. Rejeitados: refazer o
+  deploy do Pages da produção só com o arquivo novo (deploy do site inteiro no meio de um incidente, que já deu tela
+  branca), servir pelo repassador na Cloudflare (mais uma peça, que cai junto com ela), só o texto sem nível nem
+  validade, e um campo de versões afetadas.
 
 ## Corrigir antes do beta
 
@@ -39,7 +46,7 @@ Gravidade: **crítico** perde mensagem, contatos ou a conta sem aviso, expõe a 
 | P6 | Segurança | A sessão aberta entrega a chave à thread principal | `openSession` devolve a chave AES (não exportável, mas utilizável) e a chave privada cifrada; a interface grava as duas no IndexedDB. Qualquer script na origem decifra a nsec. Quebra a regra de a chave nunca sair do cofre; o T16 só aceitava a cópia dos dados do disco | `identity/vault.ts:361-367`, `session.svelte.ts:246-256` | O worker grava e lê a sessão no IndexedDB sozinho; a interface só pede para retomar e recebe a chave pública. Sessão vencida apagada ao abrir. ✅ Feita em 2026-11-05: só o cofre grava, lê, renova e apaga a sessão, num banco próprio (`lerolero-sessao`); a sessão antiga, da interface, é apagada ao abrir. **Reclassificado** no mesmo dia: não é mais crítico, porque a mudança não fecha o risco (ver as decisões acima) |
 | P7 | Segurança | Protótipos publicados na origem da produção | O release publica `prototipos/medicao` em `/medicao/`, com outro lockfile, `npm ci` com scripts de instalação e outras versões de Vite e Svelte. Uma dependência comprometida ali roda na origem do app e, por P6, leva a chave | `release.yml:76-88` | Só o app na origem da produção; os protótipos ficam na homologação. ✅ Feita em 2026-11-05: a release publica só o app; o protótipo de medição (item 20) passou para a homologação, em `/medicao/`, onde só há contas de teste. O `/medicao/` da produção some na próxima release |
 | P8 | Lançamento | Tela branca para sempre se o banco falhar ao abrir | `session.init()` não trata erro: com a migração lançando, cota cheia ou banco corrompido, o status fica em "carregando" e nada aparece, sem mensagem nem "Enviar comentário". Os dados ficam intactos | `session.svelte.ts:233-238`, `+layout.svelte:60, 134` | Tela de erro com o texto do erro, a versão, "Tentar de novo" e o aviso do P9; nunca oferecer apagar dados. Com e2e. ✅ Feita em 2026-11-05: a tela pede uma foto dela para quem convidou para o teste; o aviso do P9 entra nela junto com o P9 |
-| P9 | Lançamento, Monitoramento | Nenhum jeito de avisar quem testa sobre um incidente | Versão ruim ou relay fora do ar: o Pedro não tem como falar com todos. "Enviar comentário" vai pela própria rede, que pode ser o que quebrou | `lib/teste.ts:11`, `ajustes/comentario/+page.svelte:36` | Faixa de avisos lida de um `avisos.json` da rede, e um workflow que republica só os dados sem release nova (decidido em 2026-11-05) |
+| P9 | Lançamento, Monitoramento | Nenhum jeito de avisar quem testa sobre um incidente | Versão ruim ou relay fora do ar: o Pedro não tem como falar com todos. "Enviar comentário" vai pela própria rede, que pode ser o que quebrou | `lib/teste.ts:11`, `ajustes/comentario/+page.svelte:36` | Faixa de avisos lida de um `avisos.json` da rede, e um workflow que republica só os dados sem release nova (decidido em 2026-11-05). ✅ Feita em 2026-11-05: o workflow `avisos.yml` grava o arquivo no branch `avisos`, o app o lê do GitHub ao abrir, ao voltar para a tela e a cada 5 minutos, e guarda a última lista para valer sem internet e na tela de erro do P8 |
 
 ## Confiabilidade
 
