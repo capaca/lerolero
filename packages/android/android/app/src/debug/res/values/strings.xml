@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- APK de teste (CI, homologação): outro nome, para ficar ao lado do de verdade sem confundir (ADR-0007) -->
+<resources>
+    <string name="app_name">Lero homolog.</string>
+    <string name="title_activity_main">Lero homolog.</string>
+</resources>
