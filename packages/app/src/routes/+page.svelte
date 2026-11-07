@@ -158,11 +158,11 @@
 	{/if}
 
 	{#if showPhraseReminder}
+		<!-- o mesmo aviso e o mesmo botão dos Ajustes (item 26) -->
 		<div class="banner" role="status">
-			<p><strong>{m.inicio_frase_titulo()}</strong></p>
-			<p>{m.inicio_frase_texto()}</p>
+			<p><Rich text={m.ajustes_alerta_protecao()} /></p>
 			<div class="actions">
-				<a href={resolve('/ajustes/protecao')}>{m.inicio_frase_guardar()}</a>
+				<a class="go" href={resolve('/ajustes/protecao')}>{m.ajustes_proteger_agora()}</a>
 				<button class="link" onclick={snooze}>{m.inicio_frase_depois()}</button>
 			</div>
 		</div>

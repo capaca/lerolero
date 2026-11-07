@@ -253,19 +253,6 @@
 	.alert p {
 		margin: 0 0 0.6rem;
 	}
-	/* o botão do aviso usa as cores do próprio aviso, com 4,5:1 nos dois temas (WCAG 1.4.3) */
-	.go {
-		display: inline-flex;
-		align-items: center;
-		/* alvo de toque de 48 px (RNF-63) */
-		min-height: 3rem;
-		padding: 0 1rem;
-		border-radius: 10px;
-		background: var(--warn-fg);
-		color: var(--warn-bg);
-		font-weight: 700;
-		text-decoration: none;
-	}
 	.group-label {
 		margin: 1.5rem 0 0.4rem 0.25rem;
 		font-size: 0.8rem;

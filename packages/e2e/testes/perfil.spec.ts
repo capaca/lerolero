@@ -20,7 +20,7 @@ async function mudarPerfil(page: Page, nome: string, foto: 'nova' | 'tirar') {
 			return btoa(binary);
 		});
 		await page.getByTestId('foto-perfil').setInputFiles({ name: 'eu.png', mimeType: 'image/png', buffer: Buffer.from(base64, 'base64') });
-		await expect(page.getByAltText('Foto nova, ainda não salva')).toBeVisible();
+		await expect(page.locator('button.photo img:not(.avatar)')).toBeVisible();
 	} else {
 		await page.getByRole('button', { name: 'Tirar foto' }).click();
 	}

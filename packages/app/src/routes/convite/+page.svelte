@@ -55,7 +55,8 @@
 
 <TopBar title={error ? m.convite_titulo() : existing ? m.convite_atualizar() : m.contatos_adicionar()} back={resolve('/contatos')} backTo={m.contatos_titulo()} />
 
-<main>
+<!-- o botão embaixo, como no cadastro (item 26) -->
+<main class="flow under-bar">
 	{#if error}
 		<p class="error" role="alert">{error}</p>
 	{:else if invite}
@@ -70,7 +71,7 @@
 			<label for="nome">{m.convite_nome_rotulo()}</label>
 			<input id="nome" maxlength="40" autocomplete="off" bind:value={localName} />
 			<p class="hint">{m.convite_nome_dica()}</p>
-			<div class="actions">
+			<div class="bottom">
 				<button class="primary" type="submit" disabled={busy}>{existing ? m.comum_salvar() : m.convite_adicionar()}</button>
 			</div>
 		</form>

@@ -382,8 +382,7 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await expect(page.locator('ol li')).toHaveCount(12, { timeout: 20_000 });
 	const palavras = await dados(page, 'ol li');
 	await semTextoFixo(page, palavras);
-	await page.locator('input[type="checkbox"]').check();
-	await page.locator('button.primary').click();
+	await page.locator('main button.primary').click();
 	await page.locator('input[id^="palavra-"]').first().fill('errada');
 	await page.locator('button[type="submit"]').click();
 	await expect(page.getByRole('alert')).toBeVisible();
@@ -392,11 +391,12 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 
 	// o contato: renomear e a pergunta de bloquear
 	await expect(page).toHaveURL(/\/contatos\/[0-9a-f]{64}$/);
+	await page.locator('.name button.icon').click();
 	await page.locator('#nome').fill('Bia Silva');
 	await page.locator('form button[type="submit"]').click();
 	await expect(page.getByRole('status')).toBeVisible();
 	await semTextoFixo(page, [...nomes, ...(await dados(page, '.key'))]);
-	await page.locator('main button.danger').click();
+	await page.locator('main button.danger-row').click();
 	await semTextoFixo(page, [...nomes, ...(await dados(page, '.key'))]);
 	await page.keyboard.press('Escape');
 
@@ -411,10 +411,11 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	// adicionar contato: câmera aberta e link inválido
 	await page.goto(PSEUDO_URL + 'contatos/ler');
 	await semTextoFixo(page);
-	await page.locator('button.primary').click();
+	await page.locator('.options .option').first().click();
 	await expect(page.locator('video')).toBeVisible();
 	await semTextoFixo(page);
-	await page.locator('section').first().locator('button').click();
+	await page.locator('main > button').click(); // cancelar
+	await page.locator('.options .option').last().click();
 	await page.locator('#link').fill('xyz');
 	await page.locator('form button[type="submit"]').click();
 	await expect(page.getByRole('alert')).toBeVisible();
@@ -433,7 +434,7 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('#painel-pedidos .list a').click();
 	await expect(page).toHaveURL(/\/conversa\//);
 	await page.goto(page.url().replace('/conversa/', '/contatos/'));
-	await page.locator('main button.danger').click();
+	await page.locator('main button.danger-row').click();
 	await page.getByRole('dialog').locator('button.danger').click();
 	await expect(page.locator('main > .actions button')).toBeVisible(); // desbloquear
 	await semTextoFixo(page, [...nomes, ...(await dados(page, '.key'))]);
@@ -474,7 +475,7 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('.item.remove').click();
 	await semTextoFixo(page, nomes);
 	await page.keyboard.press('Escape');
-	await page.locator('button.leave').click();
+	await page.locator('button.danger-row').click();
 	await semTextoFixo(page, nomes);
 	await page.keyboard.press('Escape');
 
@@ -484,7 +485,7 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('.person').click();
 	await semTextoFixo(page, nomes);
 
-	// ajustes, o perfil, a frase (conferida desta vez) e o comentário
+	// ajustes, o perfil, a proteção (com as palavras anotadas e conferidas desta vez) e o comentário
 	await page.goto(PSEUDO_URL + 'ajustes');
 	await semTextoFixo(page, nomes);
 	await page.locator('details.technical summary').click();
@@ -493,17 +494,6 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.goto(PSEUDO_URL + 'ajustes/perfil');
 	await expect(page.locator('input#nome')).toBeVisible();
 	await semTextoFixo(page, nomes);
-	await page.goto(PSEUDO_URL + 'ajustes/frase');
-	await semTextoFixo(page);
-	await digitarPin(page, 'pin', PIN);
-	await expect(page.locator('ol li')).toHaveCount(12, { timeout: 20_000 });
-	await page.locator('.actions button.primary').click();
-	for (const campo of await page.locator('input[id^="palavra-"]').all()) {
-		await campo.fill(palavras[Number((await campo.getAttribute('id'))!.slice('palavra-'.length))]!);
-	}
-	await page.locator('button[type="submit"]').click();
-	await expect(page.getByRole('status')).toBeVisible();
-	await semTextoFixo(page, palavras);
 	await page.goto(PSEUDO_URL + 'ajustes/protecao');
 	await expect(page.locator('main p').first()).toBeVisible();
 	await semTextoFixo(page);
@@ -514,6 +504,17 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await page.locator('.password button.option').click();
 	await expect(page.locator('.password [role="status"]')).toBeVisible();
 	await semTextoFixo(page);
+	// anotar as palavras ali mesmo (item 26), e o teste de duas delas
+	await page.locator('.options .option').last().click();
+	await expect(page.locator('ol li')).toHaveCount(12);
+	await semTextoFixo(page, palavras);
+	await page.locator('.actions button.primary').click();
+	for (const campo of await page.locator('input[id^="palavra-"]').all()) {
+		await campo.fill(palavras[Number((await campo.getAttribute('id'))!.slice('palavra-'.length))]!);
+	}
+	await page.locator('button[type="submit"]').click();
+	await expect(page.getByRole('status')).toBeVisible();
+	await semTextoFixo(page, palavras);
 	await page.goto(PSEUDO_URL + 'favoritas');
 	await expect(page.locator('main .hint')).toBeVisible();
 	await semTextoFixo(page);
