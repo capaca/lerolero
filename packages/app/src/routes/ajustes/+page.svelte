@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Avatar from '#lib/components/Avatar.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import TopBar from '#lib/components/TopBar.svelte';
 	import Rich from '#lib/components/Rich.svelte';
 	import { goto } from '$app/navigation';
@@ -100,86 +101,95 @@
 <TopBar title={m.inicio_ajustes()} back={resolve('/')} backTo={m.comum_inicio()} />
 
 <main>
+	<!-- lista agrupada, como nos ajustes do celular (item 26): você no topo, numa linha só -->
+	<a class="me" href={resolve('/ajustes/perfil')}>
+		<Avatar name={session.identity?.displayName} publicKey={session.identity?.publicKey ?? ''} size={56} />
+		<span class="row-text"><b>{session.identity?.displayName}</b><small class="link-like">{m.ajustes_editar_perfil()}</small></span>
+		<Icon name="chevron-right" size={18} />
+	</a>
 
-	<section class="card">
-		<h2>{m.ajustes_conta()}</h2>
-		<div class="me">
-			<Avatar name={session.identity?.displayName} publicKey={session.identity?.publicKey ?? ''} size={56} />
-			<div>
-				<p><Rich text={m.ajustes_nome({ nome: session.identity?.displayName ?? '' })} /></p>
-				<a class="block" href={resolve('/ajustes/perfil')}>{m.ajustes_editar_perfil()}</a>
+	{#if !session.identity?.phraseConfirmed}
+		<div class="banner alert">
+			<p><Rich text={m.ajustes_alerta_protecao()} /></p>
+			<a class="go" href={resolve('/ajustes/protecao')}>{m.ajustes_proteger_agora()}</a>
+		</div>
+	{/if}
+
+	<h2 class="group-label">{m.ajustes_conversas()}</h2>
+	<div class="group">
+		{#if support === 'sim'}
+			<label class="row">
+				<span class="row-icon"><Icon name="bell" /></span>
+				<span class="row-text">{m.ajustes_notificacoes_ativar()}<small>{m.ajustes_notificacoes_dica()}</small></span>
+				<input class="switch" type="checkbox" bind:checked={pushOn} onchange={togglePush} disabled={pushBusy} />
+			</label>
+			{#if pushError}<p class="error row-note" role="alert">{pushError}</p>{/if}
+		{:else}
+			<div class="row">
+				<span class="row-icon"><Icon name="bell" /></span>
+				<span class="row-text">{m.ajustes_notificacoes_ativar()}<small>{support === 'instalar' ? m.ajustes_notificacoes_instalar() : m.ajustes_notificacoes_sem_suporte()}</small></span>
+			</div>
+		{/if}
+		<label class="row">
+			<span class="row-icon"><Icon name="eye" /></span>
+			<span class="row-text">{m.ajustes_leitura()}<small>{m.ajustes_leitura_dica()}</small></span>
+			<input class="switch" type="checkbox" bind:checked={readReceipts} onchange={toggleReceipts} />
+		</label>
+		<div class="row column">
+			<span class="row-head"><span class="row-icon"><Icon name="type" /></span><span class="row-text" id="letra">{m.ajustes_letra()}<small>{m.ajustes_letra_dica()}</small></span></span>
+			<div class="sizes" role="radiogroup" aria-labelledby="letra">
+				{#each sizeOptions as option (option.value)}
+					<label class="size" class:on={textSize === option.value}>
+						<input
+							type="radio"
+							name="tamanho-da-letra"
+							value={option.value}
+							bind:group={textSize}
+							onchange={() => saveTextSize(textSize)}
+						/>
+						<span>{option.label()}</span>
+					</label>
+				{/each}
 			</div>
 		</div>
-	</section>
+	</div>
 
-	<section class="card">
-		<h2>{m.ajustes_letra()}</h2>
-		<div class="sizes" role="radiogroup" aria-label={m.ajustes_letra()}>
-			{#each sizeOptions as option (option.value)}
-				<label class="size" class:on={textSize === option.value}>
-					<input
-						type="radio"
-						name="tamanho-da-letra"
-						value={option.value}
-						bind:group={textSize}
-						onchange={() => saveTextSize(textSize)}
-					/>
-					<span>{option.label()}</span>
-				</label>
-			{/each}
-		</div>
-		<p class="hint">{m.ajustes_letra_dica()}</p>
-	</section>
+	<h2 class="group-label">{m.ajustes_seguranca()}</h2>
+	<div class="group">
+		<a class="row" href={resolve('/ajustes/protecao')}>
+			<span class="row-icon"><Icon name="shield" /></span>
+			<span class="row-text">{m.ajustes_protecao()}</span>
+			<span class="value" class:warn={!session.identity?.phraseConfirmed}>
+				{session.identity?.phraseConfirmed ? m.ajustes_protecao_ok() : m.ajustes_protecao_falta()}
+			</span>
+			<Icon name="chevron-right" size={18} />
+		</a>
+		<button class="row" onclick={lock}>
+			<span class="row-icon"><Icon name="lock" /></span>
+			<span class="row-text">{m.ajustes_bloquear_agora()}</span>
+		</button>
+	</div>
 
-	<section class="card">
-		<h2>{m.ajustes_seguranca()}</h2>
-		<div class="actions stack">
-			<a href={resolve('/ajustes/protecao')}>
-				{m.ajustes_protecao()} ·
-				<span class:warn={!session.identity?.phraseConfirmed}>
-					{session.identity?.phraseConfirmed ? m.ajustes_protecao_ok() : m.ajustes_protecao_falta()}
-				</span>
+	<h2 class="group-label">{m.ajustes_teste()}</h2>
+	<div class="group">
+		{#if FEEDBACK_INVITE || FEEDBACK_FORM_URL}
+			<a class="row" href={resolve('/ajustes/comentario')}>
+				<span class="row-icon"><Icon name="message" /></span>
+				<span class="row-text">{m.ajustes_comentario()}</span>
+				<Icon name="chevron-right" size={18} />
 			</a>
-			<button onclick={lock}>{m.ajustes_bloquear_agora()}</button>
-		</div>
-	</section>
-
-	<section class="card">
-		<h2>{m.ajustes_notificacoes()}</h2>
-		{#if support === 'sim'}
-			<label class="check">
-				<input type="checkbox" bind:checked={pushOn} onchange={togglePush} disabled={pushBusy} />
-				<span>{m.ajustes_notificacoes_ativar()}</span>
-			</label>
-			<p class="hint">{m.ajustes_notificacoes_dica()}</p>
-			{#if pushError}<p class="error" role="alert">{pushError}</p>{/if}
-		{:else}
-			<p class="hint">{support === 'instalar' ? m.ajustes_notificacoes_instalar() : m.ajustes_notificacoes_sem_suporte()}</p>
 		{/if}
-	</section>
+		<a class="row" href={resolve('/teste')}>
+			<span class="row-icon"><Icon name="help" /></span>
+			<span class="row-text">{m.ajustes_como_testar()}</span>
+			<Icon name="chevron-right" size={18} />
+		</a>
+	</div>
 
-	<section class="card">
-		<h2>{m.ajustes_privacidade()}</h2>
-		<label class="check">
-			<input type="checkbox" bind:checked={readReceipts} onchange={toggleReceipts} />
-			<span>{m.ajustes_leitura()}</span>
-		</label>
-		<p class="hint">{m.ajustes_leitura_dica()}</p>
-	</section>
-
-	<section class="card">
-		<h2>{m.ajustes_teste()}</h2>
-		<div class="actions stack">
-			{#if FEEDBACK_INVITE || FEEDBACK_FORM_URL}
-				<a href={resolve('/ajustes/comentario')}>{m.ajustes_comentario()}</a>
-			{/if}
-			<a href={resolve('/teste')}>{m.ajustes_como_testar()}</a>
-		</div>
-	</section>
-
-	<!-- chave e servidores ficam fora do fluxo padrão, fechados até quem quiser abrir (RNF-64) -->
-	<details class="card technical">
-		<summary>{m.ajustes_detalhes()}</summary>
+<!-- chave e servidores ficam fora do fluxo padrão, fechados até quem quiser abrir (RNF-64) -->
+	<details class="group technical">
+		<summary class="row"><span class="row-icon"><Icon name="code" /></span><span class="row-text">{m.ajustes_detalhes()}</span><Icon name="chevron-down" size={18} /></summary>
+		<div class="technical-body">
 		<p class="hint">{m.ajustes_chave_dica()}</p>
 		<p class="key">{npub}</p>
 		<button onclick={copy}>{copied ? m.ajustes_chave_copiada() : m.ajustes_copiar_chave()}</button>
@@ -200,6 +210,7 @@
 				{#each connected as url (url)}<li>{url.replace('wss://', '')}</li>{/each}
 			</ul>
 		{/if}
+		</div>
 	</details>
 
 	{#if __APP_LOCAL__}
@@ -219,48 +230,192 @@
 </main>
 
 <style>
-	.warn {
-		color: var(--danger);
-		font-weight: 600;
-	}
 	.me {
 		display: flex;
 		align-items: center;
 		gap: 0.9rem;
-		margin-bottom: 0.75rem;
-	}
-	.me p {
-		margin: 0 0 0.25rem;
-	}
-	.check {
-		display: flex;
-		gap: 0.6rem;
-		align-items: center;
-		font-weight: 500;
-	}
-	.check input {
-		width: auto;
-		transform: scale(1.3);
-	}
-	.sizes {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-	.size {
-		flex: 1;
-		margin: 0;
-		min-width: 6rem;
-		position: relative; /* âncora do rádio escondido, que senão alarga a página */
-		padding: 0.6rem 0.5rem;
-		text-align: center;
+		padding: 0.8rem;
 		border: 1px solid var(--line);
+		border-radius: 14px;
+		background: var(--surface);
+		color: var(--fg);
+		text-decoration: none;
+	}
+	.me b {
+		font-size: 1.15rem;
+	}
+	.link-like {
+		color: var(--accent);
+	}
+	.alert {
+		margin-top: 1rem;
+	}
+	.alert p {
+		margin: 0 0 0.6rem;
+	}
+	/* o botão do aviso usa as cores do próprio aviso, com 4,5:1 nos dois temas (WCAG 1.4.3) */
+	.go {
+		display: inline-flex;
+		align-items: center;
+		/* alvo de toque de 48 px (RNF-63) */
+		min-height: 3rem;
+		padding: 0 1rem;
 		border-radius: 10px;
+		background: var(--warn-fg);
+		color: var(--warn-bg);
+		font-weight: 700;
+		text-decoration: none;
+	}
+	.group-label {
+		margin: 1.5rem 0 0.4rem 0.25rem;
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+	.group {
+		border: 1px solid var(--line);
+		border-radius: 14px;
+		background: var(--surface);
+		overflow: hidden;
+	}
+	.technical {
+		margin-top: 1.5rem;
+	}
+	/* uma linha por ajuste: ícone, nome (com a explicação embaixo), o valor e a seta; 48 px de alvo (RNF-63) */
+	.row {
+		display: flex;
+		align-items: center;
+		gap: 0.8rem;
+		width: 100%;
+		min-height: 3rem;
+		margin: 0;
+		padding: 0.75rem 0.9rem;
+		border: 0;
+		border-top: 1px solid var(--line);
+		border-radius: 0;
+		background: none;
+		color: var(--fg);
+		font: inherit;
+		font-weight: 500;
+		text-align: left;
+		text-decoration: none;
 		cursor: pointer;
 	}
+	.group > .row:first-child,
+	.technical > summary {
+		border-top: 0;
+	}
+	.row.column {
+		flex-direction: column;
+		align-items: stretch;
+		cursor: default;
+	}
+	.row-head {
+		display: flex;
+		align-items: center;
+		gap: 0.8rem;
+	}
+	.row-icon {
+		display: grid;
+		flex: none;
+		color: var(--accent);
+	}
+	.row-text {
+		display: grid;
+		flex: 1;
+		min-width: 0;
+		gap: 0.15rem;
+	}
+	.row-text small {
+		color: var(--muted);
+		font-size: 0.85rem;
+		font-weight: 400;
+	}
+	.me > :global(svg:last-child),
+	.row > :global(svg:last-child) {
+		flex: none;
+		color: var(--muted);
+	}
+	.row-note {
+		margin: 0;
+		padding: 0 0.9rem 0.75rem;
+	}
+	.value {
+		color: var(--muted);
+	}
+	.warn {
+		color: var(--danger);
+		font-weight: 700;
+	}
+	/* chave de liga e desliga: a caixa de seleção de sempre, desenhada como chave (o leitor de tela continua igual) */
+	.switch {
+		appearance: none;
+		flex: none;
+		position: relative;
+		width: 2.75rem;
+		height: 1.6rem;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-radius: 999px;
+		background: var(--muted);
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+	.switch::before {
+		content: '';
+		position: absolute;
+		top: 0.2rem;
+		left: 0.2rem;
+		width: 1.2rem;
+		height: 1.2rem;
+		border-radius: 50%;
+		background: var(--surface);
+		transition: transform 0.15s;
+	}
+	.switch:checked {
+		background: var(--accent);
+	}
+	.switch:checked::before {
+		transform: translateX(1.15rem);
+	}
+	.switch:disabled {
+		opacity: 0.55;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.switch,
+		.switch::before {
+			transition: none;
+		}
+	}
+	/* tamanho da letra: seletor de três partes */
+	.sizes {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+		border: 1px solid var(--line);
+		border-radius: 10px;
+		overflow: hidden;
+	}
+	.size {
+		margin: 0;
+		position: relative; /* âncora do rádio escondido, que senão alarga a página */
+		display: grid;
+		place-items: center;
+		min-height: 3rem;
+		padding: 0.4rem;
+		text-align: center;
+		font-weight: 600;
+		border-left: 1px solid var(--line);
+		cursor: pointer;
+	}
+	.size:first-child {
+		border-left: 0;
+	}
 	.size.on {
-		border-color: var(--accent);
-		box-shadow: inset 0 0 0 1px var(--accent);
+		background: var(--accent);
+		color: var(--accent-fg);
 	}
 	.size input {
 		position: absolute;
@@ -272,17 +427,20 @@
 		pointer-events: none;
 	}
 	.size:has(input:focus-visible) {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
+		outline: 3px solid var(--accent);
+		outline-offset: -3px;
 	}
 	.release {
 		text-align: center;
 	}
 	.technical summary {
-		cursor: pointer;
-		font-weight: 600;
-		/* alvo de toque de 48 px (RNF-63) */
-		padding: 0.75rem 0;
+		list-style: none;
+	}
+	.technical summary::-webkit-details-marker {
+		display: none;
+	}
+	.technical-body {
+		padding: 0 0.9rem 0.9rem;
 	}
 	.technical h3 {
 		margin: 1.25rem 0 0.5rem;

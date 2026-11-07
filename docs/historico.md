@@ -5,6 +5,19 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-06: Ajustes e proteção da conta (item 26, etapa 3c; item 26 concluído)
+
+- Propostas comparadas com capturas do app; o Pedro aprovou tudo e revisou no celular.
+- Ajustes: os sete cartões viraram uma lista agrupada (Conversas, Segurança, Teste), com ícone, nome e o valor ou a
+  seta; você no topo numa linha só; o aviso amarelo com "Proteger agora" quando a conta não está protegida; as chaves
+  de liga e desliga são as mesmas caixas de seleção de antes, desenhadas como chave (o leitor de tela não muda); o
+  tamanho da letra num seletor de três partes.
+- Proteção da conta e "Guarde sua frase": o PIN segue sozinho ao completar, sem botão, como no cadastro; as camadas
+  (gerenciador de senhas, arquivo, Drive, cartão, anotar) viraram opções com ícone e uma linha de explicação, a mais
+  fácil em destaque (classe `.option`). "Ver ou anotar as 12 palavras" entrou como opção, no lugar do link solto.
+- Achado no caminho: o botão "Proteger agora" tinha 44 px, e o e2e `textos` exige 48 (RNF-63).
+- Com isso o item 26 fica concluído: cores, fonte e ícone (v0.15.0), barra em pedra, cadastro e PIN, e Ajustes.
+
 ## 2026-11-06: e2e depois do merge, com travas para a main vermelha (ADR-0006)
 
 - O Pedro trouxe do Sonzeira, projeto irmão (PR #94 de lá), a ideia de os testes pesados deixarem de segurar o PR.

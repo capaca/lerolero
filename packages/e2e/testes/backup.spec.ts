@@ -63,7 +63,7 @@ test('a frase num aparelho novo traz o nome, os contatos, o bloqueio, o grupo e 
 
 	await novo.goto('./');
 	await abrirAjustes(novo);
-	await expect(novo.getByText('Nome: Maria')).toBeVisible();
+	await expect(novo.getByRole('link', { name: /Maria.*Editar nome e foto/ })).toBeVisible();
 	await expect(novo.getByRole('checkbox', { name: 'Confirmação de leitura' })).not.toBeChecked();
 });
 

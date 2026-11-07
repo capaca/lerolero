@@ -365,14 +365,14 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await digitarPin(page, 'pin', PIN);
 	// o gerenciador de senhas (RF-09 b) vem antes; depois o arquivo (RF-09 a), já com o "Guardei o arquivo" do
 	// depois de baixar
-	await expect(page.locator('.actions button.link')).toBeVisible({ timeout: 20_000 });
-	await expect(page.locator('.password button.primary')).toBeVisible();
+	await expect(page.locator('.options .option').last()).toBeVisible({ timeout: 20_000 });
+	await expect(page.locator('.password button.option')).toBeVisible();
 	const baixado = page.waitForEvent('download');
-	await page.locator('.password ~ .actions button').first().click();
+	await page.locator('.options .option').first().click();
 	await baixado;
 	await expect(page.locator('.done')).toBeVisible();
 	await semTextoFixo(page);
-	await page.locator('.actions button.link').click(); // anotar as palavras
+	await page.locator('.options .option').last().click(); // anotar as palavras
 	await expect(page.locator('ol li')).toHaveCount(12, { timeout: 20_000 });
 	const palavras = await dados(page, 'ol li');
 	await semTextoFixo(page, palavras);
@@ -502,10 +502,10 @@ test('contatos, convite, frase, grupo e ajustes: nenhum texto fixo', async ({ no
 	await expect(page.locator('main p').first()).toBeVisible();
 	await semTextoFixo(page);
 	await digitarPin(page, 'pin', PIN);
-	await expect(page.locator('.actions button').first()).toBeVisible({ timeout: 20_000 });
+	await expect(page.locator('.options .option').first()).toBeVisible({ timeout: 20_000 });
 	await semTextoFixo(page);
 	// depois de pedir ao gerenciador de senhas para salvar (RF-09 b)
-	await page.locator('.password button.primary').click();
+	await page.locator('.password button.option').click();
 	await expect(page.locator('.password [role="status"]')).toBeVisible();
 	await semTextoFixo(page);
 	await page.goto(PSEUDO_URL + 'favoritas');
