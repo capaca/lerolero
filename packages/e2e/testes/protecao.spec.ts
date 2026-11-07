@@ -207,6 +207,16 @@ test('gerenciador de senhas: guardar protege a conta, e a frase salva restaura e
 	await expect(outro.locator('.key')).toHaveText(chave!);
 });
 
+test('"Prefiro anotar as palavras" na Proteção: a seta da frase volta para a Proteção', async ({ novaPessoa }) => {
+	const { page } = await novaPessoa('Maria');
+	await page.goto('./ajustes/protecao');
+	await digitarPin(page, 'pin', PIN);
+	await page.getByRole('button', { name: 'Prefiro anotar as palavras' }).click();
+	await expect(page).toHaveURL(/\/ajustes\/frase\?de=protecao$/);
+	await page.getByRole('link', { name: 'Voltar para Proteção da conta' }).click();
+	await expect(page).toHaveURL(/\/ajustes\/protecao$/);
+});
+
 test('gerenciador de senhas sem PasswordCredential: o formulário é enviado e some, e a restauração não oferece o botão', async ({ novaPessoa, novoAparelho }) => {
 	const { page } = await novaPessoa('Maria');
 	await page.addInitScript(() => delete (window as { PasswordCredential?: unknown }).PasswordCredential);
