@@ -161,9 +161,10 @@ export async function recuperarConta(page: Page, frase: string[], pin = '246810'
 	await page.goto('./');
 	await page.getByRole('link', { name: 'Já tenho uma conta' }).or(page.getByRole('button', { name: 'Já tenho uma conta' })).click();
 	await page.locator('#frase').fill(frase.join(' '));
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	// o PIN novo e a confirmação, um por vez no mesmo campo, sem botão (item 26)
 	await digitarPin(page, 'pin', pin);
 	await page.keyboard.type(pin);
-	await page.getByRole('button', { name: 'Recuperar conta' }).click();
 }
 
 /**

@@ -138,35 +138,31 @@ test('entrada (boas-vindas, cadastro, PIN, recuperar, esqueci o PIN): nenhum tex
 	await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
 	await semTextoFixo(page);
 
-	// recuperar: palavra desconhecida, depois frase curta demais (erro que vem do worker com o código)
+	// recuperar: palavra desconhecida, depois frase curta demais, conferida antes do PIN
 	await page.goto('./restaurar');
 	await page.locator('#frase').fill('abacate xyzw ');
 	await expect(page.locator('.hint .error')).toBeVisible();
 	await semTextoFixo(page, ['abacate', 'xyzw']);
-	await digitarPin(page, 'pin', PIN);
-	await page.keyboard.type(PIN);
 	await page.locator('button[type="submit"]').click();
 	await expect(page.getByRole('alert')).toBeVisible();
 	await semTextoFixo(page, ['abacate', 'xyzw']);
 
-	// pelo arquivo de recuperação (RF-09 a): um que não serve avisa; o link preenche as palavras
+	// pelo arquivo de recuperação (RF-09 a): um que não serve avisa
 	await page.locator('input[type="file"]').setInputFiles({ name: 'x.txt', mimeType: 'text/plain', buffer: Buffer.from('x') });
 	await expect(page.getByRole('alert')).toHaveCount(2);
 	await semTextoFixo(page, ['abacate', 'xyzw']);
+
+	// o link traz as palavras e vai direto ao PIN; frase válida de uma conta sem backup (RF-06): depois, o nome
 	const doLink = generatePhrase();
 	await page.goto('./bem-vindo');
 	await page.goto('./restaurar#' + doLink.join('-'));
-	await expect(page.locator('#frase')).toHaveValue(doLink.join(' '));
-	await semTextoFixo(page, doLink);
+	await expect(page.locator('#pin')).toBeFocused();
+	await semTextoFixo(page);
 	await digitarPin(page, 'pin', PIN);
+	await semTextoFixo(page); // a confirmação
 	await page.keyboard.type(PIN);
-
-	// frase válida de uma conta sem backup (RF-06): a segunda etapa pede o nome
-	const frase = generatePhrase();
-	await page.locator('#frase').fill(frase.join(' '));
-	await page.locator('button[type="submit"]').click();
 	await expect(page.locator('#nome')).toBeVisible({ timeout: 20_000 });
-	await semTextoFixo(page, frase);
+	await semTextoFixo(page);
 
 	// cadastro: nome, PIN e a confirmação diferente
 	await page.goto('./cadastro');
@@ -192,6 +188,16 @@ test('entrada (boas-vindas, cadastro, PIN, recuperar, esqueci o PIN): nenhum tex
 	await page.locator('a.forgot').click();
 	await expect(page).toHaveURL(/\/esqueci-pin$/);
 	await semTextoFixo(page);
+	// a frase de outra conta: o PIN novo e a confirmação, e o erro volta na frase
+	const outra = generatePhrase();
+	await page.locator('#frase').fill(outra.join(' '));
+	await page.locator('button[type="submit"]').click();
+	await semTextoFixo(page);
+	await digitarPin(page, 'pin', PIN);
+	await semTextoFixo(page);
+	await page.keyboard.type(PIN);
+	await expect(page.getByRole('alert')).toBeVisible({ timeout: 20_000 });
+	await semTextoFixo(page, outra);
 });
 
 test('banco que não abre (P8): nenhum texto fixo', async ({ novoAparelho }) => {
