@@ -203,6 +203,7 @@ a.block {
 	.switch::before {
 		transition: none;
 	}
+}
 /* fluxos em passos (StepHeader; item 26): a tela inteira, com o botão principal embaixo, logo acima do teclado */
 .flow {
 	display: flex;
