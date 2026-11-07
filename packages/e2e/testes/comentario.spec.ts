@@ -17,6 +17,10 @@ test('"Enviar comentário" vai como conversa com a equipe, com os dados do apare
 	await abrirAjustes(page);
 	await page.getByRole('link', { name: 'Enviar comentário (problema ou sugestão)' }).click();
 	await expect(page.locator('pre.device')).toContainText('Versão do app:');
+	// o tipo é rádio com o texto ao lado, não a lista de jeitos (`.option`, item 26); os dados, uma chave como nos Ajustes
+	await expect(page.getByRole('radio', { name: 'Problema' })).toBeChecked();
+	await expect(page.locator('label.option')).toHaveCount(0);
+	await expect(page.getByRole('checkbox', { name: 'Incluir dados do aparelho' })).toHaveClass(/switch/);
 	await page.getByLabel('O que aconteceu ou o que você sugere?').fill('O botão de enviar ficou meio escondido.');
 	await page.getByRole('button', { name: 'Enviar', exact: true }).click();
 

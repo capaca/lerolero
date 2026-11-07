@@ -44,7 +44,7 @@
 	{:else}
 		<!-- as camadas como uma lista de escolhas, a mais fácil em destaque (item 26); anotar abre as palavras -->
 		<PasswordSave {words} onsaved={saved} />
-		<RecoveryFile {words} onsaved={saved} onwrite={() => goto(resolve('/ajustes/frase'))} />
+		<RecoveryFile {words} onsaved={saved} onwrite={() => goto(resolve('/ajustes/frase') + '?de=protecao')} />
 	{/if}
 </main>
 

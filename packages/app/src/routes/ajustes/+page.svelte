@@ -349,47 +349,6 @@
 		color: var(--danger);
 		font-weight: 700;
 	}
-	/* chave de liga e desliga: a caixa de seleção de sempre, desenhada como chave (o leitor de tela continua igual) */
-	.switch {
-		appearance: none;
-		flex: none;
-		position: relative;
-		width: 2.75rem;
-		height: 1.6rem;
-		margin: 0;
-		padding: 0;
-		border: 0;
-		border-radius: 999px;
-		background: var(--muted);
-		cursor: pointer;
-		transition: background 0.15s;
-	}
-	.switch::before {
-		content: '';
-		position: absolute;
-		top: 0.2rem;
-		left: 0.2rem;
-		width: 1.2rem;
-		height: 1.2rem;
-		border-radius: 50%;
-		background: var(--surface);
-		transition: transform 0.15s;
-	}
-	.switch:checked {
-		background: var(--accent);
-	}
-	.switch:checked::before {
-		transform: translateX(1.15rem);
-	}
-	.switch:disabled {
-		opacity: 0.55;
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.switch,
-		.switch::before {
-			transition: none;
-		}
-	}
 	/* tamanho da letra: seletor de três partes */
 	.sizes {
 		display: grid;

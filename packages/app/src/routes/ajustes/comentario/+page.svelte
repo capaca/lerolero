@@ -55,13 +55,13 @@
 			<fieldset>
 				<legend>{m.comentario_tipo()}</legend>
 				{#each Object.entries(KINDS) as [k, label] (k)}
-					<label class="option"><input type="radio" name="tipo" value={k} bind:group={kind} /> {label()}</label>
+					<label class="choice"><input type="radio" name="tipo" value={k} bind:group={kind} /> {label()}</label>
 				{/each}
 			</fieldset>
 			<label for="texto">{m.comentario_texto_rotulo()}</label>
 			<textarea id="texto" rows="6" required maxlength="3000" bind:value={text}></textarea>
 			<p class="hint">{m.comentario_texto_dica()}</p>
-			<label class="option"><input type="checkbox" bind:checked={withDevice} /> {m.comentario_incluir_dados()}</label>
+			<label class="toggle">{m.comentario_incluir_dados()}<input class="switch" type="checkbox" bind:checked={withDevice} /></label>
 			{#if withDevice}<pre class="hint device">{device}</pre>{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 			<div class="actions">
@@ -87,15 +87,26 @@
 		font-weight: 600;
 		margin-bottom: 0.35rem;
 	}
-	.option {
+	/* rádio com o texto ao lado; `.option` é a lista de jeitos de fazer algo, outra coisa (item 26) */
+	.choice {
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
 		font-weight: 500;
 		margin: 0.5rem 0;
 	}
-	.option input {
+	.choice input {
 		width: auto;
+	}
+	/* a chave à direita do texto, como nos Ajustes */
+	.toggle {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		min-height: 3rem;
+		margin-top: 0.5rem;
+		font-weight: 500;
 	}
 	.device {
 		white-space: pre-wrap;

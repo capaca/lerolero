@@ -1,12 +1,16 @@
 <script lang="ts">
 	import TopBar from '#lib/components/TopBar.svelte';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import PhraseCheck from '#lib/components/PhraseCheck.svelte';
 	import PhraseBackup from '#lib/components/PhraseBackup.svelte';
 	import PhraseReveal from '#lib/components/PhraseReveal.svelte';
 	import Rich from '#lib/components/Rich.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
+
+	// aberta pela opção "Anotar" da Proteção da conta: a seta volta para lá, não para os Ajustes
+	const fromProtection = page.url.searchParams.get('de') === 'protecao';
 
 	let words = $state<string[]>([]);
 	let checking = $state(false);
@@ -21,7 +25,11 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.frase_titulo() })}</title></svelte:head>
 
-<TopBar title={m.frase_titulo()} back={resolve('/ajustes')} backTo={m.inicio_ajustes()} />
+<TopBar
+	title={m.frase_titulo()}
+	back={fromProtection ? resolve('/ajustes/protecao') : resolve('/ajustes')}
+	backTo={fromProtection ? m.protecao_titulo() : m.inicio_ajustes()}
+/>
 
 <main>
 
