@@ -1,15 +1,17 @@
 <script lang="ts">
+	import Icon from '#lib/components/Icon.svelte';
 	import TopBar from '#lib/components/TopBar.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { parseInvite } from '@lerolero/core';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import { startScanner } from '#lib/scanner.ts';
 	import { friendlyError } from '#lib/errors.ts';
 	import { m } from '#lib/paraglide/messages.js';
 
 	let video = $state<HTMLVideoElement>();
 	let scanning = $state(false);
+	let pasting = $state(false);
 	let pasted = $state('');
 	let error = $state('');
 	let stop: (() => void) | undefined;
@@ -29,14 +31,17 @@
 
 	async function scan() {
 		error = '';
+		pasting = false;
 		scanning = true;
 		try {
+			await tick(); // o vídeo só existe depois que a tela troca
 			stop = await startScanner(video!, (text) => {
 				scanning = false;
 				void open(text);
 			});
 		} catch {
 			scanning = false;
+			pasting = true; // o erro manda colar o link
 			error = m.ler_erro_camera();
 		}
 	}
@@ -54,27 +59,34 @@
 <TopBar title={m.contatos_adicionar()} back={resolve('/contatos')} backTo={m.contatos_titulo()} />
 
 <main>
-
-	<section>
-		<h2>{m.ler_qr_titulo()}</h2>
+	<!-- os dois jeitos como opções, a câmera em destaque (item 26); colar abre o campo do link -->
+	{#if scanning}
 		<!-- svelte-ignore a11y_media_has_caption -->
-		<video bind:this={video} playsinline muted class:hidden={!scanning}></video>
-		{#if !scanning}
-			<button class="primary" onclick={scan}>{m.ler_abrir_camera()}</button>
-		{:else}
-			<p class="hint">{m.ler_aponte()}</p>
-			<button onclick={() => (stop?.(), (scanning = false))}>{m.comum_cancelar()}</button>
+		<video bind:this={video} playsinline muted></video>
+		<p class="hint">{m.ler_aponte()}</p>
+		<button onclick={() => (stop?.(), (scanning = false))}>{m.comum_cancelar()}</button>
+	{:else}
+		<div class="options">
+			<button class="option best" onclick={scan}>
+				<span class="option-icon"><Icon name="scan" /></span>
+				<span class="option-text"><b>{m.ler_qr_titulo()}</b><small>{m.ler_qr_dica()}</small></span>
+				<Icon name="chevron-right" size={18} />
+			</button>
+			<button class="option" aria-expanded={pasting} onclick={() => ((pasting = true), (error = ''))}>
+				<span class="option-icon"><Icon name="copy" /></span>
+				<span class="option-text"><b>{m.ler_colar_titulo()}</b><small>{m.ler_colar_dica()}</small></span>
+				<Icon name="chevron-right" size={18} />
+			</button>
+		</div>
+		{#if pasting}
+			<form onsubmit={submitPaste}>
+				<label for="link">{m.ler_link_rotulo()}</label>
+				<!-- svelte-ignore a11y_autofocus -->
+				<input id="link" autocomplete="off" autofocus placeholder={m.ler_link_placeholder()} bind:value={pasted} />
+				<div class="actions"><button class="primary" type="submit" disabled={!pasted.trim()}>{m.ler_abrir_convite()}</button></div>
+			</form>
 		{/if}
-	</section>
-
-	<section>
-		<h2>{m.ler_colar_titulo()}</h2>
-		<form onsubmit={submitPaste}>
-			<label for="link">{m.ler_link_rotulo()}</label>
-			<input id="link" autocomplete="off" placeholder={m.ler_link_placeholder()} bind:value={pasted} />
-			<div class="actions"><button type="submit" disabled={!pasted.trim()}>{m.ler_abrir_convite()}</button></div>
-		</form>
-	</section>
+	{/if}
 
 	{#if error}<p class="error" role="alert">{error}</p>{/if}
 </main>
@@ -86,11 +98,5 @@
 		border-radius: 12px;
 		background: black;
 		margin-bottom: 0.6rem;
-	}
-	.hidden {
-		display: none;
-	}
-	section {
-		margin: 1.5rem 0;
 	}
 </style>

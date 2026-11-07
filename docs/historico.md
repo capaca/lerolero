@@ -5,6 +5,20 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-07: Inconsistências que sobraram do item 26
+
+- Achadas numa revisão das telas que o item 26 não tinha tocado; revisadas pelo Pedro no celular.
+- "Guarde sua frase" em passos, com o `StepHeader` (PIN, jeito de guardar, palavras). Para anotar as palavras,
+  basta o botão "Já guardei, conferir"; a caixa "Guardei as 12 palavras" e a lista antiga "Num papel / Num
+  gerenciador" saíram (o jeito já é escolhido nas opções).
+- Bug: "Prefiro anotar as palavras" na Proteção abria `/ajustes/frase`, que pedia o PIN de novo. Agora as palavras
+  aparecem na própria Proteção (componente `PhraseWrite`), e `/ajustes/frase`, sem outro caminho até ela, saiu.
+- O aviso do início é o mesmo dos Ajustes ("Falta proteger sua conta." e "Proteger agora"); a foto do perfil é
+  trocada pela bolinha, como no cadastro (`PhotoPicker`); adicionar contato tem as duas formas como opções; o
+  nome do contato muda pelo lápis, como o do grupo, e "Bloquear" foi para o fim da tela, como "Sair do grupo".
+- Decidido pelo Pedro: o botão principal embaixo, como no cadastro, também no perfil, no convite e no grupo novo
+  (grudado no rodapé numa lista comprida). Rejeitado deixar como estava.
+
 ## 2026-11-07: App Android com Capacitor, esqueleto (item 27, etapa 1)
 
 - Decidido ao começar o item ([ADR-0011](adr/0011-app-android-nativo.md)): push pelo FCM, com o UnifiedPush depois;

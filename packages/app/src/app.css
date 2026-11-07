@@ -218,10 +218,22 @@ a.block {
 .flow h1 {
 	margin-top: 1.25rem;
 }
+/* telas de formulário com a barra do topo (perfil, convite, grupo novo): o resto da tela, abaixo dos 3,5rem dela */
+.flow.under-bar {
+	min-height: calc(100dvh - 3.5rem);
+}
+.flow.under-bar h1 {
+	margin-top: 0.5rem;
+}
+/* grudado embaixo: numa lista comprida (grupo novo), o botão fica à vista sem rolar até o fim */
 .flow .bottom {
+	position: sticky;
+	bottom: 0;
 	margin-top: auto;
-	padding-top: 1.5rem;
+	padding: 1.5rem 0 0.5rem;
 	display: grid;
+	gap: 0.6rem;
+	background: var(--bg);
 }
 .flow .center {
 	text-align: center;
@@ -304,7 +316,33 @@ a.block {
 }
 .banner .actions {
 	margin-top: 0.5rem;
-	align-items: baseline;
+	align-items: center;
+}
+/* o botão do aviso ("Proteger agora") usa as cores do próprio aviso, com 4,5:1 nos dois temas (WCAG 1.4.3) */
+.banner .go {
+	display: inline-flex;
+	align-items: center;
+	/* alvo de toque de 48 px (RNF-63) */
+	min-height: 3rem;
+	padding: 0 1rem;
+	border-radius: 10px;
+	background: var(--warn-fg);
+	color: var(--warn-bg);
+	font-weight: 700;
+	text-decoration: none;
+}
+/* ação que tira algo da conversa (Sair do grupo, Bloquear): a linha toda em vermelho, sem caixa, no fim da tela */
+button.danger-row {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	width: 100%;
+	margin-top: 2rem;
+	padding: 0.8rem 0;
+	border: none;
+	background: none;
+	color: var(--danger);
+	font-weight: 600;
 }
 
 /* botão redondo só com ícone (enviar, gravar, ir para o fim) */

@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import Avatar from '#lib/components/Avatar.svelte';
-	import Icon from '#lib/components/Icon.svelte';
 	import NewPin from '#lib/components/NewPin.svelte';
+	import PhotoPicker from '#lib/components/PhotoPicker.svelte';
 	import StepHeader from '#lib/components/StepHeader.svelte';
 	import { friendlyError } from '#lib/errors.ts';
 	import { m } from '#lib/paraglide/messages.js';
@@ -18,17 +17,12 @@
 	let photo = $state<Blob>();
 	let preview = $state<string>();
 	let newPin = $state<NewPin>();
-	let picker: HTMLInputElement;
 
 	$effect(() => () => {
 		if (preview) URL.revokeObjectURL(preview);
 	});
 
-	function pick(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		input.value = '';
-		if (!file) return;
+	function pick(file: File) {
 		if (preview) URL.revokeObjectURL(preview);
 		photo = file;
 		preview = URL.createObjectURL(file);
@@ -72,16 +66,7 @@
 	{#if step === 'nome'}
 		<h1>{m.cadastro_nome_titulo()}</h1>
 		<form onsubmit={submitName}>
-			<!-- a bolinha mostra como os contatos vão ver; tocar nela escolhe a foto -->
-			<button class="photo" type="button" onclick={() => picker.click()} aria-label={photo ? m.perfil_trocar_foto() : m.perfil_escolher_foto()}>
-				{#if preview}
-					<img src={preview} alt="" />
-				{:else}
-					<Avatar {name} publicKey="" size={96} />
-				{/if}
-				<span class="badge" aria-hidden="true"><Icon name="image" size={18} /></span>
-			</button>
-			<input bind:this={picker} type="file" accept="image/*" hidden onchange={pick} data-testid="foto-cadastro" />
+			<PhotoPicker {name} publicKey="" {preview} hasPhoto={!!photo} testid="foto-cadastro" onpick={pick} />
 			<p class="hint center">{m.cadastro_foto_dica()}</p>
 
 			<label for="nome">{m.comum_seu_nome()}</label>
@@ -107,33 +92,3 @@
 	{/if}
 </main>
 
-<style>
-	.photo {
-		position: relative;
-		align-self: center;
-		padding: 0;
-		border: 0;
-		border-radius: 50%;
-		background: none;
-	}
-	.photo img {
-		display: block;
-		width: 96px;
-		height: 96px;
-		border-radius: 50%;
-		object-fit: cover;
-	}
-	.badge {
-		position: absolute;
-		right: -2px;
-		bottom: -2px;
-		display: grid;
-		place-items: center;
-		width: 2rem;
-		height: 2rem;
-		border-radius: 50%;
-		background: var(--accent);
-		color: var(--accent-fg);
-		border: 2px solid var(--bg);
-	}
-</style>

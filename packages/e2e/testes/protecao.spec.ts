@@ -64,7 +64,7 @@ test('primeiro contato: o arquivo protege a conta, e o link dele restaura em out
 	await expect(joao.page.getByRole('heading', { name: 'Maria' })).toBeVisible();
 	await joao.page.goto('./');
 	await noInicio(joao.page);
-	await expect(joao.page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+	await expect(joao.page.getByText('Falta proteger sua conta.')).toHaveCount(0);
 	await abrirAjustes(joao.page);
 	await expect(joao.page.getByRole('link', { name: /Proteção da conta.*protegida/ })).toBeVisible();
 
@@ -207,14 +207,21 @@ test('gerenciador de senhas: guardar protege a conta, e a frase salva restaura e
 	await expect(outro.locator('.key')).toHaveText(chave!);
 });
 
-test('"Prefiro anotar as palavras" na Proteção: a seta da frase volta para a Proteção', async ({ novaPessoa }) => {
+test('"Prefiro anotar as palavras" na Proteção: as palavras aparecem ali mesmo, sem pedir o PIN de novo', async ({ novaPessoa }) => {
 	const { page } = await novaPessoa('Maria');
 	await page.goto('./ajustes/protecao');
 	await digitarPin(page, 'pin', PIN);
-	await page.getByRole('button', { name: 'Prefiro anotar as palavras' }).click();
-	await expect(page).toHaveURL(/\/ajustes\/frase\?de=protecao$/);
-	await page.getByRole('link', { name: 'Voltar para Proteção da conta' }).click();
+	await page.getByRole('button', { name: 'Prefiro anotar as palavras' }).click({ timeout: 20_000 });
 	await expect(page).toHaveURL(/\/ajustes\/protecao$/);
+	await expect(page.locator('ol li')).toHaveCount(12);
+	await expect(page.locator('#pin')).toHaveCount(0);
+	const frase = (await page.locator('ol li').allTextContents()).map((t) => t.replace(/^\d+/, '').trim());
+	await page.getByRole('button', { name: 'Já guardei, conferir' }).click();
+	for (const campo of await page.locator('input[id^="palavra-"]').all()) {
+		await campo.fill(frase[Number((await campo.getAttribute('id'))!.slice('palavra-'.length))]!);
+	}
+	await page.getByRole('button', { name: 'Confirmar' }).click();
+	await expect(page.getByText('Pronto, conta protegida.', { exact: false })).toBeVisible();
 });
 
 test('gerenciador de senhas sem PasswordCredential: o formulário é enviado e some, e a restauração não oferece o botão', async ({ novaPessoa, novoAparelho }) => {

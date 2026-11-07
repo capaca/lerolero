@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Meu cartão de perfil (Q-P5, RF-02): nome e foto, que vão cifrados só para quem conversa comigo.
-	import Avatar from '#lib/components/Avatar.svelte';
+	import PhotoPicker from '#lib/components/PhotoPicker.svelte';
 	import TopBar from '#lib/components/TopBar.svelte';
 	import { resolve } from '$app/paths';
 	import { friendlyError } from '#lib/errors.ts';
@@ -15,7 +15,6 @@
 	let busy = $state(false);
 	let saved = $state(false);
 	let error = $state('');
-	let picker: HTMLInputElement;
 
 	const hasPhoto = $derived(chosen ? true : chosen === null ? false : !!session.photos[me]);
 
@@ -23,11 +22,7 @@
 		if (preview) URL.revokeObjectURL(preview);
 	});
 
-	function pick(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		input.value = '';
-		if (!file) return;
+	function pick(file: File) {
 		if (preview) URL.revokeObjectURL(preview);
 		chosen = file;
 		preview = URL.createObjectURL(file);
@@ -63,47 +58,28 @@
 
 <TopBar title={m.perfil_titulo()} back={resolve('/ajustes')} backTo={m.inicio_ajustes()} />
 
-<main>
-
+<!-- formulário com o botão embaixo, como no cadastro (item 26) -->
+<main class="flow under-bar">
 	<form onsubmit={submit}>
-		<div class="photo">
-			{#if preview}
-				<img class="preview" src={preview} alt={m.perfil_foto_nova()} />
-			{:else}
-				<Avatar {name} publicKey={me} size={112} showPhoto={chosen !== null} />
-			{/if}
-			<div class="actions stack">
-				<button type="button" onclick={() => picker.click()}>{hasPhoto ? m.perfil_trocar_foto() : m.perfil_escolher_foto()}</button>
-				<input bind:this={picker} type="file" accept="image/*" hidden onchange={pick} data-testid="foto-perfil" />
-				{#if hasPhoto}<button type="button" onclick={removePhoto}>{m.perfil_tirar_foto()}</button>{/if}
-			</div>
-		</div>
-		<p class="hint">{m.perfil_foto_dica()}</p>
+		<!-- a foto pela bolinha, como no cadastro -->
+		<PhotoPicker {name} publicKey={me} {preview} {hasPhoto} showPhoto={chosen !== null} size={112} testid="foto-perfil" onpick={pick} />
+		{#if hasPhoto}<button class="link remove" type="button" onclick={removePhoto}>{m.perfil_tirar_foto()}</button>{/if}
+		<p class="hint center">{m.perfil_foto_dica()}</p>
 
 		<label for="nome">{m.comum_seu_nome()}</label>
 		<input id="nome" maxlength="40" autocomplete="nickname" required bind:value={name} oninput={() => (saved = false)} />
 		<p class="hint">{m.perfil_privado_dica()}</p>
 
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
-		<div class="actions">
+		<div class="bottom">
+			{#if saved}<p role="status" class="hint center">{m.perfil_salvo()}</p>{/if}
 			<button class="primary" type="submit" disabled={busy || !name.trim()}>{busy ? m.perfil_salvando() : m.comum_salvar()}</button>
-			{#if saved}<span role="status" class="hint">{m.perfil_salvo()}</span>{/if}
 		</div>
 	</form>
 </main>
 
 <style>
-	.photo {
-		display: flex;
-		align-items: center;
-		gap: 1.25rem;
-		margin-bottom: 0.5rem;
-	}
-	.preview {
-		width: 112px;
-		height: 112px;
-		border-radius: 50%;
-		object-fit: cover;
-		flex-shrink: 0;
+	.remove {
+		align-self: center;
 	}
 </style>

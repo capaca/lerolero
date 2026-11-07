@@ -30,7 +30,7 @@ async function cameraMostrando(page: Page, qrSvg: string, semLeitorNativo = fals
 
 async function lerQr(page: Page) {
 	await page.goto('./contatos/ler');
-	await page.getByRole('button', { name: 'Abrir a câmera' }).click();
+	await page.getByRole('button', { name: /Ler o QR code/ }).click();
 	await expect(page).toHaveURL(/\/convite#/);
 }
 
@@ -51,8 +51,9 @@ test('convite aberto antes de ter conta, nome local e o próprio convite', async
 	await expect(joao.getByText('Se apresenta como “Maria”.')).toBeVisible();
 
 	// o nome que eu dou fica só comigo (RF-14)
+	await joao.getByRole('button', { name: 'Mudar o nome' }).click();
 	await joao.locator('#nome').fill('Maria Souza');
-	await joao.getByRole('button', { name: 'Salvar nome' }).click();
+	await joao.getByRole('button', { name: 'Salvar', exact: true }).click();
 	await expect(joao.getByText('Salvo.')).toBeVisible();
 	await joao.goto('./contatos');
 	await expect(joao.locator('.list a', { hasText: 'Maria Souza' })).toContainText('se apresenta como “Maria”');
@@ -87,6 +88,7 @@ test('QR pela câmera, com o leitor do navegador e com o jsQR, e o link colado',
 
 	// colar: lixo dá erro claro; a chave pura de outro app Nostr abre o convite sem nome
 	await pedro.page.goto('./contatos/ler');
+	await pedro.page.getByRole('button', { name: /Colar o link de convite/ }).click();
 	await pedro.page.locator('#link').fill('qualquer coisa');
 	await pedro.page.getByRole('button', { name: 'Abrir convite' }).click();
 	await expect(pedro.page.getByRole('alert')).toContainText('Este não parece ser um convite do Lero-lero');

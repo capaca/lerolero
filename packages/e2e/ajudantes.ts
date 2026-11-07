@@ -37,10 +37,11 @@ export async function cadastrar(page: Page, nome: string, pin = PIN) {
 	await expect(page.getByRole('heading', { name: 'Crie um PIN' })).toBeHidden({ timeout: 20_000 });
 }
 
-/** As 12 palavras, lidas em Ajustes › Frase de recuperação (pede o PIN). */
+/** As 12 palavras, lidas em Ajustes › Proteção da conta › "Prefiro anotar as palavras" (pede o PIN). */
 export async function verFrase(page: Page, pin = PIN): Promise<string[]> {
-	await page.goto('./ajustes/frase');
+	await page.goto('./ajustes/protecao');
 	await digitarPin(page, 'pin', pin);
+	await page.getByRole('button', { name: 'Prefiro anotar as palavras' }).click({ timeout: 20_000 });
 	await expect(page.locator('ol li')).toHaveCount(12, { timeout: 20_000 });
 	return (await page.locator('ol li').allTextContents()).map((t) => t.replace(/^\d+/, '').trim());
 }
@@ -52,7 +53,7 @@ export async function verFrase(page: Page, pin = PIN): Promise<string[]> {
 export async function confirmarConvite(page: Page) {
 	await page.getByRole('button', { name: 'Adicionar' }).click();
 	const aviso = page.getByRole('heading', { name: 'Guarde sua frase de recuperação' });
-	const contato = page.getByRole('button', { name: 'Salvar nome' });
+	const contato = page.getByRole('button', { name: 'Mudar o nome' });
 	await expect(aviso.or(contato)).toBeVisible({ timeout: 20_000 });
 	if (await aviso.isVisible()) await page.getByRole('button', { name: 'Depois' }).click();
 	await expect(contato).toBeVisible();

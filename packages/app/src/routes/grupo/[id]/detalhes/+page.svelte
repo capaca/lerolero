@@ -174,7 +174,7 @@
 		<StarredList {conversationId} />
 
 		{#if active}
-			<button class="leave" onclick={() => (confirm = 'sair')} disabled={busy}><Icon name="log-out" /> {m.grupo_sair()}</button>
+			<button class="danger-row" onclick={() => (confirm = 'sair')} disabled={busy}><Icon name="log-out" /> {m.grupo_sair()}</button>
 		{/if}
 	{/if}
 </main>
@@ -317,18 +317,6 @@
 	}
 	.full {
 		padding: 0.5rem 0;
-	}
-	.leave {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		width: 100%;
-		margin-top: 2rem;
-		border: none;
-		background: none;
-		padding: 0.8rem 0;
-		color: var(--danger);
-		font-weight: 600;
 	}
 	.who {
 		padding: 0.3rem 0.6rem;

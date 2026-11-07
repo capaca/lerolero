@@ -27,7 +27,7 @@ test('cadastro: um PIN por vez; diferentes avisam e voltam ao começo, iguais cr
 	await page.keyboard.type(PIN);
 	// a frase fica para o primeiro contato (Q-U1): sem ele, nem o aviso aparece
 	await noInicio(page);
-	await expect(page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+	await expect(page.getByText('Falta proteger sua conta.')).toHaveCount(0);
 });
 
 test('cadastro: a seta volta do PIN para o nome, e a foto escolhida no nome vira a do perfil', async ({ novoAparelho }) => {
@@ -72,8 +72,8 @@ test('o código vem com o primeiro contato: anotar as palavras confere e some; d
 	await joao.page.getByRole('button', { name: 'Prefiro anotar as palavras' }).click();
 	await expect(joao.page.locator('ol li')).toHaveCount(12, { timeout: 20_000 });
 	const frase = (await joao.page.locator('ol li').allTextContents()).map((t) => t.replace(/^\d+/, '').trim());
-	await joao.page.getByLabel('Guardei as 12 palavras').check();
-	await joao.page.getByRole('button', { name: 'Continuar' }).click();
+	// confirmar é só pelo botão, sem a caixa de "guardei" (item 26)
+	await joao.page.getByRole('button', { name: 'Já guardei, conferir' }).click();
 	for (const campo of await joao.page.locator('input[id^="palavra-"]').all()) {
 		const posicao = Number((await campo.getAttribute('id'))!.slice('palavra-'.length));
 		await campo.fill(frase[posicao]);
@@ -83,7 +83,7 @@ test('o código vem com o primeiro contato: anotar as palavras confere e some; d
 	await expect(joao.page.getByRole('heading', { name: 'Maria' })).toBeVisible();
 	await joao.page.goto('./');
 	await noInicio(joao.page);
-	await expect(joao.page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+	await expect(joao.page.getByText('Falta proteger sua conta.')).toHaveCount(0);
 
 	// "Depois" segue para o contato; a tela não aparece de novo e o aviso fica adiado
 	await maria.page.goto(await meuConvite(joao.page));
@@ -92,7 +92,7 @@ test('o código vem com o primeiro contato: anotar as palavras confere e some; d
 	await expect(maria.page.getByRole('heading', { name: 'João' })).toBeVisible();
 	await maria.page.goto('./');
 	await noInicio(maria.page);
-	await expect(maria.page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
+	await expect(maria.page.getByText('Falta proteger sua conta.')).toHaveCount(0);
 	await maria.page.goto(await meuConvite(ana.page));
 	await maria.page.getByRole('button', { name: 'Adicionar' }).click();
 	await expect(maria.page.getByRole('heading', { name: 'Ana' })).toBeVisible();
@@ -100,7 +100,7 @@ test('o código vem com o primeiro contato: anotar as palavras confere e some; d
 	// passado o adiamento, o aviso aparece na tela inicial
 	await esquecerAjuste(maria.page, 'lembreteFraseAdiadoAte');
 	await maria.page.goto('./');
-	await expect(maria.page.getByText('Você ainda não guardou sua frase de recuperação.')).toBeVisible({ timeout: 20_000 });
+	await expect(maria.page.getByText('Falta proteger sua conta.')).toBeVisible({ timeout: 20_000 });
 });
 
 test('PIN: a sessão vencida pede o PIN; errado avisa, certo abre', async ({ novaPessoa }) => {

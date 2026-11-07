@@ -1,6 +1,5 @@
 <script lang="ts">
-	// Mostra a frase e orienta onde guardar: papel ou gerenciador de senhas.
-	// Usado no cadastro e em "ver minha frase".
+	// Mostra a frase para anotar. O jeito de guardar já foi escolhido antes, na lista de opções (item 26).
 	import { onDestroy } from 'svelte';
 	import PhraseGrid from './PhraseGrid.svelte';
 	import Rich from './Rich.svelte';
@@ -33,11 +32,6 @@
 
 <div class="banner">
 	<p><Rich text={m.frase_guarde_aviso()} /></p>
-	<p>{m.frase_escolha_jeito()}</p>
-	<ul>
-		<li><Rich text={m.frase_jeito_papel()} /></li>
-		<li><Rich text={m.frase_jeito_gerenciador()} /></li>
-	</ul>
 	<p>{m.frase_nunca_print()}</p>
 </div>
 
@@ -49,13 +43,6 @@
 </div>
 
 <style>
-	ul {
-		margin: 0 0 0.5rem;
-		padding-left: 1.2rem;
-	}
-	li {
-		margin-bottom: 0.3rem;
-	}
 	.copy .hint {
 		margin-top: 0.4rem;
 	}

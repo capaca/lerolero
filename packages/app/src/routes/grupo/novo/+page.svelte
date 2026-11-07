@@ -44,8 +44,8 @@
 
 <TopBar title={m.inicio_novo_grupo()} back={resolve('/')} backTo={m.comum_inicio()} />
 
-<main>
-
+<!-- o botão embaixo, como no cadastro, e grudado nele numa lista comprida (item 26) -->
+<main class="flow under-bar">
 	<form onsubmit={create}>
 		<label for="nome">{m.grupo_nome_rotulo()}</label>
 		<input id="nome" bind:value={name} oninput={() => (error = '')} maxlength="60" autocomplete="off" placeholder={m.grupo_nome_placeholder()} />
@@ -65,7 +65,7 @@
 		<p class="hint">{m.grupo_nomes_dica()}</p>
 
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
-		<div class="actions">
+		<div class="bottom">
 			<button class="primary" type="submit" disabled={creating || !contacts?.length}>
 				{creating ? m.grupo_criando() : m.grupo_criar()}
 			</button>
