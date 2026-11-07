@@ -192,7 +192,13 @@ resolvidos.
 ### Beta fechado (~6 semanas de uso)
 
 - 10–20 pessoas, incluindo pelo menos algumas idosas ou com pouca familiaridade digital (RNF-65).
-- Canal simples de feedback (ex.: um grupo no próprio app).
+- Canal simples de feedback (ex.: um grupo no próprio app). Decidido em 2026-11-07: o "Enviar comentário" continua
+  indo para a conta pessoal do Pedro, que ele abre sempre (sem conta separada por ora), e a triagem
+  não é pública por enquanto. Falta um canal fora da rede, para quando o app não abre ou os relays caíram (P8, P9 da
+  [prontidão](08-prontidao.md)): **decidido em 2026-11-07, um e-mail do projeto**, o mesmo da chave Pix e do
+  suporte, com um `mailto:` já preenchido com a versão e o navegador, também na tela de erro do P8. Rejeitado o Google
+  Forms como canal de socorro: mandar print nele exige entrar com conta Google, e é mais um site estranho para quem
+  tem pouca familiaridade digital. Pendente: o Pedro criar o endereço.
 - Acompanhar: mensagens perdidas, dificuldades de cadastro, consumo de dados, travamentos.
 
 **Pronto para o lançamento público quando:**
@@ -226,6 +232,13 @@ Registrados a pedido do Pedro; entram na ordem quando ele decidir.
   login, funciona no PWA); (2) automático no Google Drive, que pede OAuth, domínio próprio (Q-N1) e revisão do Google,
   e combina mais com a v1 nativa (no iPhone, o iCloud não está aberto ao PWA). Decidir: mídia entra ou é opcional
   (tamanho), lembrete de salvar e como importar por cima de mensagens que já estão no aparelho.
+- **Doação por Pix** (2026-11-07). Primeiro passo do modelo de sustentação (Q-N8): um "Apoie o Lero-lero" em Ajustes
+  e no site, com a chave e o QR do Pix. A chave é o e-mail do projeto (decidido em 2026-11-07, o mesmo do suporte e
+  dos comentários), nunca CPF nem celular, porque quem paga vê a chave. Numa conta de pessoa física, quem paga vê
+  também o nome do titular e parte do CPF; uma conta de empresa mostraria o nome e o
+  CNPJ dela (avaliar se valer a pena). O Pedro topa, mais adiante, serviços pagos opcionais em cima (ex.: endereço NIP-05,
+  relay ou Blossom com mais espaço), sem trancar nada do núcleo. Zaps (Lightning) ficam de fora por ora: quase
+  ninguém no público do app tem carteira.
 - **Escolha da língua em Ajustes e manifesto do PWA traduzido**: quando houver a segunda língua.
 - **Testes e2e que ficaram nos rascunhos** (`prototipos/e2e-rascunho`): extras da identidade e do PIN (bloquear,
   esqueci o PIN, limite de tentativas), o pedido de contato e a publicação por cima de um app antigo com o cache do
@@ -300,7 +313,7 @@ a Q-N7 (custo zero × servidor de referência) e a Q-N8 (teto de usuários); as 
 | P2 | Gateway de push sem conteúdo (Web Push) e aditivo no [ADR-0005](adr/0005-notificacoes.md) sobre custo em escala | push |
 | P3 | Chamadas de áudio 1:1 com STUN público e TURN (`coturn`) | TURN |
 | P3 | Marmot/MLS e canais (grupos acima de 20); multi-dispositivo; chamada em grupo com SFU | SFU, cliente |
-| P3 | Modelo de sustentação (Q-N8) | — |
+| P3 | Modelo de sustentação (Q-N8); a doação por Pix já está nos pedidos fora da ordem (2026-11-07) | — |
 
 ## Pontos de decisão
 
