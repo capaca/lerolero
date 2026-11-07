@@ -37,7 +37,11 @@ fi
 gh run list --workflow release.yml --limit 1 --json createdAt,status,conclusion \
 	--jq '.[0] | "Última release: \(.createdAt[0:16] | sub("T"; " ")) UTC, \(.conclusion // .status)"' 2>/dev/null
 
-# Só os três checks que o merge exige: `verificar` (ci.yml) e os dois status gravados pelos testes sob demanda.
+# O e2e roda depois do merge (ADR-0006): vermelho na main é o primeiro item da volta e barra a release.
+scripts/e2e-main.sh linha
+
+# Os checks que o merge exige: `verificar` (ci.yml) e o status gravado pelos testes de integração; o "testes e2e"
+# aparece quando o rótulo e2e-tests foi pedido no PR, só para informar.
 echo "PRs abertos:"
 gh pr list --json number,title,headRefName,autoMergeRequest,statusCheckRollup --jq '
 	if length == 0 then "  nenhum" else .[] |

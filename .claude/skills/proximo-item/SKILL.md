@@ -16,11 +16,15 @@ scripts/situacao.sh
 
 Antes de escolher um item novo, resolva o que já está andando, nesta ordem:
 
-1. **Bug conhecido** (na memória de status ou relatado pelo Pedro): vem antes de tudo, com teste de regressão.
-2. **PR aberto** com check falhando ou pendente: `scripts/pr.sh esperar <nº>` e conserte; rótulo de novo com
+1. **E2E vermelho na `main`** (linha "E2E main" ou issue `e2e-main` aberta no `situacao.sh`): é um bug conhecido e vem
+   antes de tudo (ADR-0006). Abra o link da rodada; se for teste instável (memória de status), rode de novo com
+   `gh run rerun <id> --failed`; senão, conserte por PR com teste de regressão. A issue fecha sozinha quando a `main`
+   volta a verde: não a feche à mão. Nenhuma release sai enquanto ela estiver aberta.
+2. **Bug conhecido** (na memória de status ou relatado pelo Pedro): vem antes de tudo, com teste de regressão.
+3. **PR aberto** com check falhando ou pendente: `scripts/pr.sh esperar <nº>` e conserte; rótulo de novo com
    `scripts/pr.sh rotular <nº>`.
-3. **Alterações locais** ou branch à frente da `main`: pergunte ao Pedro se são desta sessão antes de mexer.
-4. **Porta 4190 ou 5180 ocupada**: outra sessão está rodando; não rode o e2e nem o `celular.sh` até liberar.
+4. **Alterações locais** ou branch à frente da `main`: pergunte ao Pedro se são desta sessão antes de mexer.
+5. **Porta 4190 ou 5180 ocupada**: outra sessão está rodando; não rode o e2e nem o `celular.sh` até liberar.
 
 Na `main` sem release não bloqueia: só mencione (a release é quando o Pedro pedir).
 
@@ -45,7 +49,8 @@ rejeitadas ficam como rejeitadas). Item grande: proponha etapas pequenas, cada u
 - Branch novo a partir da `main` atualizada: `git fetch -q origin && git switch -c <nome-curto> origin/main`.
 - Siga o `CLAUDE.md`: textos em `pt-BR.json`, tela nova no e2e `textos`, funcionalidade nova com teste em
   `packages/e2e/testes/`, comentários curtos com o requisito.
-- Verifique com `scripts/verificar.sh` e, mudando o app, `scripts/verificar.sh build e2e`.
+- Verifique com `scripts/verificar.sh` e, mudando o app, `scripts/verificar.sh build e2e testes/<spec>.spec.ts` com as
+  specs da área mexida e a `textos.spec.ts`. A suíte inteira roda na `main` depois do merge (ADR-0006).
 - Ajuste de tela: suba `scripts/celular.sh` em segundo plano e revise com o Pedro no celular antes do PR.
 - Se o PR conclui o item, marque-o no mesmo PR: na "Ordem do restante do MVP" de `docs/07-roadmap.md`, termine a
   linha com "✅ Feita em <data>" (é a marca que o `situacao.sh` procura), marque ✅ no marco e conte como ficou em `docs/historico.md`. Item feito

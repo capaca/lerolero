@@ -2,9 +2,10 @@
 # O ciclo do PR em poucos comandos, com uma linha por coisa e os links que o Pedro acompanha (economiza contexto do
 # assistente). O commit continua manual, com caminhos explícitos (nunca `git add -A`).
 # Uso:
-#   scripts/pr.sh abrir "<título>" <arquivo-do-corpo>   push, PR, rótulos dos testes e links
+#   scripts/pr.sh abrir "<título>" <arquivo-do-corpo>   push, PR, rótulo dos testes de integração e links
 #   scripts/pr.sh rotular [nº]                          pede a rodada de novo (depois de um push ou de uma falha)
-#   scripts/pr.sh esperar [nº]                          espera os 3 checks do merge; se falhar, mostra o erro
+#   scripts/pr.sh e2e [nº]                              pede a suíte e2e antes do merge, só numa mudança arriscada
+#   scripts/pr.sh esperar [nº]                          espera os checks do merge; se falhar, mostra o erro
 #   scripts/pr.sh homologacao                           depois do merge: espera a publicação e confere o commit.txt
 set -uo pipefail
 
@@ -29,8 +30,8 @@ links_desde() {
 
 agora() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
-# PR só de documentação ou bastidores dispensa os testes sob demanda (o workflow já marca os dois status como
-# dispensados; mesma lista do testes-sob-demanda.yml).
+# PR só de documentação ou bastidores dispensa os testes de integração (o workflow já marca o status como
+# dispensado; mesma lista do testes-sob-demanda.yml).
 # Logo depois de criar o PR o GitHub ainda devolve a lista de arquivos vazia, e a lista vazia passava por "só docs"
 # (2026-10-29, #60 ficou sem testes): espera os arquivos aparecerem e, sem eles, pede os testes (o lado seguro).
 so_docs() {
@@ -42,16 +43,25 @@ so_docs() {
 	[ -n "$arquivos" ] && ! echo "$arquivos" | grep -qvE '^docs/|^scripts/|^\.claude/|\.md$'
 }
 
-# Os rótulos só disparam a rodada num evento novo: se já estiverem no PR, tira e põe de novo.
+# O rótulo só dispara a rodada num evento novo: se já estiver no PR, tira e põe de novo.
 rotular() {
-	local pr=$1 desde
-	if so_docs "$pr"; then echo "Só documentação ou bastidores: testes de integração e e2e dispensados"; return; fi
-	gh pr edit "$pr" -R $repo --remove-label integration-tests,e2e-tests >/dev/null 2>&1
+	local pr=$1 rotulo=${2:-integration-tests} workflow=${3:-testes-sob-demanda.yml} desde
+	if [ "$rotulo" = integration-tests ] && so_docs "$pr"; then echo "Só documentação ou bastidores: testes de integração dispensados"; return; fi
+	gh pr edit "$pr" -R $repo --remove-label "$rotulo" >/dev/null 2>&1
 	sleep 3
 	desde=$(agora)
-	gh pr edit "$pr" -R $repo --add-label integration-tests,e2e-tests >/dev/null || return 1
-	echo "Rótulos postos. Rodadas:"
-	links_desde testes-sob-demanda.yml "$desde" 2
+	gh pr edit "$pr" -R $repo --add-label "$rotulo" >/dev/null || return 1
+	echo "Rótulo $rotulo posto. Rodada:"
+	links_desde "$workflow" "$desde" 1
+}
+
+# O e2e roda depois do merge (ADR-0006): vermelho na main não impede o merge, porque o conserto também entra por PR,
+# mas é o primeiro item da volta. Avisa a cada PR aberto ou esperado.
+avisar_main_vermelha() {
+	local issue
+	issue=$(gh issue list -R $repo --label e2e-main --state open --json url --jq '.[0].url // empty' 2>/dev/null)
+	[ -n "$issue" ] && echo "Aviso: o e2e está vermelho na main ($issue); consertar vem antes do próximo item"
+	return 0
 }
 
 numero() { [ -n "${1:-}" ] && echo "$1" || gh pr view --json number --jq .number; }
@@ -67,9 +77,13 @@ case "${1:-}" in
 		echo "CI:"
 		links_desde ci.yml "$desde" 1
 		rotular "${url##*/}"
+		avisar_main_vermelha
 		;;
 	rotular)
 		rotular "$(numero "${2:-}")"
+		;;
+	e2e)
+		rotular "$(numero "${2:-}")" e2e-tests e2e.yml
 		;;
 	esperar)
 		pr=$(numero "${2:-}")
@@ -86,6 +100,7 @@ case "${1:-}" in
 				erros=$(echo "$texto" | grep -E 'Error|error TS|expect|Expected|Received|✘|failed|FAIL|›' | awk '!visto[$0]++' | head -30)
 				[ -n "$erros" ] && echo "$erros" || echo "$texto" | tail -30
 			done
+		avisar_main_vermelha
 		echo "$resultado" | awk -F'\t' '$2 != "pass" { exit 1 }'
 		;;
 	homologacao)
@@ -107,7 +122,7 @@ case "${1:-}" in
 		echo "No ar em ~1 min (cache do Pages até 10): https://lerolero-app.github.io/lerolero/"
 		;;
 	*)
-		sed -n '4,8p' "$0" | sed 's/^# //'
+		sed -n '4,9p' "$0" | sed 's/^# //'
 		exit 2
 		;;
 esac

@@ -27,6 +27,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read # o e2e da main
+      issues: read # a issue e2e-main
     outputs:
       versao: ${{ steps.versao.outputs.versao }}
       commit: ${{ steps.validado.outputs.commit }}
@@ -41,6 +45,9 @@ jobs:
         run: |
           commit=$(gh api repos/lerolero-app/lerolero/contents/commit.txt?ref=gh-pages --jq .content | base64 -d | tr -d '[:space:]')
           git merge-base --is-ancestor "$commit" origin/main || { echo "::error::$commit (homologação) não está na main"; exit 1; }
+          # Nenhuma release sai de uma main vermelha (ADR-0006, 2026-11-06), também para quem dispara pela página do
+          # Actions sem o release.sh. Roda com o script da main, antes de trocar para o commit da homologação.
+          if ! motivo=$(scripts/e2e-main.sh trava "$commit"); then echo "::error::Sem release: $motivo (ADR-0006)"; exit 1; fi
           git checkout -q "$commit"
           echo "publicando o commit da homologação: $(git log -1 --format='%h %s')" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
