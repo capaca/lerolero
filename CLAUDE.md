@@ -44,6 +44,9 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
   nunca sai dele), armazenamento Dexie atrás de repositórios (`storage/`), rede (`net/`), sincronização (`sync/`),
   mídia/Blossom (`media/`), conversas (`conversations/`).
 - `packages/app`: SvelteKit 3 estático (SPA). Imports via `#lib/...`; estado da sessão em `src/lib/session.svelte.ts`.
+- `packages/android`: Capacitor (ADR-0011), com a interface do `build:nativo` do app embutida (sem service worker).
+  Sem SDK do Android no Mac: o APK de teste ("Lero homolog.") sai pelo `android.yml` como artefato da rodada.
+  Ícones: `node packages/android/scripts/icones.js`.
 - `prototipos/`: pesquisas fora do workspace (usam npm; `prototipos/senha` é HTML puro). Só a homologação os publica
   (`/senha/`, `/push/`, `/medicao/`); a produção tem só o app (P7). `prototipos/e2e-rascunho` tem os rascunhos em Puppeteer
   ainda não migrados para `packages/e2e`.

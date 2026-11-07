@@ -159,9 +159,10 @@ lerolero/
 ├── packages/
 │   ├── core/              # núcleo em TypeScript, sem interface (testável isoladamente)
 │   ├── app/               # interface Svelte + PWA
+│   ├── android/           # Capacitor, com a interface do app embutida (antes do beta, ADR-0011)
+│   ├── repassador/        # repassador de push (Cloudflare Workers, ADR-0010)
 │   └── e2e/               # suíte de ponta a ponta (Playwright, relays e Blossom locais)
 ├── platforms/
-│   ├── android/           # Capacitor (v1)
 │   └── desktop/           # Tauri (Rust) (v1)
 ├── prototipos/            # medições e pesquisas descartáveis, fora do workspace
 └── relays.json            # lista padrão de relays e Blossom

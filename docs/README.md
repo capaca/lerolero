@@ -37,6 +37,7 @@ Cada decisão relevante tem um ADR em [`adr/`](adr/), seguindo o [template](adr/
 | [0008](adr/0008-internacionalizacao.md) | Internacionalização (Paraglide JS, pt-BR como base) | ✅ aceito |
 | [0009](adr/0009-protecao-e-recuperacao-da-conta.md) | Proteção e recuperação da conta em camadas (arquivo, gerenciador de senhas, passkey) | ✅ aceito |
 | [0010](adr/0010-web-push-no-pwa.md) | Web Push no PWA antes do beta, com chave VAPID por pessoa e um repassador mínimo | ✅ aceito |
+| [0011](adr/0011-app-android-nativo.md) | App Android nativo antes do beta (push pelo FCM, APK no GitHub Releases, interface embutida) | ✅ aceito |
 
 ## Estudos
 

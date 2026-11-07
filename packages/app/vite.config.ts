@@ -8,7 +8,10 @@ import { defineConfig, type Plugin } from 'vite';
 const base = (process.env.BASE_PATH ?? '') as '' | `/${string}`;
 // build:pseudo: os textos na pseudolíngua (scripts/pseudolingua.js), para o teste de textos fixos (ADR-0008)
 const pseudo = !!process.env.LINGUA_PSEUDO;
-const out = pseudo ? 'build-pseudo' : 'build';
+// build:nativo: a interface embutida no APK do Capacitor (ADR-0011), sem service worker: os arquivos já estão no
+// aparelho, e a versão nova chega por outro APK
+const nativo = !!process.env.APP_NATIVO;
+const out = pseudo ? 'build-pseudo' : nativo ? 'build-nativo' : 'build';
 
 /** Cor do app em dev (`vite dev`, scripts/celular.sh): roxo, para o instalado no celular não parecer a produção. */
 const LOCAL_COLOR = '#7c3aed';
@@ -68,7 +71,8 @@ export default defineConfig(({ command }) => ({
 			// SPA estático (ADR-0002): sem servidor. O GitHub Pages devolve 404.html para
 			// qualquer caminho desconhecido, então ele vira a página de entrada do app.
 			adapter: adapter({ pages: out, assets: out, fallback: '404.html' }),
-			paths: { base }
+			paths: { base },
+			serviceWorker: { register: !nativo }
 		}),
 		// textos da interface (ADR-0008); as opções ficam em project.inlang/paraglide.config.js
 		paraglideVitePlugin({ project: pseudo ? './.pseudo/project.inlang' : './project.inlang' })

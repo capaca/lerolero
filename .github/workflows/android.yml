@@ -1,0 +1,48 @@
+name: Android
+
+# APK de teste do app nativo (item 27, ADR-0011): a interface embutida, com os servidores da homologação, num APK de
+# depuração que instala ao lado do de verdade ("Lero homolog."). Sai como artefato da rodada, para baixar e instalar
+# no celular. Não é checagem obrigatória: só roda quando muda o que vai dentro do APK.
+
+on:
+  pull_request:
+    paths: [packages/android/**, packages/app/**, packages/core/**, pnpm-lock.yaml, .github/workflows/android.yml]
+  push:
+    branches: [main]
+    paths: [packages/android/**, packages/app/**, packages/core/**, pnpm-lock.yaml, .github/workflows/android.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: pnpm install --frozen-lockfile
+      - name: Interface e APK de teste
+        working-directory: packages/android
+        run: APP_RELEASE="homolog-${GITHUB_SHA::7}" pnpm apk
+        env:
+          APP_AMBIENTE: homologacao
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lerolero-homologacao-${{ github.sha }}
+          path: packages/android/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14

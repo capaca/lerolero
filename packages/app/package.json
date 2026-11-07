@@ -7,6 +7,7 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"build:pseudo": "node scripts/pseudolingua.js && LINGUA_PSEUDO=1 BASE_PATH=/lerolero-pseudo vite build && paraglide-js compile --silent",
+		"build:nativo": "APP_NATIVO=1 vite build",
 		"preview": "vite preview",
 		"prepare": "paraglide-js compile --silent && svelte-kit sync || echo ''",
 		"check": "paraglide-js compile --silent && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && svelte-check --tsconfig ./src/service-worker/tsconfig.json --threshold error",
