@@ -5,6 +5,19 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-07: App Android com Capacitor, esqueleto (item 27, etapa 1)
+
+- Decidido ao começar o item ([ADR-0011](adr/0011-app-android-nativo.md)): push pelo FCM, com o UnifiedPush depois;
+  APK assinado no GitHub Releases, com a Play depois do beta; interface embutida no APK. Identificador
+  `io.github.capaca.lerolero`, que não depende do domínio ainda não registrado (rejeitados `br.com.<domínio>`, que
+  esperaria o registro, e `app.lerolero`, domínio que não é nosso).
+- `packages/android` com Capacitor 8.6; o app ganhou o `build:nativo`, sem service worker (os arquivos já estão no
+  aparelho). Ícone adaptativo e abertura gerados do `icon.svg`, como os do PWA.
+- Backup do sistema desligado: o cofre, protegido só pelo PIN, não vai para a nuvem do Google (T15).
+- Sem SDK do Android no Mac: o APK de teste ("Lero homolog.", instala ao lado do de verdade, com os servidores da
+  homologação) sai pelo `android.yml` como artefato. O Pedro instalou no Motorola e conferiu (#122).
+- Ficou de fora: arquivo de recuperação e "compartilhar" no WebView (precisam de plugin), notificações (etapa 3).
+
 ## 2026-11-06: Ajustes e proteção da conta (item 26, etapa 3c; item 26 concluído)
 
 - Propostas comparadas com capturas do app; o Pedro aprovou tudo e revisou no celular.
