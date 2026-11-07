@@ -5,6 +5,7 @@
 	import { asset, resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { apkDownloadUrl, newerApkRelease } from '@lerolero/core';
 	import { announcements } from '#lib/announcements.svelte.ts';
 	import { language } from '#lib/i18n.svelte.ts';
 	import { m } from '#lib/paraglide/messages.js';
@@ -24,6 +25,8 @@
 	// versão nova do app ativada pelo service worker: avisa em vez de recarregar sozinho,
 	// para não perder uma mensagem que a pessoa esteja digitando
 	let updateReady = $state(false);
+	// app Android (ADR-0011): sem service worker, a versão nova é outro APK, baixado da Release do GitHub
+	let apkVersion = $state<string>();
 	const showOffline = $derived(session.status === 'desbloqueado' && session.offline);
 	// altura das faixas do topo (sem conexão e aviso), que a conversa desconta da tela
 	let barsHeight = $state(0);
@@ -100,7 +103,20 @@
 			if (event.data?.tipo === 'abrir' && path?.startsWith(resolve('/'))) void goto(path);
 		};
 		navigator.serviceWorker?.addEventListener('message', onWorkerMessage);
-		const checkForUpdate = () => void navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => {});
+		const checkForUpdate = () => {
+			void navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => {});
+			if (__APP_APK_REPO__) void checkApk();
+		};
+		// sem rede ou com o limite da API do GitHub (60 por hora por IP) estourado, tenta de novo na próxima vez
+		const checkApk = async () => {
+			try {
+				const res = await fetch(`https://api.github.com/repos/${__APP_APK_REPO__}/releases/latest`, { cache: 'no-cache' });
+				if (res.ok) apkVersion = newerApkRelease(__APP_RELEASE__, await res.json());
+			} catch {
+				// fica o aviso que já estava
+			}
+		};
+		if (__APP_APK_REPO__) void checkApk();
 
 		const resume = () => {
 			if (document.visibilityState !== 'visible') return;
@@ -170,6 +186,12 @@
 	<div class="update" role="status">
 		<span>{m.layout_versao_nova()}</span>
 		<button onclick={() => location.reload()}>{m.layout_atualizar()}</button>
+	</div>
+{:else if apkVersion}
+	<!-- o WebView abre o link no navegador, que baixa o APK; instalar por cima mantém a conta (mesma assinatura) -->
+	<div class="update" role="status">
+		<span>{m.layout_apk_nova({ versao: apkVersion })}</span>
+		<a href={apkDownloadUrl(__APP_APK_REPO__, apkVersion)}>{m.layout_apk_baixar()}</a>
 	</div>
 {/if}
 
@@ -287,12 +309,14 @@
 		box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
 		white-space: nowrap;
 	}
-	.update button {
+	.update button,
+	.update a {
 		padding: 0.4rem 0.9rem;
 		border-radius: 999px;
 		border: none;
 		background: var(--accent);
 		color: var(--accent-fg);
+		text-decoration: none;
 	}
 	.error-detail {
 		white-space: pre-wrap;

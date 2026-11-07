@@ -6,6 +6,7 @@ export {
 	type Announcement,
 	type AnnouncementLevel
 } from './announcements.ts';
+export { APK_FILE, apkDownloadUrl, newerApkRelease } from './apk-release.ts';
 export { DEFAULT_KDF, seal, unseal, WrongPinError, type KdfParams, type Sealed } from './crypto/seal.ts';
 export { POW_DIFFICULTY, powOf } from './crypto/pow.ts';
 export { connect, expose, RemoteError, type Endpoint, type Remote } from './worker/rpc.ts';

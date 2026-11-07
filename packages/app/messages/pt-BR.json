@@ -5,6 +5,8 @@
 	"layout_sem_conexao": "Sem conexão. As mensagens saem quando voltar.",
 	"layout_versao_nova": "Nova versão disponível.",
 	"layout_atualizar": "Atualizar",
+	"layout_apk_nova": "Saiu a versão {versao} do app.",
+	"layout_apk_baixar": "Baixar",
 	"layout_aviso_fechar": "Fechar aviso",
 	"layout_homologacao": "Homologação",
 	"layout_local": "Local",

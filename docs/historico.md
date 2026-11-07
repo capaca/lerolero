@@ -5,6 +5,25 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-07: Item 27, etapa 2: APK assinado na release
+
+- Antes, a verificação de desenvolvedor do Google: no Brasil, desde 2026-09-30, ela só barra o que vem de lojas; o
+  APK do GitHub Releases instala como antes até a regra global de 2027. Decidido pelo Pedro: seguir sem conta no
+  Google por enquanto (a conta completa, US$ 25, entra no item 23) e manter o pacote `io.github.capaca.lerolero`.
+  Rejeitadas: a conta completa já e a distribuição limitada (no máximo 20 aparelhos). Detalhes no ADR-0011.
+- O `release.yml` ganhou o job `apk`: monta a interface com a versão da release, assina com a chave do ambiente
+  `apk` (só a `main` o usa) e anexa `lerolero.apk` à Release. Ele vem antes de publicar o site: APK quebrado barra a
+  release inteira. `versionCode` sai da versão (0.18.0 vira 18000), para o Android aceitar instalar por cima.
+- A chave é criada uma vez por `packages/android/scripts/chave.sh`, que se recusa a criar outra: com chave nova, o
+  APK não instala por cima e a pessoa perderia a conta ao desinstalar. Risco novo no modelo de ameaças (T28).
+- No app Android, a cada abertura, ao voltar para a tela e a cada 5 minutos, o app lê a última Release pela API do
+  GitHub e mostra "Saiu a versão X do app." com "Baixar", que abre o APK no navegador. O endereço é montado no app,
+  não copiado da resposta. O PWA e o APK de teste não fazem essa leitura.
+- O `android.yml` também monta o APK da release, com uma chave descartável, e confere a versão: um erro na assinatura
+  aparece no PR, não na hora da release.
+- Fora do e2e: a faixa só existe na interface do app nativo, que a suíte não serve. Foi conferida num Chrome com a
+  resposta do GitHub simulada; a lógica da versão tem teste no core.
+
 ## 2026-11-07: Inconsistências que sobraram do item 26
 
 - Achadas numa revisão das telas que o item 26 não tinha tocado; revisadas pelo Pedro no celular.

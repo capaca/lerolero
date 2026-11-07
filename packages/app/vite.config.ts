@@ -51,6 +51,9 @@ export default defineConfig(({ command }) => ({
 					? 'https://lerolero-repassador-homologacao.pedro-capaca.workers.dev'
 					: 'https://lerolero-repassador.pedro-capaca.workers.dev')
 		),
+		// app Android (ADR-0011): o repositório cujas Releases trazem o APK, para avisar de versão nova; vazio no PWA,
+		// que se atualiza pelo service worker, e no APK de teste da homologação
+		__APP_APK_REPO__: JSON.stringify(nativo && process.env.APP_AMBIENTE !== 'homologacao' ? 'capaca/lerolero' : ''),
 		// faixa de avisos (P9): o branch `avisos` do repositório, gravado pelo workflow avisos.yml; a homologação e o
 		// app em dev leem um arquivo próprio, para testar o aviso sem que ele apareça para quem usa a produção
 		__APP_AVISOS__: JSON.stringify(

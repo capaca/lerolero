@@ -41,6 +41,21 @@ jobs:
         run: APP_RELEASE="homolog-${GITHUB_SHA::7}" pnpm apk
         env:
           APP_AMBIENTE: homologacao
+      # o APK assinado só sai na release; aqui ele é montado com uma chave descartável, para um erro na assinatura ou na
+      # versão aparecer no PR e não na hora da release
+      - name: APK da release, com chave descartável
+        working-directory: packages/android/android
+        run: |
+          keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/teste.p12" -storepass "$APK_CHAVE_SENHA" \
+            -alias lerolero -keyalg RSA -keysize 2048 -validity 1 -dname 'CN=teste' >/dev/null
+          APK_CHAVE="$RUNNER_TEMP/teste.p12" ./gradlew assembleRelease
+          aapt=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt
+          "$aapt" dump badging app/build/outputs/apk/release/app-release.apk > "$RUNNER_TEMP/apk.txt"
+          grep '^package:' "$RUNNER_TEMP/apk.txt"
+          grep -q "versionCode='17000' versionName='0.17.0'" "$RUNNER_TEMP/apk.txt"
+        env:
+          APP_RELEASE: 0.17.0
+          APK_CHAVE_SENHA: descartavel
       - uses: actions/upload-artifact@v4
         with:
           name: lerolero-homologacao-${{ github.sha }}
