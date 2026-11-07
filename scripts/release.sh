@@ -23,8 +23,18 @@ minutos_desde_release() {
 	echo $(( ($(date -u +%s) - $(date -j -u -f %Y-%m-%dT%H:%M:%SZ "$criada" +%s)) / 60 ))
 }
 
+# Nenhuma release sai de uma main vermelha (ADR-0006, 2026-11-06): a issue e2e-main aberta ou o e2e do commit da
+# homologação sem estar verde barram. Falha fechada: sem conseguir ler a homologação ou o GitHub, também barra.
+trava_e2e() {
+	local commit
+	commit=$(homologacao 2>/dev/null)
+	[ -z "$commit" ] && { echo "não consegui ler o commit da homologação"; return 1; }
+	scripts/e2e-main.sh trava "$commit"
+}
+
 case "${1:-}" in
 	preparar)
+		if ! motivo=$(trava_e2e); then echo "BARRADA: $motivo. Nenhuma release sai de uma main vermelha (ADR-0006)."; fi
 		git fetch -q origin --tags
 		tag=$(git describe --tags --abbrev=0 origin/main)
 		homolog=$(homologacao)
@@ -51,6 +61,8 @@ case "${1:-}" in
 	disparar)
 		tipo=${2:-}
 		[[ "$tipo" =~ ^(minor|patch)$ ]] || { echo "use: scripts/release.sh disparar minor|patch"; exit 2; }
+		git fetch -q origin
+		if ! motivo=$(trava_e2e); then echo "Sem release: $motivo (ADR-0006)."; exit 1; fi
 		min=$(minutos_desde_release)
 		[ "$min" -lt 10 ] && { echo "Última release há $min min: espere o cache do Pages (10 min)."; exit 1; }
 		desde=$(date -u +%Y-%m-%dT%H:%M:%SZ)

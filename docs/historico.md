@@ -5,6 +5,24 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-06: e2e depois do merge, com travas para a main vermelha (ADR-0006)
+
+- O Pedro trouxe do Sonzeira, projeto irmão (PR #94 de lá), a ideia de os testes pesados deixarem de segurar o PR.
+  Medido aqui: em 64 rodadas o e2e levou 5,7 min na mediana, repetido a cada commit novo do PR, e falhou 5 vezes,
+  parte por teste instável; a CI normal leva 1,1 min e os testes de integração, 36 s, sem nenhuma falha em 60 rodadas.
+- Decidido com o Pedro: o e2e vai para depois do merge, num `e2e.yml` próprio que roda em cada push na `main` que mude
+  o app; os testes de integração continuam antes do merge e exigidos; antes do PR, roda localmente só o e2e da área
+  mexida e o `textos` (o `verificar.sh` passou a aceitar specs). O status `testes e2e` sai das checagens obrigatórias
+  da regra "main protegida", mudado logo depois do merge deste PR.
+- Travas, a pedido do Pedro ("é importante ter travas para a IA e para humanos"): a issue `e2e-main` que o workflow
+  abre e fecha sozinho; a linha "E2E main" no `situacao.sh`; o aviso no `pr.sh`; e a recusa da release no
+  `release.sh` e no `release.yml`, com a consulta única em `scripts/e2e-main.sh`. A diferença do Sonzeira: aqui a
+  release publica o commit da homologação, então a trava olha o e2e do último commit até ele que mexeu no que a
+  suíte testa, e recusa também uma rodada cancelada por um merge seguinte.
+- Testado: `actionlint` nos três workflows; a trava recusando sem o workflow no GitHub, com o `gh` sem credencial e
+  sem conseguir ler a homologação (o `disparar` sai antes de disparar); e liberando com uma rodada verde (com uma
+  cópia apontada para o `ci.yml`). A issue só abre e fecha na `main`: o primeiro merge que mude o app mostra.
+
 ## 2026-11-06: cadastro e PIN novos (item 26, etapa 3b)
 
 - Propostas comparadas com capturas do app; o Pedro aprovou as três telas e pediu a foto já no cadastro.

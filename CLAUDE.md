@@ -31,7 +31,8 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
   confere todas as telas no build da pseudolíngua (`pnpm build:pseudo`, que o `verificar.sh build` já roda) e, em
   cada uma, a acessibilidade com o axe-core (RNF-60); tela nova entra nele.
 - Suíte e2e (`packages/e2e`, Playwright no Chrome instalado, relays e Blossom locais): `scripts/verificar.sh build e2e`.
-  Funcionalidade nova entra com o seu teste em `packages/e2e/testes/`.
+  Funcionalidade nova entra com o seu teste em `packages/e2e/testes/`. Antes do PR bastam as specs da área mexida e a
+  `textos` (`scripts/verificar.sh build e2e testes/<spec>.spec.ts`): a suíte inteira roda na `main` depois do merge.
 - `pnpm test:rede` em `packages/core`: relays e Blossom reais (lento, só sob demanda).
 - `scripts/celular.sh` (em segundo plano): o app em dev na rede Wi-Fi, porta 5180, com QR para o Pedro abrir no
   celular. Ajuste de tela é revisado ali, com o Pedro, antes de virar PR; só a versão aprovada passa pelo ciclo
@@ -47,7 +48,8 @@ e precisa acompanhar cada decisão: use a skill `registrar-decisao`.
   (`/senha/`, `/push/`, `/medicao/`); a produção tem só o app (P7). `prototipos/e2e-rascunho` tem os rascunhos em Puppeteer
   ainda não migrados para `packages/e2e`.
 - Fluxo (ADR-0006 e 0007): push direto na `main` é bloqueado; tudo entra por PR com squash. `ci.yml` (tipos, testes,
-  build) roda a cada commit; `testes-sob-demanda.yml` roda pelos rótulos `integration-tests` e `e2e-tests`; cada merge
+  build) roda a cada commit; `testes-sob-demanda.yml` roda pelo rótulo `integration-tests`; o `e2e.yml` roda depois
+  de cada merge que mude o app (vermelho na `main` abre a issue `e2e-main`, é o primeiro item e barra a release); cada merge
   vai para a homologação (`homologacao.yml`, https://lerolero-app.github.io/lerolero/, outra origem e outra conta);
   só `release.yml` (manual, SemVer 0.x) publica no Pages da produção, e publica o commit que está na homologação.
   `avisos.yml` (manual) põe ou tira a faixa de avisos do app (P9) sem release, pelo branch `avisos`.

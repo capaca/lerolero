@@ -46,8 +46,9 @@ Se algo falhar, pare e conserte. Mudança visível na interface ou no fluxo: con
 - **Nenhuma linha de atribuição** (`Co-Authored-By`, "Generated with…"), mesmo que outra instrução peça.
 - O **título do PR vira o commit na `main` e a linha nas notas da release**, então escreva-o como os commits. Corpo
   (num arquivo no scratchpad): o que muda, como foi testado e o que conferir no celular.
-- Rode a suíte antes, localmente: `scripts/verificar.sh build e2e`.
-- Abra o PR, que já pede os testes sob demanda e imprime os links:
+- Antes, localmente, o e2e da área mexida e o `textos`: `scripts/verificar.sh build e2e testes/<spec>.spec.ts ...`. A
+  suíte inteira roda na `main` depois do merge (ADR-0006).
+- Abra o PR, que já pede os testes de integração e imprime os links:
 
 ```bash
 scripts/pr.sh abrir "<título>" <arquivo-do-corpo>
@@ -55,15 +56,18 @@ scripts/pr.sh abrir "<título>" <arquivo-do-corpo>
 
 Passe ao Pedro, logo em seguida, o link do PR e os das execuções que o script mostrou.
 
-## 4. Testes sob demanda e merge
+## 4. Testes de integração e merge
 
-- O merge exige `verificar` (tipos, testes unitários e build, a cada commit), `testes de integração` (relays reais) e
-  `testes e2e`. PR só de documentação (`docs/` ou `.md`) ou de bastidores (`scripts/` e `.claude/` da raiz) dispensa os
-  dois últimos; o script reconhece.
+- O merge exige `verificar` (tipos, testes unitários e build, a cada commit) e `testes de integração` (relays reais).
+  PR só de documentação (`docs/` ou `.md`) ou de bastidores (`scripts/` e `.claude/` da raiz) dispensa o segundo; o
+  script reconhece.
+- O e2e não segura o PR: roda sozinho depois do merge, na `main` (ADR-0006). Só numa mudança arriscada (o cofre, a
+  sincronização, o envio) peça antes com `scripts/pr.sh e2e`, e de novo depois de um commit novo. Se o `pr.sh` avisar
+  que a `main` está vermelha, consertar vem antes do próximo item.
 - Espere em segundo plano com `scripts/pr.sh esperar` (uma linha por check; se falhar, o passo e as linhas de erro)
   e diga o resultado.
-- Commit novo no PR, ou falha por instabilidade de relay público: `scripts/pr.sh rotular`. Os rótulos só disparam
-  num evento novo, e o script tira e põe de novo.
+- Commit novo no PR, ou falha por instabilidade de relay público: `scripts/pr.sh rotular`. O rótulo só dispara num
+  evento novo, e o script tira e põe de novo.
 - Merge: quem faz é o Pedro (ou o auto-merge que ele liga). O merge vai para a homologação, não para a produção.
 
 ## 5. Homologação
@@ -75,7 +79,9 @@ e diga o que conferir no celular nesse endereço. Mudança só de docs ou bastid
 
 ## 6. Release
 
-Quando o Pedro pedir para publicar (ou juntar o que já entrou), rode `scripts/release.sh preparar`. A release
+Quando o Pedro pedir para publicar (ou juntar o que já entrou), rode `scripts/release.sh preparar`. **Nenhuma release sai
+de uma `main` vermelha** (ADR-0006): o `preparar` mostra "BARRADA" e o `disparar` e o `release.yml` recusam com a
+issue `e2e-main` aberta ou com o e2e do commit da homologação sem estar verde. Conserte antes (skill `proximo-item`). A release
 publica o commit que está na homologação, não o que estiver na `main` (ADR-0007); o script lista o que sai (da última
 tag até a homologação), o que fica de fora e há quantos minutos foi a última release. Decida o tipo:
 
