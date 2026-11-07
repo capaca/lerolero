@@ -1,19 +1,23 @@
 <script lang="ts">
 	import { goto, replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { phraseFromFragment, phraseFromRecoveryText } from '@lerolero/core';
-	import { onMount, tick } from 'svelte';
+	import { parsePhrase, phraseFromFragment, phraseFromRecoveryText } from '@lerolero/core';
+	import { onMount } from 'svelte';
+	import NewPin from '#lib/components/NewPin.svelte';
 	import { canReadSavedPhrase, savedPhrase } from '#lib/components/PasswordSave.svelte';
 	import PhraseInput from '#lib/components/PhraseInput.svelte';
-	import PinInput from '#lib/components/PinInput.svelte';
+	import StepHeader from '#lib/components/StepHeader.svelte';
 	import { friendlyError } from '#lib/errors.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
+	// frase → PIN → confirmação, um por vez, como no cadastro (item 26); o nome só se não houver backup (RF-06)
+	type Step = 'frase' | 'pin' | 'recuperando';
+	let step = $state<Step>('frase');
+	let confirming = $state(false);
+	let newPin = $state<NewPin>();
 	let phrase = $state('');
 	let name = $state('');
-	let pin = $state('');
-	let pinAgain = $state('');
 	let busy = $state(false);
 	let error = $state('');
 	/** frase aceita sem backup com o nome (RF-06): falta só o nome; o motivo muda o aviso */
@@ -29,7 +33,8 @@
 		if (!words) return;
 		phrase = words.join(' ');
 		fromFile = true;
-		void tick().then(() => document.getElementById('pin')?.focus());
+		error = '';
+		step = 'pin';
 	}
 
 	onMount(() => {
@@ -59,30 +64,35 @@
 		if (saved) fill(saved.trim().split(/\s+/));
 	}
 
-	// PIN em dois campos: completar o 1º pula para o 2º; se não bater, treme e apaga o 2º
-	let pinAgainInput = $state<PinInput>();
-	let pinShakes = $state(0);
-	function pinMismatch() {
-		error = m.comum_pins_diferentes();
-		pinAgain = '';
-		pinShakes++;
-		navigator.vibrate?.(150);
-		void pinAgainInput?.focus();
+	// a frase é conferida antes do PIN, para o erro aparecer ao lado dela
+	function submitPhrase(event: SubmitEvent) {
+		event.preventDefault();
+		try {
+			parsePhrase(phrase);
+		} catch (err) {
+			return void (error = friendlyError(err));
+		}
+		error = '';
+		fromFile = false;
+		step = 'pin';
 	}
 
-	async function submit(event: SubmitEvent) {
-		event.preventDefault();
-		if (pin !== pinAgain) return pinMismatch();
-		busy = true;
-		error = '';
+	function back() {
+		if (confirming) newPin?.reset();
+		else step = 'frase';
+	}
+
+	async function recover(pin: string) {
+		step = 'recuperando';
 		try {
 			const result = await session.restore(phrase, pin);
 			if (result !== 'pronto') return void (missingName = result);
 			await goto(resolve('/'));
 		} catch (err) {
+			// o que falha aqui vem da frase (o PIN acabou de ser criado): volta para ela, com o erro
 			error = friendlyError(err);
-		} finally {
-			busy = false;
+			fromFile = false;
+			step = 'frase';
 		}
 	}
 
@@ -103,9 +113,9 @@
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.restaurar_titulo_pagina() })}</title></svelte:head>
 
-<main>
-	<h1>{m.restaurar_titulo()}</h1>
+<main class:flow={!missingName}>
 	{#if missingName}
+		<h1>{m.restaurar_titulo()}</h1>
 		<p class="hint">{missingName === 'sem-rede' ? m.restaurar_backup_depois() : m.restaurar_sem_backup()}</p>
 		<form onsubmit={submitName}>
 			<label for="nome">{m.comum_seu_nome()}</label>
@@ -117,12 +127,10 @@
 				<button class="primary" type="submit" disabled={busy}>{m.restaurar_entrar()}</button>
 			</div>
 		</form>
-	{:else}
-		{#if fromFile}
-			<p role="status">{m.restaurar_do_arquivo()}</p>
-		{:else}
-			<p class="hint">{m.restaurar_dica()}</p>
-		{/if}
+	{:else if step === 'frase'}
+		<StepHeader current={1} total={2} href={resolve('/bem-vindo')} />
+		<h1>{m.restaurar_titulo()}</h1>
+		<p class="hint">{m.restaurar_dica()}</p>
 		<div class="actions file">
 			{#if canUseSaved}<button type="button" onclick={useSaved}>{m.restaurar_usar_senha()}</button>{/if}
 			<button type="button" onclick={() => fileInput?.click()}>{m.restaurar_abrir_arquivo()}</button>
@@ -130,23 +138,29 @@
 		</div>
 		{#if fileError}<p class="error" role="alert">{m.restaurar_arquivo_invalido()}</p>{/if}
 		{#if savedMissing}<p class="error" role="alert">{m.restaurar_senha_nada()}</p>{/if}
-		<form onsubmit={submit}>
+		<form onsubmit={submitPhrase}>
 			<PhraseInput id="frase" bind:value={phrase} />
-			<PinInput id="pin" label={m.restaurar_pin_rotulo()} bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
-			<PinInput
-				bind:this={pinAgainInput}
-				id="pin2"
-				label={m.comum_pin_repetir()}
-				bind:value={pinAgain}
-				error={!!error && !pinAgain}
-				shakes={pinShakes}
-				oncomplete={() => pin !== pinAgain && pinMismatch()}
-			/>
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
-			<div class="actions">
-				<button class="primary" type="submit" disabled={busy}>{busy ? m.restaurar_recuperando() : m.restaurar_recuperar()}</button>
-				<a href={resolve('/bem-vindo')}>{m.comum_voltar()}</a>
-			</div>
+			<div class="bottom"><button class="primary" type="submit">{m.comum_continuar()}</button></div>
+		</form>
+	{:else}
+		<StepHeader current={2} total={2} onback={back} disabled={step === 'recuperando'} />
+		<h1>{confirming ? m.comum_pin_repetir() : m.cadastro_pin_titulo()}</h1>
+		{#if fromFile && !confirming}
+			<p class="hint" role="status">{m.restaurar_do_arquivo()}</p>
+		{:else}
+			<p class="hint">{confirming ? m.cadastro_pin_confirmar_dica() : m.restaurar_pin_dica()}</p>
+		{/if}
+		<form onsubmit={(event) => event.preventDefault()}>
+			<NewPin
+				bind:this={newPin}
+				bind:confirming
+				label={m.cadastro_pin_rotulo()}
+				confirmLabel={m.comum_pin_repetir()}
+				disabled={step === 'recuperando'}
+				onconfirm={recover}
+			/>
+			{#if step === 'recuperando'}<p class="hint center" role="status">{m.restaurar_recuperando()}</p>{/if}
 		</form>
 	{/if}
 </main>

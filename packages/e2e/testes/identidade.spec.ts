@@ -133,6 +133,54 @@ test('recuperar a conta com a frase em outro aparelho dá a mesma chave', async 
 	await expect(outro.locator('.key')).toHaveText(chave!);
 });
 
+test('recuperar e esqueci o PIN: a frase conferida antes, depois o PIN um por vez; a seta volta um passo', async ({ novaPessoa, novoAparelho }) => {
+	const { page } = await novaPessoa('Maria');
+	const frase = await verFrase(page);
+
+	// recuperar: a frase errada avisa ainda no passo 1
+	const outro = await novoAparelho();
+	await outro.goto('./restaurar');
+	await expect(outro.getByText('Passo 1 de 2')).toBeVisible();
+	await outro.locator('#frase').fill(frase.slice(0, 11).join(' '));
+	await outro.getByRole('button', { name: 'Continuar' }).click();
+	await expect(outro.getByRole('alert')).toBeVisible();
+	await expect(outro.getByText('Passo 1 de 2')).toBeVisible();
+
+	// a certa: PIN, confirmação diferente volta ao começo; a seta da confirmação volta ao PIN e a do PIN, à frase
+	await outro.locator('#frase').fill(frase.join(' '));
+	await outro.getByRole('button', { name: 'Continuar' }).click();
+	await expect(outro.getByText('Passo 2 de 2')).toBeVisible();
+	await expect(outro.locator('#pin')).toBeFocused();
+	await outro.keyboard.type(PIN);
+	await expect(outro.getByRole('heading', { name: 'Digite o PIN de novo' })).toBeVisible();
+	await outro.keyboard.type('654321');
+	await expect(outro.getByText('Os dois PINs não são iguais')).toBeVisible();
+	await expect(outro.getByRole('heading', { name: 'Crie um PIN de 6 números' })).toBeVisible();
+	await outro.keyboard.type(PIN);
+	await outro.getByRole('button', { name: 'Voltar' }).click();
+	await expect(outro.getByRole('heading', { name: 'Crie um PIN de 6 números' })).toBeVisible();
+	await outro.getByRole('button', { name: 'Voltar' }).click();
+	await expect(outro.locator('#frase')).toHaveValue(frase.join(' '));
+	await outro.getByRole('button', { name: 'Continuar' }).click();
+	await digitarPin(outro, 'pin', PIN);
+	await outro.keyboard.type(PIN);
+	await noInicio(outro);
+
+	// esqueci o PIN: a mesma sequência, e o PIN novo abre o app
+	await vencerSessao(page);
+	await page.goto('./');
+	await expect(page).toHaveURL(/\/desbloquear$/, { timeout: 20_000 });
+	await page.locator('a.forgot').click();
+	await expect(page.getByText('Passo 1 de 2')).toBeVisible();
+	await page.locator('#frase').fill(frase.join(' '));
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	await expect(page.getByRole('heading', { name: 'Crie um PIN novo' })).toBeVisible();
+	await digitarPin(page, 'pin', '246810');
+	await expect(page.getByRole('heading', { name: 'Digite o PIN novo de novo' })).toBeVisible();
+	await page.keyboard.type('246810');
+	await noInicio(page);
+});
+
 test('armazenamento persistente (T19): pede ao entrar, tenta de novo só depois de um dia e para quando concedido', async ({ novoAparelho }) => {
 	const page = await novoAparelho();
 	// o Chrome nega no cadastro; o teste conta os pedidos e controla a resposta
