@@ -38,7 +38,7 @@ test('primeiro contato: o arquivo protege a conta, e o link dele restaura em out
 	const [maria, joao] = await Promise.all([novaPessoa('Maria'), novaPessoa('João')]);
 	await abrirAjustes(joao.page);
 	const chave = await joao.page.locator('.key').textContent();
-	await expect(joao.page.getByRole('link', { name: /Proteção da conta · falta proteger/ })).toBeVisible();
+	await expect(joao.page.getByRole('link', { name: /Proteção da conta.*falta proteger/ })).toBeVisible();
 
 	await joao.page.goto(await meuConvite(maria.page));
 	await joao.page.getByRole('button', { name: 'Adicionar' }).click();
@@ -66,7 +66,7 @@ test('primeiro contato: o arquivo protege a conta, e o link dele restaura em out
 	await noInicio(joao.page);
 	await expect(joao.page.getByText('Você ainda não guardou sua frase de recuperação.')).toHaveCount(0);
 	await abrirAjustes(joao.page);
-	await expect(joao.page.getByRole('link', { name: /Proteção da conta · protegida/ })).toBeVisible();
+	await expect(joao.page.getByRole('link', { name: /Proteção da conta.*protegida/ })).toBeVisible();
 
 	// o link do arquivo num aparelho novo: as palavras chegam prontas e saem do endereço
 	const outro = await novoAparelho();

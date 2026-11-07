@@ -22,6 +22,7 @@
 	// formulário de nome e código que é enviado e some. Medido no Motorola, no PWA instalado (2026-10-29). O app não sabe
 	// se a pessoa aceitou o "Salvar senha?"; por isso, como no arquivo, a conta só fica protegida quando ela confirma.
 	import { resolve } from '$app/paths';
+	import Icon from './Icon.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
@@ -66,21 +67,24 @@
 </script>
 
 <section class="password">
-	<p>{m.senha_dica()}</p>
 	{#if !asked}
 		{#if native}
-			<div class="actions stack">
-				<button class="primary" disabled={busy} onclick={store}>{m.senha_guardar()}</button>
-			</div>
+			<button class="option best" disabled={busy} onclick={store}>
+				<span class="option-icon"><Icon name="key" /></span>
+				<span class="option-text"><span class="option-tag">{m.senha_mais_facil()}</span><b>{m.senha_guardar()}</b><small>{m.senha_dica_curta()}</small></span>
+				<Icon name="chevron-right" size={18} />
+			</button>
 		{:else}
 			<form onsubmit={submit}>
 				<label for="senha-conta">{m.senha_rotulo_conta()}</label>
 				<input id="senha-conta" name="username" autocomplete="username" value={account} />
 				<label for="senha-codigo">{m.senha_rotulo_codigo()}</label>
 				<input id="senha-codigo" name="password" type="password" autocomplete="new-password" value={phrase} />
-				<div class="actions stack">
-					<button class="primary" type="submit" disabled={busy}>{m.senha_guardar()}</button>
-				</div>
+				<button class="option best" type="submit" disabled={busy}>
+					<span class="option-icon"><Icon name="key" /></span>
+					<span class="option-text"><span class="option-tag">{m.senha_mais_facil()}</span><b>{m.senha_guardar()}</b><small>{m.senha_dica_curta()}</small></span>
+					<Icon name="chevron-right" size={18} />
+				</button>
 			</form>
 		{/if}
 		{#if error}<p class="error" role="alert">{m.senha_erro({ erro: error })}</p>{/if}
@@ -97,8 +101,6 @@
 
 <style>
 	.password {
-		border-bottom: 1px solid var(--line);
-		padding-bottom: 1rem;
-		margin-bottom: 1rem;
+		margin: 1rem 0 0.6rem;
 	}
 </style>

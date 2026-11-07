@@ -5,6 +5,7 @@
 	// Usado em "Guarde seu código" e em "Proteção da conta".
 	import { resolve } from '$app/paths';
 	import { numberedWords, recoveryFragment } from '@lerolero/core';
+	import Icon from './Icon.svelte';
 	import QrCode from './QrCode.svelte';
 	import Rich from './Rich.svelte';
 	import { m } from '#lib/paraglide/messages.js';
@@ -62,12 +63,32 @@
 	}
 </script>
 
-<p><Rich text={m.arquivo_dica()} /></p>
-<div class="actions stack">
-	<button class={ready ? '' : 'primary'} onclick={download}>{m.arquivo_salvar()}</button>
-	{#if canShareFiles}<button disabled={sharing} onclick={share}>{m.arquivo_compartilhar()}</button>{/if}
-	<button onclick={print}>{m.arquivo_imprimir()}</button>
-	{#if onwrite}<button class="link" onclick={onwrite}>{m.arquivo_anotar()}</button>{/if}
+<!-- cada jeito de guardar é uma opção, com uma linha dizendo onde a frase fica (item 26) -->
+<div class="options">
+	<button class="option" onclick={download}>
+		<span class="option-icon"><Icon name="file" /></span>
+		<span class="option-text"><b>{m.arquivo_salvar()}</b><small>{m.arquivo_salvar_dica()}</small></span>
+		<Icon name="chevron-right" size={18} />
+	</button>
+	{#if canShareFiles}
+		<button class="option" disabled={sharing} onclick={share}>
+			<span class="option-icon"><Icon name="share" /></span>
+			<span class="option-text"><b>{m.arquivo_compartilhar()}</b><small>{m.arquivo_compartilhar_dica()}</small></span>
+			<Icon name="chevron-right" size={18} />
+		</button>
+	{/if}
+	<button class="option" onclick={print}>
+		<span class="option-icon"><Icon name="printer" /></span>
+		<span class="option-text"><b>{m.arquivo_imprimir()}</b><small>{m.arquivo_imprimir_dica()}</small></span>
+		<Icon name="chevron-right" size={18} />
+	</button>
+	{#if onwrite}
+		<button class="option" onclick={onwrite}>
+			<span class="option-icon"><Icon name="pencil" /></span>
+			<span class="option-text"><b>{m.arquivo_anotar()}</b><small>{m.arquivo_anotar_dica()}</small></span>
+			<Icon name="chevron-right" size={18} />
+		</button>
+	{/if}
 </div>
 {#if shareError}<p class="error" role="alert">{m.arquivo_compartilhar_erro({ erro: shareError })}</p>{/if}
 {#if ready}

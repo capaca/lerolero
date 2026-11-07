@@ -170,6 +170,65 @@ a.block {
 	padding: 1rem;
 	margin: 1rem 0;
 }
+/* escolha entre jeitos de fazer algo (item 26): ícone, título, uma linha de explicação e a seta */
+.option {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	width: 100%;
+	padding: 0.8rem;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	background: var(--surface);
+	color: var(--fg);
+	text-align: left;
+	font-weight: 400;
+}
+.option-icon {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: 2.75rem;
+	height: 2.75rem;
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+	color: var(--accent);
+}
+.option-text {
+	display: grid;
+	flex: 1;
+	min-width: 0;
+}
+.option-text b {
+	font-weight: 700;
+}
+.option-text small {
+	color: var(--muted);
+	font-size: 0.85rem;
+}
+.option > svg:last-child {
+	flex: none;
+	color: var(--muted);
+}
+.option.best {
+	border: 2px solid var(--accent);
+}
+.option.best .option-icon {
+	background: var(--accent);
+	color: var(--accent-fg);
+}
+.option-tag {
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--accent);
+}
+.options {
+	display: grid;
+	gap: 0.6rem;
+	margin: 1rem 0;
+}
 .banner {
 	background: var(--warn-bg);
 	color: var(--warn-fg);

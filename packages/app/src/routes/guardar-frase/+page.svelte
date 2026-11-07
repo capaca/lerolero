@@ -52,7 +52,6 @@
 		<h1>{m.frase_guardar_titulo()}</h1>
 		<PhraseReveal
 			label={m.protecao_pin_rotulo()}
-			action={m.comum_continuar()}
 			onrevealed={(w) => {
 				words = w;
 				step = 'arquivo';
