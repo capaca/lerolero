@@ -1,67 +1,79 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { parsePhrase } from '@lerolero/core';
+	import NewPin from '#lib/components/NewPin.svelte';
 	import PhraseInput from '#lib/components/PhraseInput.svelte';
-	import PinInput from '#lib/components/PinInput.svelte';
+	import StepHeader from '#lib/components/StepHeader.svelte';
 	import { friendlyError } from '#lib/errors.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
+	// frase → PIN novo → confirmação, um por vez, como no cadastro (item 26)
+	type Step = 'frase' | 'pin' | 'trocando';
+	let step = $state<Step>('frase');
+	let confirming = $state(false);
+	let newPin = $state<NewPin>();
 	let phrase = $state('');
-	let pin = $state('');
-	let pinAgain = $state('');
-	let busy = $state(false);
 	let error = $state('');
 
-	// PIN em dois campos: completar o 1º pula para o 2º; se não bater, treme e apaga o 2º
-	let pinAgainInput = $state<PinInput>();
-	let pinShakes = $state(0);
-	function pinMismatch() {
-		error = m.comum_pins_diferentes();
-		pinAgain = '';
-		pinShakes++;
-		navigator.vibrate?.(150);
-		void pinAgainInput?.focus();
+	// a frase é conferida antes do PIN, para o erro aparecer ao lado dela
+	function submitPhrase(event: SubmitEvent) {
+		event.preventDefault();
+		try {
+			parsePhrase(phrase);
+		} catch (err) {
+			return void (error = friendlyError(err));
+		}
+		error = '';
+		step = 'pin';
 	}
 
-	async function submit(event: SubmitEvent) {
-		event.preventDefault();
-		if (pin !== pinAgain) return pinMismatch();
-		busy = true;
-		error = '';
+	function back() {
+		if (confirming) newPin?.reset();
+		else step = 'frase';
+	}
+
+	async function change(pin: string) {
+		step = 'trocando';
 		try {
 			await session.resetPin(phrase, pin);
 			await goto(resolve('/'));
 		} catch (err) {
+			// o que falha aqui vem da frase (de outra conta, por exemplo): volta para ela, com o erro
 			error = friendlyError(err);
-		} finally {
-			busy = false;
+			step = 'frase';
 		}
 	}
 </script>
 
 <svelte:head><title>{m.titulo_pagina({ pagina: m.esqueci_titulo() })}</title></svelte:head>
 
-<main>
-	<h1>{m.esqueci_titulo()}</h1>
-	<p class="hint">{m.esqueci_dica()}</p>
-	<form onsubmit={submit}>
-		<PhraseInput id="frase" bind:value={phrase} />
-		<PinInput id="pin" label={m.esqueci_pin_rotulo()} bind:value={pin} oncomplete={() => pinAgainInput?.focus()} />
-		<PinInput
-			bind:this={pinAgainInput}
-			id="pin2"
-			label={m.esqueci_pin_repetir()}
-			bind:value={pinAgain}
-			error={!!error && !pinAgain}
-			shakes={pinShakes}
-			oncomplete={() => pin !== pinAgain && pinMismatch()}
-		/>
-		{#if error}<p class="error" role="alert">{error}</p>{/if}
-		<div class="actions">
-			<button class="primary" type="submit" disabled={busy}>{busy ? m.esqueci_trocando() : m.esqueci_trocar()}</button>
-			<a href={resolve('/desbloquear')}>{m.comum_voltar()}</a>
-		</div>
-	</form>
-	<p class="hint">{m.esqueci_sem_frase()}</p>
+<main class="flow">
+	{#if step === 'frase'}
+		<StepHeader current={1} total={2} href={resolve('/desbloquear')} />
+		<h1>{m.esqueci_titulo()}</h1>
+		<p class="hint">{m.esqueci_dica()}</p>
+		<form onsubmit={submitPhrase}>
+			<PhraseInput id="frase" bind:value={phrase} />
+			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			<p class="hint">{m.esqueci_sem_frase()}</p>
+			<div class="bottom"><button class="primary" type="submit">{m.comum_continuar()}</button></div>
+		</form>
+	{:else}
+		<StepHeader current={2} total={2} onback={back} disabled={step === 'trocando'} />
+		<h1>{confirming ? m.esqueci_pin_repetir() : m.esqueci_pin_titulo()}</h1>
+		<p class="hint">{confirming ? m.cadastro_pin_confirmar_dica() : m.cadastro_pin_dica()}</p>
+		<form onsubmit={(event) => event.preventDefault()}>
+			<NewPin
+				bind:this={newPin}
+				bind:confirming
+				label={m.cadastro_pin_rotulo()}
+				confirmLabel={m.esqueci_pin_repetir()}
+				disabled={step === 'trocando'}
+				onconfirm={change}
+			/>
+			{#if step === 'trocando'}<p class="hint center" role="status">{m.esqueci_trocando()}</p>{/if}
+		</form>
+	{/if}
 </main>

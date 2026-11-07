@@ -26,11 +26,11 @@ const simularCompartilhar = (page: Page, jeito: 'ok' | 'cancelar' | 'erro' | 'pe
 
 const palavrasDo = (texto: string) => [...texto.matchAll(/^\d+\. (\p{L}+)$/gmu)].map(([, p]) => p!);
 
-/** Termina a restauração aberta (pelo link ou pelo arquivo): o PIN novo duas vezes. */
+/** Termina a restauração aberta (pelo link ou pelo arquivo): já no PIN novo, ele e a confirmação, sem botão. */
 async function criarPinERecuperar(page: Page, pin = '246810') {
+	await expect(page.getByText('Passo 2 de 2')).toBeVisible();
 	await digitarPin(page, 'pin', pin);
 	await page.keyboard.type(pin);
-	await page.getByRole('button', { name: 'Recuperar conta' }).click();
 	await noInicio(page);
 }
 
@@ -72,7 +72,7 @@ test('primeiro contato: o arquivo protege a conta, e o link dele restaura em out
 	const outro = await novoAparelho();
 	await outro.goto(link);
 	await expect(outro.getByText('As palavras da sua frase de recuperação já estão aqui.', { exact: false })).toBeVisible({ timeout: 20_000 });
-	await expect(outro.locator('#frase')).toHaveValue(palavras.join(' '));
+	// as palavras certas: a chave no fim é a mesma
 	expect(new URL(outro.url()).hash).toBe('');
 	await criarPinERecuperar(outro);
 	await abrirAjustes(outro);
@@ -140,7 +140,7 @@ test('Proteção da conta: cancelar não protege; o cartão sai na impressão; o
 	await escolher({ name: 'compras.txt', mimeType: 'text/plain', buffer: Buffer.from('arroz\nfeijão\n') });
 	await expect(outro.getByText('Não achamos as 12 palavras neste arquivo.', { exact: false })).toBeVisible();
 	await escolher(caminho);
-	await expect(outro.locator('#frase')).toHaveValue(/^(\p{L}+ ){11}\p{L}+$/u);
+	await expect(outro.getByText('As palavras da sua frase de recuperação já estão aqui.', { exact: false })).toBeVisible();
 	await expect(outro.getByText('Não achamos as 12 palavras neste arquivo.', { exact: false })).toHaveCount(0);
 	await criarPinERecuperar(outro);
 	await abrirAjustes(outro);
@@ -201,7 +201,7 @@ test('gerenciador de senhas: guardar protege a conta, e a frase salva restaura e
 	await simularGerenciador(outro, guardado.password);
 	await outro.goto('./restaurar');
 	await outro.getByRole('button', { name: 'Usar a frase salva no navegador' }).click();
-	await expect(outro.locator('#frase')).toHaveValue(guardado.password);
+	await expect(outro.getByText('As palavras da sua frase de recuperação já estão aqui.', { exact: false })).toBeVisible();
 	await criarPinERecuperar(outro);
 	await abrirAjustes(outro);
 	await expect(outro.locator('.key')).toHaveText(chave!);
