@@ -55,7 +55,15 @@ de onde vem a interface.
   [modelo de ameaças](../02-modelo-de-ameacas.md) quando a etapa do push for feita.
 - Cada release do app gera um APK; o testador precisa atualizar (o aviso no app e o Obtainium ajudam).
 - Quem já usa o PWA restaura a conta no app; as conversas antigas não vêm junto (não há multi-dispositivo).
-- Risco a conferir antes da etapa do APK assinado: o Google anunciou em 2025 a verificação de desenvolvedor também
-  para APK instalado fora da Play, começando pelo Brasil em setembro de 2026. Se ela já valer, o APK precisa vir de
-  uma conta verificada (e ver se há custo), senão o Android certificado não o instala.
+- Verificação de desenvolvedor do Google, conferida em 2026-11-07: no Brasil, desde 2026-09-30, ela só barra
+  instalações vindas de lojas (Play, Galaxy Store, Xiaomi e outras de fabricantes). O APK baixado do GitHub Releases
+  ou pelo Obtainium instala como antes. Em 2027, sem data marcada, passa a valer para todo APK num Android
+  certificado. A partir daí, um APK sem registro só instala depois do "fluxo avançado", que se faz uma vez: modo
+  desenvolvedor, reiniciar o celular e esperar 24 h. Decidido em 2026-11-07: a etapa do APK assinado segue **sem
+  conta no Google**. A conta completa no Android Developer Console (US$ 25 e documento) fica para antes da regra
+  global e entra na revisão de prontidão (item 23). Até lá, a chave de assinatura fica guardada com cópia segura,
+  porque o registro do pacote vai pedir um APK assinado por ela. Rejeitadas: abrir a conta completa já (custo e
+  cadastro antes de precisar) e a distribuição limitada (grátis, mas no máximo 20 aparelhos, sem folga para o
+  beta). O pacote continua `io.github.capaca.lerolero`, que não depende do domínio (Q-N1). Rejeitado esperar o
+  `.com.br` para trocar de pacote: o nome não aparece para quem usa o app, e a etapa ficaria parada.
 - Rever se o beta mostrar que instalar o APK é um obstáculo grande: aí a Play (US$ 25) volta à mesa.

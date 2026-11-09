@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+// Versão do APK a partir da release (ADR-0011): APP_RELEASE=0.18.0 vira versionName "0.18.0" e versionCode 18000,
+// que só cresce, para o Android aceitar instalar a versão nova por cima. Fora da release, "1.0".
+def appRelease = System.getenv('APP_RELEASE') ?: ''
+def semver = appRelease =~ /^(\d+)\.(\d+)\.(\d+)$/
+def releaseCode = semver.matches() ? semver.group(1).toInteger() * 1000000 + semver.group(2).toInteger() * 1000 + semver.group(3).toInteger() : 1
+
 android {
     namespace = "io.github.capaca.lerolero"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,13 +13,24 @@ android {
         applicationId "io.github.capaca.lerolero"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode releaseCode
+        versionName semver.matches() ? appRelease : "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // A chave do APK de verdade vem dos secrets da release (scripts/chave.sh). A mesma chave em todas as versões: com
+    // outra, o Android não instala por cima e a pessoa teria de desinstalar (perdendo a conta). O registro do pacote
+    // no Google (antes da regra de 2027) também pede um APK assinado por ela.
+    signingConfigs {
+        release {
+            storeFile System.getenv('APK_CHAVE') ? file(System.getenv('APK_CHAVE')) : null
+            storePassword System.getenv('APK_CHAVE_SENHA')
+            keyAlias 'lerolero'
+            keyPassword System.getenv('APK_CHAVE_SENHA')
         }
     }
     buildTypes {
@@ -23,6 +40,7 @@ android {
             versionNameSuffix "-homologacao"
         }
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

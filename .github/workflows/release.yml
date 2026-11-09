@@ -2,8 +2,8 @@ name: Release
 
 # Única forma de pôr o app no ar. Disparo manual no Actions (ou `gh workflow run release.yml -f tipo=minor`):
 # pega o commit que está na homologação (ADR-0007: o que o Pedro conferiu, não o que estiver na main), calcula a
-# versão a partir da última tag (SemVer 0.x até o beta), verifica, monta o site, publica no GitHub Pages e só
-# então cria a tag e a Release com as notas geradas dos PRs.
+# versão a partir da última tag (SemVer 0.x até o beta), verifica, monta o site e o APK assinado, publica no GitHub
+# Pages e só então cria a tag e a Release com as notas geradas dos PRs e o APK.
 
 on:
   workflow_dispatch:
@@ -100,8 +100,49 @@ jobs:
         with:
           path: site
 
-  publicar:
+  # O APK assinado da mesma versão (ADR-0011), anexado à Release. Vem antes de publicar: APK quebrado barra a release
+  # inteira, em vez de deixar o site numa versão e o app Android sem ela. A chave fica no ambiente `apk`, que só a
+  # main usa (packages/android/scripts/chave.sh).
+  apk:
     needs: montar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: apk
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.montar.outputs.commit }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: pnpm install --frozen-lockfile
+      - name: Interface e APK assinado
+        working-directory: packages/android
+        run: |
+          [ -n "$CHAVE" ] || { echo "::error::Falta a chave do APK no ambiente apk: rode packages/android/scripts/chave.sh"; exit 1; }
+          printf %s "$CHAVE" | base64 -d > "$RUNNER_TEMP/chave.p12"
+          APK_CHAVE="$RUNNER_TEMP/chave.p12" pnpm apk:release
+          mv android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/lerolero.apk"
+          rm "$RUNNER_TEMP/chave.p12"
+        env:
+          APP_RELEASE: ${{ needs.montar.outputs.versao }}
+          CHAVE: ${{ secrets.APK_CHAVE_BASE64 }}
+          APK_CHAVE_SENHA: ${{ secrets.APK_CHAVE_SENHA }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: ${{ runner.temp }}/lerolero.apk
+          retention-days: 7
+
+  publicar:
+    needs: [montar, apk]
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -154,7 +195,11 @@ jobs:
       VERSAO: ${{ needs.montar.outputs.versao }}
       COMMIT: ${{ needs.montar.outputs.commit }}
     steps:
-      - name: Cria a tag e a Release
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk
+      # o APK com nome fixo: o aviso no app e o Obtainium acham sempre o mesmo arquivo na última Release
+      - name: Cria a tag e a Release, com o APK
         run: |
           gh release create "v$VERSAO" -R "$GITHUB_REPOSITORY" --target "$COMMIT" \
-            --title "Lero-lero $VERSAO" --generate-notes
+            --title "Lero-lero $VERSAO" --generate-notes lerolero.apk

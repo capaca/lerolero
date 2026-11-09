@@ -6,7 +6,8 @@
 	"type": "module",
 	"scripts": {
 		"sync": "pnpm --filter @lerolero/app build:nativo && cap sync android",
-		"apk": "pnpm sync && cd android && ./gradlew assembleDebug"
+		"apk": "pnpm sync && cd android && ./gradlew assembleDebug",
+		"apk:release": "pnpm sync && cd android && ./gradlew assembleRelease"
 	},
 	"dependencies": {
 		"@capacitor/android": "8.6.0",
