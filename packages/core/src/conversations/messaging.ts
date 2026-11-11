@@ -314,9 +314,12 @@ async function storePendingMessageNow(storage: Storage, message: MessageRecord):
 }
 
 /** Um relay aceitou: "pendente" vira "enviada". */
-export async function markSent(storage: Storage, messageId: string) {
+/** Devolve a conversa da mensagem, se ela mudou. */
+export async function markSent(storage: Storage, messageId: string): Promise<string | undefined> {
 	const message = await storage.messages.get(messageId);
-	if (message?.status === 'pendente') await storage.messages.put({ ...message, status: 'enviada' });
+	if (message?.status !== 'pendente') return undefined;
+	await storage.messages.put({ ...message, status: 'enviada' });
+	return message.conversationId;
 }
 
 async function markReadNow(storage: Storage, conversationId: string) {

@@ -62,9 +62,9 @@ describe('reações (RF-23)', () => {
 			return { id: wrapped.rumor.id, stored: await storeReaction(alice.storage, alice.publicKey, alice.vault.unwrap(wrapped.toRecipient)) };
 		};
 		const first = await react('👍', 1000);
-		expect(first.stored).toBe(true);
-		expect((await react('❤️', 2000)).stored).toBe(true);
-		expect((await react('😂', 1500)).stored).toBe(false); // chegou fora de ordem
+		expect(first.stored).toBe(directConversationId(bob.publicKey));
+		expect((await react('❤️', 2000)).stored).toBe(directConversationId(bob.publicKey));
+		expect((await react('😂', 1500)).stored).toBeUndefined(); // chegou fora de ordem
 		const list = await alice.storage.reactions.listByConversation(directConversationId(bob.publicKey));
 		expect(list.map((r) => r.emoji)).toEqual(['❤️']);
 	});
@@ -77,9 +77,9 @@ describe('reações (RF-23)', () => {
 		await storeReaction(alice.storage, alice.publicKey, alice.vault.unwrap(wrapped.toRecipient));
 
 		const forged = carol.vault.wrapDirectMessage(alice.publicKey, '', [['e', wrapped.rumor.id]], 5);
-		expect(await removeReactions(alice.storage, alice.vault.unwrap(forged.toRecipient))).toBe(false);
+		expect(await removeReactions(alice.storage, alice.vault.unwrap(forged.toRecipient))).toEqual([]);
 		const undo = bob.vault.wrapDirectMessage(alice.publicKey, '', [['e', wrapped.rumor.id]], 5);
-		expect(await removeReactions(alice.storage, alice.vault.unwrap(undo.toRecipient))).toBe(true);
+		expect(await removeReactions(alice.storage, alice.vault.unwrap(undo.toRecipient))).toEqual([directConversationId(bob.publicKey)]);
 		expect(await alice.storage.reactions.get(wrapped.rumor.id)).toBeUndefined();
 	});
 
@@ -88,10 +88,10 @@ describe('reações (RF-23)', () => {
 		await befriend(alice, bob);
 		const msg = await say(alice, bob, 'oi');
 		const stranger = carol.vault.wrapDirectMessage(alice.publicKey, '👍', reactionTags({ id: msg.id, kind: 14 }), REACTION_KIND);
-		expect(await storeReaction(alice.storage, alice.publicKey, alice.vault.unwrap(stranger.toRecipient))).toBe(false);
+		expect(await storeReaction(alice.storage, alice.publicKey, alice.vault.unwrap(stranger.toRecipient))).toBeUndefined();
 		await alice.storage.contacts.put({ publicKey: bob.publicKey, state: 'bloqueado', dmRelays: [], addedAt: 0 });
 		const blocked = bob.vault.wrapDirectMessage(alice.publicKey, '👍', reactionTags({ id: msg.id, kind: 14 }), REACTION_KIND);
-		expect(await storeReaction(alice.storage, alice.publicKey, alice.vault.unwrap(blocked.toRecipient))).toBe(false);
+		expect(await storeReaction(alice.storage, alice.publicKey, alice.vault.unwrap(blocked.toRecipient))).toBeUndefined();
 	});
 
 	it('apagar a mensagem leva as reações junto', async () => {
@@ -123,10 +123,10 @@ describe('confirmações de entrega e leitura (RF-50, 51)', () => {
 		const msg = await say(alice, bob, 'oi');
 		const read = (w: ReturnType<typeof confirm>, readReceipts = true) =>
 			storeReceipt(alice.storage, alice.publicKey, alice.vault.unwrap(w.toRecipient), { readReceipts });
-		expect(await read(confirm(bob, alice, [msg.id], 'entregue'))).toBe(true);
+		expect((await read(confirm(bob, alice, [msg.id], 'entregue'))).map((m) => m.id)).toEqual([msg.id]);
 		expect((await alice.storage.messages.get(msg.id))?.receipts).toEqual({ [bob.publicKey]: 'entregue' });
-		expect(await read(confirm(bob, alice, [msg.id], 'lida'))).toBe(true);
-		expect(await read(confirm(bob, alice, [msg.id], 'entregue'))).toBe(false);
+		expect((await read(confirm(bob, alice, [msg.id], 'lida'))).map((m) => m.id)).toEqual([msg.id]);
+		expect(await read(confirm(bob, alice, [msg.id], 'entregue'))).toEqual([]);
 		expect((await alice.storage.messages.get(msg.id))?.receipts).toEqual({ [bob.publicKey]: 'lida' });
 	});
 
@@ -144,9 +144,9 @@ describe('confirmações de entrega e leitura (RF-50, 51)', () => {
 		const theirs = await say(bob, alice, 'olá');
 		const options = { readReceipts: true };
 		const fromStranger = confirm(carol, alice, [mine.id], 'lida');
-		expect(await storeReceipt(alice.storage, alice.publicKey, alice.vault.unwrap(fromStranger.toRecipient), options)).toBe(false);
+		expect(await storeReceipt(alice.storage, alice.publicKey, alice.vault.unwrap(fromStranger.toRecipient), options)).toEqual([]);
 		const forOthers = confirm(bob, alice, [theirs.id], 'lida');
-		expect(await storeReceipt(alice.storage, alice.publicKey, alice.vault.unwrap(forOthers.toRecipient), options)).toBe(false);
+		expect(await storeReceipt(alice.storage, alice.publicKey, alice.vault.unwrap(forOthers.toRecipient), options)).toEqual([]);
 	});
 
 	it('o estado mostrado é o do destinatário mais atrasado', () => {

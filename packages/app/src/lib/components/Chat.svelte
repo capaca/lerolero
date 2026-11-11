@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Conversa (1:1 ou grupo): mensagens, avisos de grupo, menu da mensagem e campo de envio.
 	// O topo e os avisos de cima ficam com a tela que usa o componente.
-	import { canEdit, contactName, deliveryOf, forwardOf, isBlockedFile, saveName, withMentionLabels, type MessageRecord, type ReactionRecord } from '@lerolero/core';
+	import { applyChanges, canEdit, contactName, deliveryOf, forwardOf, isBlockedFile, keepUnchanged, keepUnchangedGroups, sameRecord, saveName, withMentionLabels, type MessageRecord, type ReactionRecord } from '@lerolero/core';
 	import { page } from '$app/state';
 	import { onDestroy, tick, type Snippet } from 'svelte';
 	import Composer from './Composer.svelte';
@@ -40,6 +40,10 @@
 	// em blocos com content-visibility: o modo que rolou melhor no celular (prototipos/medicao).
 	const PAGE_SIZE = 200;
 	const BLOCK_SIZE = 50;
+	// numa rajada do que chega pela rede, o intervalo mínimo entre uma recarga e a seguinte (P17)
+	const RELOAD_GAP_MS = 250;
+	// as últimas que a recarga parcial relê sempre, além das que a sessão avisou que mudaram
+	const RECENT_CHECK = 20;
 
 	const me = session.identity?.publicKey;
 
@@ -171,10 +175,20 @@
 		}
 	}
 
+	// Os chips e a citação de cada balão só mudam de objeto quando o que eles mostram muda: com um objeto novo a
+	// cada recarga, todos os balões da conversa eram redesenhados a cada mensagem que chegava (P17).
+	type Chip = { emoji: string; count: number; mine: boolean };
+	const NO_CHIPS: Chip[] = [];
+	const chipCache = new Map<string, { from: ReactionRecord[]; chips: Chip[] }>();
 	/** Reações de uma mensagem somadas por emoji, na ordem em que apareceram. */
 	function chipsOf(messageId: string) {
-		const chips: Array<{ emoji: string; count: number; mine: boolean }> = [];
-		for (const reaction of reactions.get(messageId) ?? []) {
+		const from = reactions.get(messageId);
+		if (!from) return NO_CHIPS;
+		const cached = chipCache.get(messageId);
+		if (cached?.from === from) return cached.chips;
+		const chips: Chip[] = [];
+		chipCache.set(messageId, { from, chips });
+		for (const reaction of from) {
 			const chip = chips.find((c) => c.emoji === reaction.emoji);
 			if (chip) {
 				chip.count++;
@@ -182,6 +196,17 @@
 			} else chips.push({ emoji: reaction.emoji, count: 1, mine: reaction.sender === me });
 		}
 		return chips;
+	}
+	const byId = $derived(new Map(messages.map((x) => [x.id, x])));
+	const quoteCache = new Map<string, { name: string; message: MessageRecord | undefined }>();
+	function quoteOf(id: string) {
+		const message = byId.get(id) ?? quoted.get(id);
+		const name = message ? nameFor(message.sender) : '';
+		const cached = quoteCache.get(id);
+		if (cached && cached.message === message && cached.name === name) return cached;
+		const quote = { name, message };
+		quoteCache.set(id, quote);
+		return quote;
 	}
 	const myReactionTo = (messageId: string) => reactions.get(messageId)?.find((r) => r.sender === me)?.emoji;
 
@@ -380,27 +405,111 @@
 		return () => observer.disconnect();
 	});
 
-	async function load() {
-		const limit = PAGE_SIZE * (1 + extraPages);
-		const [list, conversation, reactionList] = await Promise.all([
+	// Uma recarga por vez (P17), e numa rajada do que chega pela rede, no máximo uma a cada RELOAD_GAP_MS: as
+	// mudanças do intervalo vão juntas para a tela. Desenhar a cada mensagem atrasava o recebimento da seguinte.
+	// O que eu faço (enviar, reagir...) recarrega na hora (RNF-12).
+	let running: Promise<void> | undefined;
+	let again = false;
+	let againNow = false;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let lastEnd = -Infinity;
+	function refresh(now = false) {
+		if (running) {
+			again = true;
+			againNow ||= now;
+			return;
+		}
+		const wait = now || firstLoad ? 0 : lastEnd + RELOAD_GAP_MS - performance.now();
+		if (wait > 0) {
+			timer ??= setTimeout(() => ((timer = undefined), refresh()), wait);
+			return;
+		}
+		clearTimeout(timer);
+		timer = undefined;
+		running = load()
+			.catch((err) => {
+				// as mudanças já saíram da sessão (takeChanges): a próxima relê a página inteira
+				wantsAll = true;
+				throw err;
+			})
+			.finally(() => {
+				running = undefined;
+				lastEnd = performance.now();
+				if (!again) return;
+				const urgent = againNow;
+				again = againNow = false;
+				refresh(urgent);
+			});
+	}
+	onDestroy(() => clearTimeout(timer));
+
+	// A página inteira: ao abrir, em "carregar anteriores" e quando mudou o que não é só mensagem (reação, membros...)
+	async function readAll(limit: number) {
+		const [all, conversation, reactionList] = await Promise.all([
 			session.getMessages(conversationId, limit + 1),
 			session.getConversation(conversationId),
 			session.getReactions(conversationId)
 		]);
+		const older = all.length > limit;
+		const list = older ? all.slice(1) : all;
 		const byMessage = new Map<string, ReactionRecord[]>();
 		for (const reaction of reactionList.sort((a, b) => a.createdAt - b.createdAt)) {
 			byMessage.set(reaction.messageId, [...(byMessage.get(reaction.messageId) ?? []), reaction]);
 		}
-		reactions = byMessage;
+		reactions = keepUnchangedGroups(reactions, byMessage);
 		recipients = conversation?.members ?? [];
 		// citações de mensagens mais antigas que a página
 		const here = new Set(list.map((x) => x.id));
 		const found = new Map<string, MessageRecord>();
 		for (const id of new Set(list.flatMap((x) => (x.replyTo && !here.has(x.replyTo) ? [x.replyTo] : [])))) {
 			const original = await session.getMessage(id);
-			if (original) found.set(id, original);
+			const before = quoted.get(id);
+			if (original) found.set(id, before && sameRecord(before, original) ? before : original);
 		}
 		quoted = found;
+		// pode ter mudado o que barrava a "lida" (ex.: aceitou o pedido): confere de novo todas na tela
+		askedRead.clear();
+		return { list, older, conversation };
+	}
+
+	// Só as mensagens que mudaram (P17): numa rajada, reler a página, as reações e as citações a cada mensagem que
+	// chegava deixava o recebimento esperando o banco. Vêm junto as últimas da conversa (uma leitura pelo índice), para
+	// a que entrou sem aviso não ficar de fora, e a conversa, para os destinatários (a tela pode abrir antes de ela
+	// existir, e sem eles a "lida" não conta).
+	async function readChanged(ids: Set<string>, limit: number) {
+		const read = (id: string) => session.getMessage(id).then((message) => [id, message] as const);
+		const [changed, last, conversation] = await Promise.all([
+			Promise.all([...ids].map(read)),
+			session.getMessages(conversationId, RECENT_CHECK),
+			session.getConversation(conversationId)
+		]);
+		const members = conversation?.members ?? [];
+		if (members.length !== recipients.length || members.some((k, i) => k !== recipients[i])) recipients = members;
+		const { list, older } = applyChanges(messages, [...last.map((x) => [x.id, x] as const), ...changed], conversationId, limit);
+		// a citação de uma que chegou, de fora da página, e a citada que mudou
+		const here = new Set(list.map((x) => x.id));
+		const missing = list.filter((x) => ids.has(x.id) && x.replyTo && !here.has(x.replyTo) && !quoted.has(x.replyTo)).map((x) => x.replyTo!);
+		const stale = [...quoted.keys()].filter((id) => ids.has(id));
+		if (missing.length || stale.length) {
+			const next = new Map(quoted);
+			for (const [id, original] of await Promise.all([...new Set([...missing, ...stale])].map(read))) {
+				if (original) next.set(id, original);
+				else next.delete(id);
+			}
+			quoted = next;
+		}
+		return { list, older: older || hasOlder, conversation };
+	}
+
+	/** "Carregar anteriores" pediu mais uma página em cima: relê tudo */
+	let wantsAll = false;
+
+	async function load() {
+		const limit = PAGE_SIZE * (1 + extraPages);
+		const changes = session.takeChanges(conversationId);
+		const { list, older, conversation } =
+			firstLoad || wantsAll || changes === 'tudo' ? await readAll(limit) : await readChanged(changes, limit);
+		wantsAll = false;
 		// só chegada ou envio de mensagem leva ao fim: estrela, reação e confirmação também recarregam a lista e não
 		// podem arrancar quem lê lá em cima
 		const grew = list.at(-1)?.id !== messages.at(-1)?.id;
@@ -417,8 +526,8 @@
 			if (arrived.length && !pending) newFrom = arrived[0].id;
 			pending += arrived.length;
 		}
-		hasOlder = list.length > limit;
-		messages = hasOlder ? list.slice(1) : list;
+		hasOlder = older;
+		messages = keepUnchanged(messages, list);
 		loaded = true;
 		await tick();
 		const divider = scroller?.querySelector('.new-line');
@@ -450,9 +559,13 @@
 	}
 
 	// "Lida" (RF-50): o que está na tela e veio dos outros; só com o app à vista, não com a aba escondida
+	// Na recarga parcial, cada uma é pedida uma vez: até a confirmação sair, o `ack` no banco ainda não é "lida", e
+	// reconferir todas a cada recarga lia o banco três vezes por mensagem (P17). A recarga inteira confere todas de novo.
+	const askedRead = new Set<string>();
 	function acknowledgeVisible() {
 		if (document.visibilityState !== 'visible') return;
-		const ids = messages.filter((x) => x.sender !== me && !x.notice && !x.deleted && x.ack !== 'lida').map((x) => x.id);
+		const ids = messages.filter((x) => x.sender !== me && !x.notice && !x.deleted && x.ack !== 'lida' && !askedRead.has(x.id)).map((x) => x.id);
+		for (const id of ids) askedRead.add(id);
 		if (ids.length) void session.acknowledgeRead(ids);
 	}
 	$effect(() => {
@@ -474,11 +587,11 @@
 		if (frames > 0) requestAnimationFrame(() => goToEnd(frames - 1));
 	}
 
-	// recarrega quando muda a conversa ou chega/sai qualquer mensagem (session.version)
+	// recarrega quando muda a conversa ou algo nela (P17: mudança em outra conversa não recarrega esta)
 	$effect(() => {
-		void session.version;
+		void session.conversationVersion(conversationId);
 		session.openConversationId = conversationId;
-		void load();
+		refresh(session.changedByMe(conversationId));
 	});
 	// conecta já aos relays de quem recebe, para a primeira mensagem não esperar a conexão
 	$effect(() => {
@@ -495,7 +608,10 @@
 	async function loadOlder() {
 		const before = scroller!.scrollHeight;
 		extraPages++;
-		await load();
+		wantsAll = true;
+		while (running) await running;
+		refresh(true);
+		await running;
 		// mantém na tela a mensagem que a pessoa estava lendo
 		scroller!.scrollTop += scroller!.scrollHeight - before;
 	}
@@ -556,12 +672,7 @@
 								senderName={nameOf && item.first && msg.sender !== me ? memberName(nameOf(msg.sender)) : undefined}
 								links={msg.sender === me ? 'aberto' : (linkMode?.(msg.sender) ?? 'texto')}
 								delivery={msg.sender === me ? deliveryOf(msg, recipients) : undefined}
-								quote={msg.replyTo
-									? (() => {
-											const original = messages.find((x) => x.id === msg.replyTo) ?? quoted.get(msg.replyTo);
-											return { name: original ? nameFor(original.sender) : '', message: original };
-										})()
-									: undefined}
+								quote={msg.replyTo ? quoteOf(msg.replyTo) : undefined}
 								reactions={chipsOf(msg.id)}
 								selecting={selecting}
 								selected={selected.has(msg.id)}
