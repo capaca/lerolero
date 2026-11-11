@@ -35,6 +35,7 @@ O MVP é um PWA, e a v1 traz Android e desktop nativos reaproveitando o mesmo c�
 - No macOS, notificações e distribuição sem avisos de segurança exigem app assinado e notarizado pela Apple (conta de desenvolvedor de US$ 99/ano), o que conflita com o orçamento zero. Vale para qualquer ferramenta de desktop ([Q-N5](../04-requisitos-nao-funcionais.md#questões-em-aberto)).
 - Capacitor depende do WebView do Android; em aparelhos antigos com WebView desatualizado, o desempenho pode cair. Medir no aparelho de referência.
 - Rever se o desempenho do Capacitor no aparelho de referência não atingir as metas: a alternativa é um app Android nativo em Kotlin reaproveitando só o núcleo.
+- **Medido em 2026-11-11 no aparelho de referência** (Redmi Note 8, Android 10, Chrome e WebView 156; Q-N4): o stack se sustenta. Cifrar e decifrar levam 34 e 10 ms, o Argon2id mínimo da OWASP 182 ms em WebAssembly, e o protótipo rola 2.000 mensagens em blocos com `content-visibility` a 60 fps. No app, a conversa longa ficou fora das metas por causa de como a lista é recarregada, não do stack (item 28 do [roadmap](../07-roadmap.md)). A partida a frio no Chrome (3,9 a 5,0 s) é revista no app nativo.
 
 ## Versões (2026-10-22, M0)
 

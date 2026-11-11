@@ -5,6 +5,27 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-11: Item 20: medição no aparelho de referência
+
+- O Pedro conseguiu o celular mais simples que pôde: um Xiaomi Redmi Note 8 (2019, Snapdragon 665, 4 GB, Android 10,
+  MIUI 12, Chrome e WebView 156). Decidido pelo Pedro: ele passa a ser o aparelho de referência no lugar do "Android
+  8+ com 2 GB", porque os resultados bastam para um aparelho de entrada. Rejeitado esperar um de 2 GB.
+- Tudo foi medido pelo USB, sem tocar no celular: `adb` e o DevTools remoto do Chrome. O protótipo de medição rodou
+  na homologação; o app de verdade, pelo `packages/e2e/medir-celular.ts` (novo): o build de produção e os relays
+  locais da suíte servidos no Mac e levados ao celular pelo `adb reverse`, uma pessoa no Mac que escreve N mensagens
+  e o celular que recebe, abre, rola e envia. A prova de trabalho do app foi medida em Ajustes, no app em dev.
+- Protótipo: cifrar 34 ms e decifrar 10 ms; gift wrap de 1,9 KB; Argon2id mínimo da OWASP em 182 ms (WebAssembly) e
+  726 ms (JS); 2.000 mensagens rolam a 60 fps em todas as montagens menos `content-visibility` em cada mensagem (30
+  fps). Relays: só auth.nostr1.com e relay.primal.net fizeram a ida e volta (0,3 e 2,0 s); o teste que roda numa aba
+  escondida fica congelado pelo Chrome.
+- App, com 50 e 2.000 mensagens: abrir a conversa em 187 e 247 ms; rolar a 60 fps e a 31 a 36 fps; mensagem enviada
+  na tela em 107 e 158 ms; heap de 53 e 114 MB. Receber as 2.000 com a conversa aberta levou 551 s (o Mac enviou em
+  103 s): é o P17 da prontidão, confirmado. Partida a frio até a lista: 3,9 a 5,0 s, dos quais ~1,8 s são o Chrome.
+- Prova de trabalho do app, 14 bits: média de 434 a 602 ms, a mais lenta de 0,9 a 2,6 s. Decidido: a meta de 1 s
+  (RNF-18) vale para a média e os 14 bits ficam. Rejeitado cair para 13.
+- Daqui saiu o item 28 (conversa longa), antes do app nativo, que usa a mesma interface. A partida a frio fica para
+  o nativo (item 27).
+
 ## 2026-11-07: Item 27, etapa 2: APK assinado na release
 
 - Antes, a verificação de desenvolvedor do Google: no Brasil, desde 2026-09-30, ela só barra o que vem de lojas; o

@@ -72,7 +72,7 @@ Telas e interação. Não tem lógica de protocolo: conversa só com o núcleo. 
 
 ### Web Worker
 
-Criptografia e prova de trabalho rodam fora da thread principal, para a interface não travar no celular de 2 GB (RNF-14, RNF-18).
+Criptografia e prova de trabalho rodam fora da thread principal, para a interface não travar no celular de entrada (RNF-14, RNF-18).
 
 ### Armazenamento local
 

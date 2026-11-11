@@ -1,13 +1,13 @@
 # 04 — Requisitos não funcionais
 
 - **Status:** ✅ aprovado
-- **Última atualização:** 2026-10-16
+- **Última atualização:** 2026-11-11
 
-Metas de qualidade que valem para todo o app. Os números são propostas iniciais, a serem validadas com medições reais no aparelho de referência.
+Metas de qualidade que valem para todo o app. Os números de desempenho foram medidos no aparelho de referência em 2026-11-11 (Q-N4); cada meta traz o resultado.
 
 ## 1. Aparelho de referência e plataformas
 
-**Aparelho de referência:** Android de entrada com **2 GB de RAM e Android 8 ou superior**. Todas as metas de desempenho são medidas nele.
+**Aparelho de referência:** **Xiaomi Redmi Note 8** (2019, Snapdragon 665, 4 GB de RAM, Android 10, Chrome e WebView 156). Todas as metas de desempenho são medidas nele, pelo protótipo de medição ([prototipos/medicao](../prototipos/medicao/README.md)) e pelo app de verdade (`packages/e2e/medir-celular.ts`). Escolhido pelo Pedro em 2026-11-11, no lugar do "Android 8+ com 2 GB" do início: foi o celular mais simples que ele conseguiu, e os resultados bastam para um aparelho de entrada. Rejeitado esperar um aparelho de 2 GB. A pressão de memória de um 2 GB fica sem medição.
 
 | ID | Requisito | Fase |
 |---|---|---|
@@ -20,22 +20,22 @@ Metas de qualidade que valem para todo o app. Os números são propostas iniciai
 
 | ID | Requisito | Meta |
 |---|---|---|
-| RNF-10 | Abrir o app (já instalado, partida a frio) até a lista de conversas | < 3 s |
-| RNF-11 | Abrir uma conversa com histórico | < 500 ms |
-| RNF-12 | Mensagem enviada aparece na tela de quem envia | < 100 ms (antes mesmo de chegar ao relay) |
-| RNF-13 | Entrega com os dois usuários online | < 2 s em 95% dos casos |
-| RNF-14 | Rolagem de conversa longa sem travar | 60 fps, sem engasgos perceptíveis |
-| RNF-15 | Memória usada pelo app | < 150 MB |
+| RNF-10 | Abrir o app (já instalado, partida a frio) até a lista de conversas | < 3 s. ❌ Medido 3,9 a 5,0 s no Chrome (limite superior), dos quais ~1,8 s são o Chrome abrindo e ~1,2 s a página carregando. Rever no app nativo (item 27) |
+| RNF-11 | Abrir uma conversa com histórico | < 500 ms. ✅ 187 ms com 50 mensagens; 247 ms (pior 316 ms) com 2.000 |
+| RNF-12 | Mensagem enviada aparece na tela de quem envia | < 100 ms (antes mesmo de chegar ao relay). ❌ 107 ms com 50 mensagens; 158 ms (pior 219 ms) com 2.000. Item 28 |
+| RNF-13 | Entrega com os dois usuários online | < 2 s em 95% dos casos. Ida e volta de um gift wrap pelo celular: 0,3 s (auth.nostr1.com) e 2,0 s (relay.primal.net); depende mais dos relays que do aparelho. Com 2.000 mensagens seguidas e a conversa aberta, o celular recebeu ~3,6 por segundo (item 28) |
+| RNF-14 | Rolagem de conversa longa sem travar | 60 fps, sem engasgos perceptíveis. ❌ 60 fps com 50 mensagens; 31 a 36 fps, com 3 a 6 engasgos, com 2.000 e as anteriores carregadas. No protótipo, os blocos com `content-visibility` rolam 2.000 a 60 fps. Item 28 |
+| RNF-15 | Memória usada pelo app | < 150 MB. ⚠️ Heap JS de 53 MB com 50 mensagens e 114 MB depois das 2.000 (o processo da aba no Chrome, 341 MB) |
 | RNF-16 | Tamanho do download inicial do PWA (código) | < 500 KB comprimido |
 | RNF-17 | Tamanho do APK | < 15 MB |
-| RNF-18 | Prova de trabalho antispam (RF-90) | < 1 s no aparelho de referência (14 bits: média de 196 ms no Motorola Edge 60, medido em 2026-10-29; falta medir no de 2 GB) |
+| RNF-18 | Prova de trabalho antispam (RF-90) | < 1 s **em média** no aparelho de referência; o pior caso passa disso, porque a prova é sorte. 14 bits: média de 196 ms no Motorola Edge 60 (2026-10-29); no Redmi Note 8, média de 434 a 602 ms e a mais lenta de 0,9 a 2,6 s (3 rodadas de 10, 2026-11-11). Mantidos os 14 bits; rejeitado cair para 13 |
 
 ## 3. Consumo de dados e bateria
 
 | ID | Requisito | Meta |
 |---|---|---|
 | RNF-20 | Sincronizar ao abrir o app sem mensagens novas | < 50 KB |
-| RNF-21 | Peso extra por mensagem de texto (criptografia, envelope, padding), por destinatário | < 2 KB |
+| RNF-21 | Peso extra por mensagem de texto (criptografia, envelope, padding), por destinatário | < 2 KB. ✅ 1,8 KB (gift wrap de 1.873 bytes), medido em 2026-11-11 |
 | RNF-22 | Áudio em codec de voz eficiente (Opus ~28 kbps, que ainda soa bem em lugar barulhento) | ~210 KB por minuto |
 | RNF-23 | Foto comprimida antes do envio (ex.: lado maior 1600 px) | ≤ 200 KB |
 | RNF-24 | Prévia leve de imagem | ≤ 5 KB |
@@ -122,7 +122,7 @@ Metas de qualidade que valem para todo o app. Os números são propostas iniciai
 
 ## Decisões tomadas nesta etapa
 
-- **Aparelho de referência:** Android 8+, 2 GB de RAM.
+- **Aparelho de referência:** ~~Android 8+, 2 GB de RAM~~; desde 2026-11-11, o Xiaomi Redmi Note 8 (4 GB, Android 10).
 - **Retenção alvo:** 7 dias.
 - **Licença:** AGPL-3.0.
 - **Acessibilidade:** WCAG 2.2 AA.
@@ -138,7 +138,7 @@ Metas de qualidade que valem para todo o app. Os números são propostas iniciai
 | Q-N1 | **Domínio próprio:** um domínio `.br` custa ~R$ 40/ano, o que conflita com o orçamento zero. Sem ele, o PWA fica num endereço como `usuario.github.io/app`. O link de convite (RF-11) e a confiança do público leigo dependem disso. **Decidir antes do beta:** os convites criados até lá usam o endereço do GitHub Pages e quebram quando o domínio mudar. Também destrava a passkey (RF-08), adiada em 2026-10-29 para depois do beta; a decisão entra na revisão de prontidão | ✅ **Decidido em 2026-11-05: comprar um `.com.br` (~R$ 40/ano, registro.br) antes do beta**, apontado para o GitHub Pages, como única exceção ao RNF-84. Por quê: os dados no aparelho ficam presos à origem, então quem entrasse no beta pelo `github.io` perderia contas, conversas e convites na troca. Rejeitados: fazer o beta no `github.io` (todos restaurariam pelo código depois) e um subdomínio gratuito (eu.org, is-a.dev: depende de terceiros e parece menos confiável a leigos) | Pedro (antes do beta) |
 | Q-N2 | ✅ Google Play custa US$ 25 uma vez: aceitar esse custo quando chegar a hora (Q3 da Visão)? **Decidido em 2026-11-06: no beta, APK assinado no GitHub Releases**, com aviso de versão nova no app e Obtainium opcional; a Play fica para depois do beta ([ADR-0011](adr/0011-app-android-nativo.md)). Rejeitados a Play já no beta e logo depois, dentro do item 27 | Pedro |
 | Q-N3 | Buscar orientação jurídica antes do lançamento público (Marco Civil, ordens judiciais, LGPD) | Pedro (antes do lançamento) |
-| Q-N4 | Validar as metas numéricas com medições reais no aparelho de referência, depois do primeiro protótipo | Pedro + implementação |
+| Q-N4 | Validar as metas numéricas com medições reais no aparelho de referência, depois do primeiro protótipo | ✅ **Medido em 2026-11-11 no Redmi Note 8**, resultados na seção 2. O stack PWA + Svelte se sustenta ([ADR-0002](adr/0002-stack-do-cliente.md)); a conversa longa fica fora das metas e é corrigida no item 28; a partida a frio é revista no app nativo | Pedro + implementação |
 | Q-N6 | **Dados técnicos de uso com consentimento** (proposta de 2026-10-22, para observabilidade): hoje o RNF-50 e o princípio 7 da Visão proíbem telemetria. Proposta compatível com o projeto: opt-in, desligado por padrão; um resumo diário só com contagens e tempos técnicos (falhas de entrega, tempo de entrega, relays com falha, erros por tipo), nunca conteúdo, contatos, chaves ou nomes; enviado pela própria rede como mensagem cifrada para uma conta do projeto, com chave descartável a cada envio; tela "ver o que é enviado". Limite: o relay vê o IP, como em qualquer uso. Decidir na revisão de prontidão para produção ([07](07-roadmap.md)); se aprovada, revisar RNF-50/51 e o princípio 7 | ✅ **Aprovada em 2026-11-05, opt-in automático, já no beta**: RNF-50 e o princípio 7 da Visão revistos. Rejeitados: só o diagnóstico enviado à mão (não mostra o que ninguém percebe, como o tempo de entrega dobrar) e nenhum dado | Pedro (antes do beta) |
 | Q-N7 | **Servidor próprio de referência (do [estudo de escala](estudos/escala-whatsapp.md), 2026-10-28):** aceitar uma exceção ao RNF-84 (custo zero) para um relay e um Blossom de referência, de ~R$ 30/mês, já a partir do beta? Hoje só 7 de 100 relays de DM são aptos, nenhum no Brasil, e a lista padrão depende de 3 estrangeiros. Recomendação do estudo: sim, como entradas comuns da lista, sem tratamento especial no protocolo. Nada decidido | ✅ **Decidido em 2026-11-05: não no beta.** 20 pessoas cabem nos relays públicos da lista, e as sondas sintéticas da revisão de prontidão mostram se faltar capacidade. Reavaliar antes do lançamento público | Pedro (antes do lançamento público) |
 | Q-N8 | Qual é o teto de usuários com que o projeto se compromete na v1 (ex.: 100 mil) antes de exigir um modelo de sustentação (doações, plano opcional, apoio institucional)? O estudo estima que em 1 milhão de usuários "custo zero" deixa de ser realista | Pedro |

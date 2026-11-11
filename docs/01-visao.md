@@ -117,7 +117,7 @@ No desktop nativo, notificações não são problema: o sistema não mata o app 
 - Um usuário leigo consegue instalar, criar a identidade e mandar a primeira mensagem em menos de 2 minutos, sem ajuda.
 - 99% das mensagens são entregues quando o destinatário abre o app em até 7 dias.
 - O custo mensal de infraestrutura para o projeto é zero.
-- O app funciona de forma aceitável num Android de entrada com 2 GB de RAM, em 3G.
+- O app funciona de forma aceitável num Android de entrada (o aparelho de referência do [04](04-requisitos-nao-funcionais.md)), em 3G.
 - Existem relays mantidos por pelo menos N operadores brasileiros independentes (N a definir).
 
 ## Questões em aberto
