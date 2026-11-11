@@ -33,6 +33,8 @@ No celular, use a versão publicada na homologação (https://lerolero-app.githu
 3. Toque em **Copiar resultados (JSON)** e cole o resultado no registro de medições.
 4. Repita em Wi-Fi e em rede móvel.
 
+Medido no aparelho de referência (Redmi Note 8) em 2026-11-11; os resultados estão no [04](../../docs/04-requisitos-nao-funcionais.md). O app de verdade é medido no celular por `packages/e2e/medir-celular.ts`.
+
 Sem o aparelho de referência, dá para ter uma prévia no Chrome do computador: DevTools → Performance → CPU 6x mais lenta e rede "Slow 4G". Isso não substitui a medição no aparelho.
 
 O TypeScript dentro dos arquivos `.svelte` não passa pela checagem de tipos: o `svelte-check` ainda não funciona com o TypeScript 7. Decidir isso no monorepo.

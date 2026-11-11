@@ -1,16 +1,16 @@
 # 07 — Roadmap
 
 - **Status:** ✅ aprovado
-- **Última atualização:** 2026-11-06
+- **Última atualização:** 2026-11-11
 
 Aqui ficam o plano e o estado de cada item. Como cada coisa ficou pronta (escolhas, alternativas, bugs achados no
 caminho) está no [histórico de entregas](historico.md).
 
 ## Onde estamos
 
-- **Feito:** M0 (menos uma espera: o aparelho de 2 GB), M1, M2 e M3 inteiros; do M4,
+- **Feito:** M0, M1, M2 e M3 inteiros; do M4,
   tudo menos a passkey, adiada para depois do beta.
-- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 26: o item 20 espera o aparelho).
+- **Próximo:** o primeiro item sem "✅" na [ordem](#ordem-do-restante-do-mvp) abaixo (hoje, o item 28: a conversa longa no aparelho de referência).
 - **Em produção:** https://capaca.github.io/lerolero/; homologação em https://lerolero-app.github.io/lerolero/.
 
 ## Premissas
@@ -25,7 +25,7 @@ caminho) está no [histórico de entregas](historico.md).
 
 | Marco | Estimativa | Situação |
 |---|---|---|
-| M0 Fundação | 3 sem | ✅ 2026-10-16 a 22; falta medir no aparelho de 2 GB (retenção dos relays confirmada em 2026-10-29) |
+| M0 Fundação | 3 sem | ✅ 2026-10-16 a 22 (retenção dos relays confirmada em 2026-10-29; medição no aparelho de referência em 2026-11-11) |
 | M1 Conversas 1:1 | 8 sem | ✅ 2026-10-16 a 22 |
 | M2 Mídia (e grupos, adiantados do M3) | 6 sem | ✅ 2026-10-22 a 27 |
 | M3 Conversa do dia a dia | 6 sem | ✅ 2026-10-26 a 29; arquivos (item 18) e botão de emojis (item 19) feitos em 2026-11-02 |
@@ -66,11 +66,12 @@ do WhatsApp.
 17. Aviso de versão nova mais rápido (M5): procurar versão nova a cada poucos minutos com o app aberto, para as correções chegarem logo a quem testa o beta. O cache de até 10 minutos do Pages continua até haver domínio próprio (Q-N1). ✅ Feita em 2026-10-30: a cada 5 minutos, só com o app na tela.
 18. Arquivos além de fotos e "Salvar" no aparelho (M3; RF-44, 45): PDF e outros tipos pelo caminho das fotos (cifra, Blossom, envio com repetição, hash único do RF-70, encaminhar sem reenviar), com balão de nome, tipo e tamanho e download sob demanda; "Salvar" no menu da mensagem para foto e arquivo. Limite de 20 MB, executáveis bloqueados nos dois lados (T22) e "Salvar" por sistema, decididos em 2026-10-30. ✅ Feita em 2026-11-02
 19. Botão de emojis no campo de mensagem (M3; RF-29). Decidido em 2026-11-02: lista gerada do `emojibase-data` (pt) por um script só no desenvolvimento, sem tons de pele e sem os emojis novos demais para o Android antigo, baixada só quando o seletor abre; busca por nome em português, com os mais usados primeiro; o "+" do menu da mensagem abre o mesmo seletor. Rejeitadas: lista à mão (faltam emojis, busca pobre), componente pronto (peso, visual e textos dele, axe e pseudolíngua), seletor sem busca e manter os 48 fixos no menu. ✅ Feita em 2026-11-02
-20. Medição no aparelho de referência de 2 GB (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Depende de haver o aparelho.
+20. Medição no aparelho de referência (M0 e M5; Q-N4): o protótipo de medição, que decide o [ADR-0002](adr/0002-stack-do-cliente.md), as metas de desempenho e dados do [04](04-requisitos-nao-funcionais.md) e a prova de trabalho abaixo de 1 s. Decidido em 2026-11-11: o aparelho de referência passa a ser o Redmi Note 8 do Pedro (4 GB, Android 10), em vez de um de 2 GB. Medidos o protótipo e o app de verdade (`packages/e2e/medir-celular.ts`); a conversa longa ficou fora das metas (item 28) e a partida a frio fica para o app nativo (item 27). ✅ Feita em 2026-11-11
 21. Revisão dos textos para linguagem simples (M5; RNF-64). ✅ Feita em 2026-11-02
 22. Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (M5; RNF-60..63): axe-core e alvos de 48 dp em todas as telas no e2e `textos`; TalkBack e fonte a 200% conferidos no celular. ✅ Feita em 2026-11-03
 25. Notificações por Web Push no PWA (M5; RF-82, Q-M2, [ADR-0010](adr/0010-web-push-no-pwa.md)): decidido em 2026-11-04, antes do beta; o número 25 é para não renumerar os outros. Em três etapas, cada uma com o seu PR: (1) o repassador mínimo, sem estado, só para os serviços de push conhecidos e com limite de pedidos, no Cloudflare Workers gratuito (escolhido em 2026-11-04; feita em 2026-11-04, `packages/repassador`, 120 pedidos por minuto por IP e só as origens do app); (2) no core, chave VAPID por pessoa, inscrição no cartão de perfil, cifra do aviso (RFC 8291) e envio depois de cada mensagem (1:1, grupo, fila offline), com chaves novas ao bloquear (feita em 2026-11-04, `packages/core/src/push`, com até 3 aparelhos por conta); (3) no app, "Notificações" em Ajustes, o service worker que mostra "Mensagem de <nome>" e abre a conversa ao tocar, e o e2e (feita em 2026-11-04). ✅ Feita em 2026-11-04
 26. Revisão da identidade visual e da UX (decidido em 2026-11-06, antes do beta): logo, ícone, cores, tipografia e tom, talvez o nome (Q4 da [Visão](01-visao.md)), e os fluxos que mudarem com isso. Vem antes do app nativo para que ele já nasça com a marca nova, sem refazer ícone, abertura e páginas de loja. Decidido em 2026-11-06: o nome fica (Q4); o tom é brincalhão e brasileiro; mudam o ícone (o balão genérico), as cores (o verde lembra demais o WhatsApp, e o Lero-lero não deve parecer um WhatsApp genérico) e a tipografia (a do sistema tem cara de protótipo), e as telas ganham ajustes pontuais. Em etapas, cada uma com o seu PR: (1) três direções visuais (cor, ícone, fonte) numa página de comparação para o Pedro escolher; (2) a direção escolhida no app: cores clara e escura com contraste AA (RNF-60), fonte embutida no app e não de CDN (privacidade e uso sem rede), ícone e manifesto; (3) os ajustes de UX, revisados com o Pedro no celular, um PR por fluxo. Etapas 1 e 2 feitas em 2026-11-06: cores do Calçadão (anil, pedra e areia), ícone do Maracujá recolorido (balão branco com "ll" inclinado) fonte Outfit, balão enviado em anil sólido, barra da conversa em pedra e ícones novos de gravar (onda de voz) e enviar (seta cheia); rejeitados o Fuxico e o Maracujá inteiro, e os ícones sem balão (detalhes no [histórico](historico.md)). Etapa 3 decidida em 2026-11-06, em três PRs: (a) barra em pedra em todas as telas e Favoritas e Ajustes direto na barra do início, sem o menu ⋮ (feita em 2026-11-06); (b) cadastro e PIN: boas-vindas com a marca e três promessas, passos com progresso e voltar, foto opcional no nome e um PIN por vez (feita em 2026-11-06); (c) Ajustes e proteção da conta: Ajustes em lista agrupada, com chaves de liga e desliga e o aviso "Proteger agora", e a proteção com o PIN que segue sozinho e as opções em lista, a mais fácil em destaque (feita em 2026-11-06). ✅ Feita em 2026-11-06
+28. Conversa longa no aparelho de referência (M5; RNF-12 a 15, P17 do [08](08-prontidao.md)), achada na medição do item 20: com 2.000 mensagens, a rolagem cai para 31 a 36 fps e o celular recebe só ~3,6 mensagens por segundo com a conversa aberta. Vem antes do app nativo, que usa a mesma interface. Um PR por problema: (a) a conversa aberta deixa de recarregar inteira a cada mudança (P17); (b) rolagem a 60 fps com mais de 1.000 mensagens carregadas. Cada um conferido com o `medir-celular.ts`.
 27. App nativo com Capacitor antes do beta (decidido em 2026-11-06; antes era da v1, [ADR-0002](adr/0002-stack-do-cliente.md)): notificações confiáveis (o aviso retido com o celular parado, Q-M2), instalar como app de verdade em vez de "Adicionar à tela inicial", recursos do aparelho (câmera na hora, chave no cofre do sistema, RF-07) e iPhone no beta. Começa pelo Android. Decidido em 2026-11-06 ([ADR-0011](adr/0011-app-android-nativo.md)): push pelo FCM (UnifiedPush depois), APK assinado no GitHub Releases (Play depois do beta) e interface embutida no APK. Em etapas, cada uma com o seu PR: (1) o esqueleto em `packages/android`, com o APK de teste gerado pela CI (feita em 2026-11-07, conferida pelo Pedro no celular); (2) o APK assinado na release, com aviso de versão nova no app (feita em 2026-11-07; falta o Pedro criar a chave com `packages/android/scripts/chave.sh` e conferir no celular a atualização da primeira release para a segunda; verificação de desenvolvedor do Google conferida em 2026-11-07: segue sem conta, que fica para antes da regra global de 2027, no item 23); (3) o push pelo FCM, pelo repassador: o app nativo entra como mais um dos até 3 aparelhos de aviso do cartão (kind `4445`), com um tipo novo para o token FCM, e em Ajustes deixa de dizer "Este navegador não mostra notificações" (visto pelo Pedro em 2026-11-07: na homologação, com a mesma conta no PWA e no nativo, só o PWA recebe o aviso); (4) câmera na hora e chave no cofre do sistema (RF-07); (5) o iPhone, se a Q-N9 for aceita. Falta decidir: o iPhone (conta da Apple, US$ 99/ano, para o TestFlight; Q-N9). Depende do item 26.
 23. Revisão de prontidão para produção, com os seis temas, os [limites conhecidos](#limites-conhecidos) e a decisão do domínio (Q-N1). Decidido em 2026-11-05: `.com.br` comprado antes do beta (Q-N1), resumo técnico opt-in já no beta (Q-N6), sem servidor próprio no beta (Q-N7). Em etapas, cada uma com o seu PR: (1) as decisões (feita em 2026-11-05); (2) o domínio: o Pedro compra, o Pages e o repassador passam a atendê-lo e o endereço antigo avisa quem ainda está lá; (3) o levantamento dos riscos por tema, com mitigação ou aceite, e a correção dos críticos (levantamento feito em 2026-11-05, em [08](08-prontidao.md): 36 riscos; o Pedro escolheu corrigir antes do beta os oito de perda e de chave, P1 a P8, e a faixa de avisos de incidente, P9, cada um com o seu PR; os nove corrigidos em 2026-11-05); (4) as sondas sintéticas na CI e o painel de saúde dos relays e Blossom; (5) o resumo técnico opt-in; (6) antes da regra global de 2027, a conta completa no Android Developer Console (US$ 25 e documento do Pedro) e o registro do pacote com a chave do APK ([ADR-0011](adr/0011-app-android-nativo.md)).
 24. Beta fechado.
@@ -78,7 +79,8 @@ do WhatsApp.
 Organizada em 2026-10-30 pelo Pedro: as funcionalidades novas (17 a 19) vêm antes das revisões, para que a medição,
 a linguagem e a acessibilidade já as cubram; o polimento vem antes da prontidão. Os outros pedidos ficam fora da ordem
 e voltam a ser avaliados com o retorno do beta. Em 2026-11-06 entraram, antes do beta e nesta ordem, a identidade
-visual (26) e o app nativo (27).
+visual (26) e o app nativo (27). Em 2026-11-11 entrou a conversa longa (28), achada na medição do item 20, antes do
+nativo, que usa a mesma interface.
 
 ## MVP (PWA) por marco
 
@@ -90,8 +92,8 @@ visual (26) e o app nativo (27).
 - ✅ PWA publicado no GitHub Pages.
 - ✅ Lista padrão de relays e Blossom (Q-R1): retenção de 7 dias confirmada em 2026-10-29 para toda a lista, menos o
   Blossom cdn.hzrd149.com, trocado pelo blossom.jumble.social. Fica em aberto: relays no Brasil (Q-D2).
-- ⬜ Protótipo de medição (Q-N4): pronto e rodado num celular intermediário; falta rodar no aparelho de referência
-  (Android 2 GB), que decide o [ADR-0002](adr/0002-stack-do-cliente.md).
+- ✅ Protótipo de medição (Q-N4): rodado num celular intermediário e, em 2026-11-11, no aparelho de referência (Redmi
+  Note 8); o stack do [ADR-0002](adr/0002-stack-do-cliente.md) se sustenta.
 
 **Pronto quando:** o PWA "vazio" abre no celular de referência; os testes rodam a cada commit; existe uma lista
 inicial de pelo menos 5 relays compatíveis.
@@ -163,8 +165,9 @@ de referência; uma mensagem apagada propositalmente de um relay de teste é det
   workers da CI para 3 ou 4, repetindo a suíte antes de adotar (a carga já expôs corridas); encurtar o
   `envio-sem-rede` (35 s, o mais longo); dividir em dois jobs (`--shard`). Item 16, feito em 2026-10-30.
 - ✅ Aviso de versão nova mais rápido (2026-10-30). Item 17.
-- ⬜ Medição de todas as metas de desempenho e dados no aparelho de referência (seções 2 e 3 do
-  [04](04-requisitos-nao-funcionais.md)). Item 20.
+- ✅ Medição de todas as metas de desempenho e dados no aparelho de referência (seções 2 e 3 do
+  [04](04-requisitos-nao-funcionais.md)). Item 20, feito em 2026-11-11.
+- ⬜ Conversa longa dentro das metas (RNF-12 a 15). Item 28.
 - ✅ Revisão de textos para linguagem simples (RNF-64). Item 21, feito em 2026-11-02.
 - ✅ Revisão de acessibilidade WCAG 2.2 AA com leitor de tela (RNF-60..63). Item 22, feito em 2026-11-03.
 - ✅ Notificações por Web Push no PWA (RF-82, [ADR-0010](adr/0010-web-push-no-pwa.md)). Item 25, feito em 2026-11-04 em três etapas: repassador, core (cifra, cartão, até 3 aparelhos, envio) e app (Ajustes, service worker).
@@ -319,7 +322,7 @@ a Q-N7 (custo zero × servidor de referência) e a Q-N8 (teto de usuários); as 
 
 | Quando | Decisão |
 |---|---|
-| Fim do M0 | O desempenho medido no aparelho de referência confirma PWA + Svelte? Se não, rever o [ADR-0002](adr/0002-stack-do-cliente.md) |
+| Fim do M0 | ✅ O desempenho medido no aparelho de referência confirma PWA + Svelte? Sim, medido em 2026-11-11; a conversa longa é corrigida no item 28, sem mudar o [ADR-0002](adr/0002-stack-do-cliente.md) |
 | Fim do beta | Lançar publicamente ou fazer mais uma rodada de correções |
 | Início da v1 | ~~Quem dispara o push no Android~~ (no beta, o app do remetente pelo FCM, [ADR-0011](adr/0011-app-android-nativo.md)); Capacitor ou Tauri 2 para Android |
 | Out/2027 | Marmot está maduro o suficiente para forward secrecy? ([ADR-0001](adr/0001-protocolo-de-transporte.md)) |

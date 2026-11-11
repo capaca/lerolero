@@ -6,8 +6,9 @@ import { createSHA256, type IHasher } from 'hash-wasm';
 
 /**
  * Dificuldade em bits (decidido em 2026-10-29 pela medição no Motorola Edge 60 do Pedro, 10 provas cada): 12 bits,
- * média 61 ms (pior 178 ms); 14 bits, 196 ms (806 ms); 16 bits, 870 ms (4,9 s). Cada bit dobra o trabalho; num 2 GB,
- * 2 a 3 vezes mais lento, 14 bits ainda fica perto da meta.
+ * média 61 ms (pior 178 ms); 14 bits, 196 ms (806 ms); 16 bits, 870 ms (4,9 s). Cada bit dobra o trabalho. No aparelho
+ * de referência (Redmi Note 8, 2026-11-11), 14 bits dão média de 434 a 602 ms e a mais lenta de 0,9 a 2,6 s: a meta
+ * vale para a média.
  */
 export const POW_DIFFICULTY = 14;
 

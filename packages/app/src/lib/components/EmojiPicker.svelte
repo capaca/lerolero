@@ -157,7 +157,7 @@
 		overflow-y: auto;
 		overscroll-behavior: contain;
 	}
-	/* centenas de botões: o navegador só desenha os grupos que estão na tela (aparelho de 2 GB, RNF-02) */
+	/* centenas de botões: o navegador só desenha os grupos que estão na tela (aparelho de entrada, RNF-14) */
 	section {
 		content-visibility: auto;
 		contain-intrinsic-size: auto 20rem;
