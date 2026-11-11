@@ -1,7 +1,7 @@
 // Um aparelho que recebe Web Push, para os testes: gera a inscrição como o navegador e decifra o aviso como o
 // serviço de push entrega ao service worker (RFC 8291 e RFC 8188, o caminho de volta de push/webpush.ts).
 
-import { fromBase64Url, generateVapid, toBase64Url, type PushTarget } from '../push/webpush.ts';
+import { fromBase64Url, generateVapid, toBase64Url, type NativePushTarget, type WebPushTarget } from '../push/webpush.ts';
 
 const enc = new TextEncoder();
 
@@ -30,17 +30,24 @@ export async function decryptPush(body: Uint8Array<ArrayBuffer>, uaPrivate: Cryp
 
 let n = 0;
 
-/** Inscrição nova num serviço conhecido, com o par VAPID; `open` decifra o que chegou para ela. */
-export async function fakePushDevice(host = 'fcm.googleapis.com') {
+async function cipherKeys() {
 	const ua = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
 	const uaPublic = new Uint8Array(await crypto.subtle.exportKey('raw', ua.publicKey));
 	const auth = crypto.getRandomValues(new Uint8Array(16));
-	const target: PushTarget = {
-		endpoint: `https://${host}/fcm/send/aparelho-${n++}`,
-		p256dh: toBase64Url(uaPublic),
-		auth: toBase64Url(auth),
-		vapid: await generateVapid()
-	};
 	const open = async (body: string) => JSON.parse(new TextDecoder().decode(await decryptPush(fromBase64Url(body), ua.privateKey, uaPublic, auth)));
+	return { p256dh: toBase64Url(uaPublic), auth: toBase64Url(auth), open };
+}
+
+/** Inscrição nova num serviço conhecido, com o par VAPID; `open` decifra o que chegou para ela. */
+export async function fakePushDevice(host = 'fcm.googleapis.com') {
+	const { p256dh, auth, open } = await cipherKeys();
+	const target: WebPushTarget = { endpoint: `https://${host}/fcm/send/aparelho-${n++}`, p256dh, auth, vapid: await generateVapid() };
+	return { target, open };
+}
+
+/** O app nativo (ADR-0011): token do FCM e o par de cifra gerado no aparelho; `open` decifra como o app. */
+export async function fakeNativeDevice() {
+	const { p256dh, auth, open } = await cipherKeys();
+	const target: NativePushTarget = { fcm: `token-do-fcm-${n++}:APA91b${'x'.repeat(140)}`, p256dh, auth };
 	return { target, open };
 }

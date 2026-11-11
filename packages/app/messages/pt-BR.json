@@ -872,5 +872,6 @@
 	"restaurar_do_arquivo": "As palavras da sua frase de recuperação já estão aqui. Agora crie um PIN para este aparelho.",
 	"aviso_mensagem_de": "Mensagem de {nome}",
 	"aviso_no_grupo": "No grupo {grupo}",
-	"aviso_toque": "Toque para abrir a conversa"
+	"aviso_toque": "Toque para abrir a conversa",
+	"aviso_canal": "Mensagens"
 }

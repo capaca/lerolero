@@ -32,6 +32,7 @@
 	},
 	"license": "AGPL-3.0-or-later",
 	"dependencies": {
+		"@capacitor/core": "8.6.0",
 		"@fontsource-variable/outfit": "5.3.0",
 		"@lerolero/core": "workspace:*",
 		"jsqr": "1.4.0",

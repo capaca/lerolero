@@ -41,7 +41,10 @@ de onde vem a interface.
    ADR-0010), agora com o token FCM do destinatário, que vai no cartão de perfil só para os contatos. O aviso segue
    cifrado ponta a ponta com as chaves do destinatário, levando no máximo o nome de quem mandou (T6). O repassador
    passa a guardar a credencial do Firebase para enviar pela API do FCM. O **UnifiedPush** entra depois, como opção
-   para quem já tem um distribuidor.
+   para quem já tem um distribuidor. Decidido em 2026-11-11, ao começar a etapa: **um só projeto do Firebase** para
+   a produção e a homologação, com os dois apps (`io.github.capaca.lerolero` e o `.homologacao`) num
+   `google-services.json` só e a mesma conta de serviço nos dois repassadores; a credencial só manda aviso para
+   tokens do próprio app. Rejeitados dois projetos: isolariam a homologação, mas dobram os passos no console.
 2. **APK assinado no GitHub Releases**, publicado pela release, com aviso de versão nova no próprio app; Obtainium
    opcional. A Google Play fica para depois do beta (Q-N2).
 3. **Interface embutida no APK.** Os dados do app ficam separados dos do PWA; a conta passa para o app pela

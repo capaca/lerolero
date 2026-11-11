@@ -6,10 +6,12 @@
 import { exclusive } from '../conversations/lock.ts';
 import { PUSH_DEVICE_KIND, type Rumor } from '../identity/vault.ts';
 import type { Storage } from '../storage/repositories.ts';
-import { generateVapid, toBase64Url, validTarget, type PushTarget } from './webpush.ts';
+import { isNativeTarget, targetKey, toBase64Url, validTarget, type PushTarget } from './webpush.ts';
 
 /** Tag do cartão e do aviso entre aparelhos: endereço, p256dh, auth, VAPID pública e privada. */
 export const PUSH_TAG = 'push';
+/** O app nativo (ADR-0011): token do FCM, p256dh e auth. Versões antigas ignoram a tag e só não avisam esse aparelho. */
+export const FCM_TAG = 'fcm';
 /** Aparelhos por pessoa no cartão (decidido em 2026-11-04): o mais recente de cada um vale. */
 export const MAX_PUSH_TARGETS = 3;
 const DEVICE_TAG = 'aparelho';
@@ -22,17 +24,24 @@ const DEVICES_KEY = 'avisosAparelhos';
 export type PushDevice = { target?: PushTarget; at: number };
 
 export function pushTags(targets: PushTarget[]): string[][] {
-	return targets.slice(0, MAX_PUSH_TARGETS).map((t) => [PUSH_TAG, t.endpoint, t.p256dh, t.auth, t.vapid.publicKey, t.vapid.privateKey]);
+	return targets
+		.slice(0, MAX_PUSH_TARGETS)
+		.map((t) => (isNativeTarget(t) ? [FCM_TAG, t.fcm, t.p256dh, t.auth] : [PUSH_TAG, t.endpoint, t.p256dh, t.auth, t.vapid.publicKey, t.vapid.privateKey]));
+}
+
+function targetFromTag(t: string[]): PushTarget | undefined {
+	if (t[0] === FCM_TAG && t.length >= 4) return { fcm: t[1], p256dh: t[2], auth: t[3] };
+	if (t[0] !== PUSH_TAG || t.length < 6) return undefined;
+	const [, endpoint, p256dh, auth, publicKey, privateKey] = t;
+	return { endpoint, p256dh, auth, vapid: { publicKey, privateKey } };
 }
 
 /** Os aparelhos de um cartão ou aviso (dado de fora: o que não confere é descartado). */
 export function targetsFromTags(tags: string[][]): PushTarget[] {
 	const targets: PushTarget[] = [];
 	for (const t of tags) {
-		if (t[0] !== PUSH_TAG || t.length < 6) continue;
-		const [, endpoint, p256dh, auth, publicKey, privateKey] = t;
-		const target = { endpoint, p256dh, auth, vapid: { publicKey, privateKey } };
-		if (validTarget(target) && !targets.some((o) => o.endpoint === endpoint)) targets.push(target);
+		const target = targetFromTag(t);
+		if (target && validTarget(target) && !targets.some((o) => targetKey(o) === targetKey(target))) targets.push(target);
 	}
 	return targets.slice(0, MAX_PUSH_TARGETS);
 }
@@ -85,16 +94,12 @@ export async function setMyPushTarget(storage: Storage, target: PushTarget | und
 
 /**
  * Chaves e inscrição novas (ao bloquear alguém, ADR-0010): o bloqueado fica com um endereço que não serve mais.
- * `subscribe` troca a inscrição do navegador para a chave VAPID nova. Sem notificações ativas aqui, nada muda.
+ * `fresh` faz a inscrição nova (no navegador, com a chave VAPID nova; no app nativo, token e par de cifra novos).
+ * Sem notificações ativas aqui, nada muda.
  */
-export async function renewPushTarget(
-	storage: Storage,
-	subscribe: (vapidPublicKey: string) => Promise<Omit<PushTarget, 'vapid'>>
-): Promise<string[][] | undefined> {
+export async function renewPushTarget(storage: Storage, fresh: () => Promise<PushTarget>): Promise<string[][] | undefined> {
 	if (!(await myPushTarget(storage))) return undefined;
-	const vapid = await generateVapid();
-	const subscription = await subscribe(vapid.publicKey);
-	return setMyPushTarget(storage, { ...subscription, vapid });
+	return setMyPushTarget(storage, await fresh());
 }
 
 /**
@@ -108,7 +113,7 @@ export async function storePushDevice(storage: Storage, me: string, rumor: Rumor
 	if (!id || !/^[\w-]{1,32}$/.test(id) || id === (await myDeviceId(storage))) return none;
 	const [target] = targetsFromTags(rumor.tags);
 	// com a tag mas sem conferir, é um aviso estragado, não um "desativei"
-	if (!target && rumor.tags.some((t) => t[0] === PUSH_TAG)) return none;
+	if (!target && rumor.tags.some((t) => t[0] === PUSH_TAG || t[0] === FCM_TAG)) return none;
 	return exclusive(storage, async () => {
 		const known = await devices(storage);
 		if (known[id] && known[id].at >= rumor.created_at) return none;
@@ -118,12 +123,12 @@ export async function storePushDevice(storage: Storage, me: string, rumor: Rumor
 	});
 }
 
-/** O serviço de push disse que a inscrição de um contato acabou (404 ou 410): para de mandar para ela. */
-export async function dropPushTarget(storage: Storage, publicKey: string, endpoint: string) {
+/** O serviço de push disse que a inscrição de um contato acabou (404 ou 410): para de mandar para ela. `key`: targetKey. */
+export async function dropPushTarget(storage: Storage, publicKey: string, key: string) {
 	await exclusive(storage, async () => {
 		const card = await storage.profiles.get(publicKey);
-		if (!card?.push?.some((t) => t.endpoint === endpoint)) return;
-		const push = card.push.filter((t) => t.endpoint !== endpoint);
+		if (!card?.push?.some((t) => targetKey(t) === key)) return;
+		const push = card.push.filter((t) => targetKey(t) !== key);
 		await storage.profiles.put({ ...card, push: push.length ? push : undefined });
 	});
 }

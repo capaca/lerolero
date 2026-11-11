@@ -1,6 +1,7 @@
-// Repassador de Web Push (ADR-0010) no Cloudflare Workers gratuito. Sem estado e sem logs: o repassador vê o IP de
-// quem manda e o endereço de push de quem recebe, e nada disso fica guardado.
-// Deploy pela CI (repassador.yml): homologação a cada merge que muda esta pasta, produção na release.
+// Repassador de Web Push (ADR-0010) e do FCM do app nativo (ADR-0011) no Cloudflare Workers gratuito. Sem estado
+// e sem logs: o repassador vê o IP de quem manda e o endereço de push de quem recebe, e nada disso fica guardado.
+// Deploy pela CI (repassador.yml): homologação a cada merge que muda esta pasta, produção na release. O secret
+// FCM_CONTA (conta de serviço do Firebase) vai junto, do secret FCM_CONTA_DE_SERVICO do GitHub.
 {
 	"$schema": "../../node_modules/wrangler/config-schema.json",
 	"name": "lerolero-repassador",
@@ -8,7 +9,8 @@
 	"compatibility_date": "2026-10-01",
 	"workers_dev": true,
 	"observability": { "enabled": false },
-	"vars": { "ORIGENS": "https://capaca.github.io" },
+	// https://localhost: a interface embutida no app nativo (Capacitor, ADR-0011)
+	"vars": { "ORIGENS": "https://capaca.github.io,https://localhost" },
 	// 120 pedidos por minuto por IP (decidido em 2026-11-04); o período do binding só pode ser 10 ou 60 s
 	"ratelimits": [{ "name": "LIMITE", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } }],
 	"env": {
@@ -17,7 +19,7 @@
 			"workers_dev": true,
 			"observability": { "enabled": false },
 			// localhost e a rede local para o dev e o celular.sh
-			"vars": { "ORIGENS": "https://lerolero-app.github.io", "ORIGENS_LOCAIS": "sim" },
+			"vars": { "ORIGENS": "https://lerolero-app.github.io,https://localhost", "ORIGENS_LOCAIS": "sim" },
 			"ratelimits": [{ "name": "LIMITE", "namespace_id": "1002", "simple": { "limit": 120, "period": 60 } }]
 		}
 	}

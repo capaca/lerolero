@@ -11,6 +11,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { savePendingInvite } from '#lib/pending-invite.ts';
 	import { savePendingRoute, takePendingRoute } from '#lib/pending-route.ts';
+	import { onNativePushOpen } from '#lib/push-native.ts';
 	import { session, type Status } from '#lib/session.svelte.ts';
 	import { applyTextSize, readTextSize } from '#lib/text-size.ts';
 	import Icon from '#lib/components/Icon.svelte';
@@ -103,6 +104,8 @@
 			if (event.data?.tipo === 'abrir' && path?.startsWith(resolve('/'))) void goto(path);
 		};
 		navigator.serviceWorker?.addEventListener('message', onWorkerMessage);
+		// no app nativo, o toque na notificação chega pelo plugin (ADR-0011); bloqueado, a conversa abre depois do PIN
+		const stopNativePush = onNativePushOpen((path) => void goto(resolve('/') + path));
 		const checkForUpdate = () => {
 			void navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => {});
 			if (__APP_APK_REPO__) void checkApk();
@@ -143,6 +146,7 @@
 			removeEventListener('pagehide', touch);
 			navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
 			navigator.serviceWorker?.removeEventListener('message', onWorkerMessage);
+			stopNativePush();
 			document.removeEventListener('visibilitychange', onVisibility);
 			removeEventListener('online', resume);
 		};

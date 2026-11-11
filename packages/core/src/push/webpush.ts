@@ -4,8 +4,8 @@
 // (CORS). Tudo com o WebCrypto, que existe no navegador, no worker e no Node. Porte de prototipos/push/comum.js,
 // medido no Motorola em 2026-11-02.
 
-/** Um aparelho que recebe avisos: a inscrição do navegador (PushSubscription) e o par VAPID dela. */
-export type PushTarget = {
+/** Um navegador que recebe avisos: a inscrição dele (PushSubscription) e o par VAPID dela. */
+export type WebPushTarget = {
 	endpoint: string;
 	/** chave pública ECDH P-256 do navegador (65 bytes), em base64url */
 	p256dh: string;
@@ -15,6 +15,30 @@ export type PushTarget = {
 	vapid: VapidKeys;
 };
 
+/**
+ * O app nativo (ADR-0011): o token do FCM e o par de cifra que o próprio app gerou (a privada fica no aparelho). O
+ * aviso vai cifrado do mesmo jeito (RFC 8291), e o repassador manda pela API do FCM com a credencial do projeto.
+ */
+export type NativePushTarget = {
+	fcm: string;
+	/** chave pública ECDH P-256 do app (65 bytes), em base64url */
+	p256dh: string;
+	/** segredo de 16 bytes do app, em base64url */
+	auth: string;
+};
+
+/** Um aparelho que recebe avisos: um navegador ou o app nativo. */
+export type PushTarget = WebPushTarget | NativePushTarget;
+
+export function isNativeTarget(target: PushTarget): target is NativePushTarget {
+	return 'fcm' in target;
+}
+
+/** O que identifica o aparelho no serviço de push: o endereço do navegador ou o token do FCM. */
+export function targetKey(target: PushTarget): string {
+	return isNativeTarget(target) ? `fcm:${target.fcm}` : target.endpoint;
+}
+
 export type VapidKeys = {
 	/** ponto P-256 sem compressão (65 bytes), em base64url: o `applicationServerKey` da inscrição */
 	publicKey: string;
@@ -22,8 +46,10 @@ export type VapidKeys = {
 	privateKey: string;
 };
 
-/** O que o repassador recebe (PushRelayRequest em packages/repassador). */
-export type PushRelayRequest = { endpoint: string; ttl: number; urgency: string; authorization: string; body: string };
+/** O que o repassador recebe (PushRelayRequest em packages/repassador): Web Push ou FCM. */
+export type PushRelayRequest =
+	| { endpoint: string; ttl: number; urgency: string; authorization: string; body: string }
+	| { fcm: string; ttl: number; body: string };
 
 /** Um dia: depois disso o aviso perde o sentido (a mensagem continua nos relays por 7 dias). */
 export const PUSH_TTL_S = 24 * 60 * 60;
@@ -65,6 +91,7 @@ function concat(...parts: Uint8Array[]): Uint8Array<ArrayBuffer> {
 }
 
 function bytesOf(text: string, length: number): boolean {
+	if (typeof text !== 'string') return false;
 	try {
 		return fromBase64Url(text).length === length;
 	} catch {
@@ -83,9 +110,13 @@ export function validEndpoint(endpoint: string): boolean {
 	return url.protocol === 'https:' && !url.port && !url.username && !url.password && endpoint.length <= 1024 && PUSH_HOSTS.some((h) => h.test(url.hostname));
 }
 
+/** Token do FCM: letras, números e `_:-`, com folga no tamanho (o de hoje tem uns 160). */
+const FCM_TOKEN = /^[\w:-]{32,512}$/;
+
 /** Confere um aparelho que veio de fora (cartão de um contato ou aviso de outro aparelho meu). */
 export function validTarget(target: PushTarget): boolean {
-	const point = (text: string) => bytesOf(text, 65) && fromBase64Url(text)[0] === 4;
+	const point = (text: string) => typeof text === 'string' && bytesOf(text, 65) && fromBase64Url(text)[0] === 4;
+	if (isNativeTarget(target)) return typeof target.fcm === 'string' && FCM_TOKEN.test(target.fcm) && point(target.p256dh) && bytesOf(target.auth, 16);
 	return (
 		validEndpoint(target.endpoint) &&
 		point(target.p256dh) &&
@@ -154,9 +185,13 @@ export async function encryptPayload(
 	return concat(salt, rs, Uint8Array.of(asPublic.length), asPublic, cipher);
 }
 
-/** O pedido ao repassador para um aparelho; `Urgency: high` pede a prioridade que acorda o Android (quando deixa). */
+/**
+ * O pedido ao repassador para um aparelho; `Urgency: high` pede a prioridade que acorda o Android (quando deixa). O
+ * app nativo recebe pelo FCM com prioridade alta, que acorda o celular parado (ADR-0011).
+ */
 export async function pushRequest(target: PushTarget, payload: unknown, now = Date.now()): Promise<PushRelayRequest> {
 	const body = await encryptPayload(enc.encode(JSON.stringify(payload)), target);
+	if (isNativeTarget(target)) return { fcm: target.fcm, ttl: PUSH_TTL_S, body: toBase64Url(body) };
 	return {
 		endpoint: target.endpoint,
 		ttl: PUSH_TTL_S,

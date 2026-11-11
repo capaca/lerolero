@@ -93,7 +93,19 @@ export {
 	storePushDevice
 } from './push/targets.ts';
 export { PUSH_BURST_MS, PushNotifier, type PushNotifierOptions, type PushPayload } from './push/notifier.ts';
-export { fromBase64Url, generateVapid, pushRequest, validTarget, type PushRelayRequest, type PushTarget, type VapidKeys } from './push/webpush.ts';
+export {
+	fromBase64Url,
+	generateVapid,
+	isNativeTarget,
+	pushRequest,
+	targetKey,
+	validTarget,
+	type NativePushTarget,
+	type PushRelayRequest,
+	type PushTarget,
+	type VapidKeys,
+	type WebPushTarget
+} from './push/webpush.ts';
 export { RelayConnection, RelayError, type PublishResult, type Signer, type SocketFactory } from './net/connection.ts';
 export { IDLE_CLOSE_MS, RECONNECT_DELAYS_MS, RelayPool, type PoolOptions } from './net/pool.ts';
 export {

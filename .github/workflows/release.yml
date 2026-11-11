@@ -180,10 +180,23 @@ jobs:
           [ "${#conta}" = "${#CONTA}" ] || echo "::warning::O secret CLOUDFLARE_ACCOUNT_ID tinha espaços ou quebras de linha"
           [ "${#token}" = "${#TOKEN}" ] || echo "::warning::O secret CLOUDFLARE_API_TOKEN tinha espaços ou quebras de linha"
           [[ "$conta" =~ ^[0-9a-f]{32}$ ]] || { echo "::error::O secret CLOUDFLARE_ACCOUNT_ID não parece um Account ID (32 caracteres hexadecimais)"; exit 1; }
-          CLOUDFLARE_ACCOUNT_ID=$conta CLOUDFLARE_API_TOKEN=$token pnpm deploy:producao
+          # a conta de serviço do Firebase (ADR-0011) sobe junto como o secret FCM_CONTA; sem ela, só o app nativo
+          # fica sem aviso (o repassador responde 503)
+          segredos=()
+          if [ -n "$FCM" ]; then
+            node -e 'process.stdout.write(JSON.stringify({ FCM_CONTA: process.env.FCM }))' > "$RUNNER_TEMP/segredos.json"
+            node -e 'const j = JSON.parse(process.env.FCM); if (!j.project_id || !j.private_key) process.exit(1)' ||
+              { echo "::error::O secret FCM_CONTA_DE_SERVICO não parece a conta de serviço do Firebase (JSON com project_id e private_key)"; exit 1; }
+            segredos=(--secrets-file "$RUNNER_TEMP/segredos.json")
+          else
+            echo "::warning::Sem o secret FCM_CONTA_DE_SERVICO: o app nativo não recebe avisos"
+          fi
+          CLOUDFLARE_ACCOUNT_ID=$conta CLOUDFLARE_API_TOKEN=$token pnpm deploy:producao "${segredos[@]}"
+          rm -f "$RUNNER_TEMP/segredos.json"
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CONTA: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FCM: ${{ secrets.FCM_CONTA_DE_SERVICO }}
 
   registrar:
     needs: [montar, publicar, repassador]

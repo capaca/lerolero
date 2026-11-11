@@ -1,6 +1,9 @@
 // Repassador de Web Push (ADR-0010): o Chrome do remetente não consegue fazer o POST direto no FCM (CORS), então o
-// app manda o aviso já cifrado e assinado para cá, e o repassador só o encaminha. Não guarda nada, não registra nada
-// e não tem credencial: a cifra (RFC 8291) e o JWT VAPID (RFC 8292) vêm prontos do remetente.
+// app manda o aviso já cifrado e assinado para cá, e o repassador só o encaminha. Não guarda nada e não registra
+// nada: a cifra (RFC 8291) e o JWT VAPID (RFC 8292) vêm prontos do remetente. Para o app nativo (ADR-0011) o aviso
+// vai pela API do FCM, com a conta de serviço do projeto (fcm.ts), única credencial daqui.
+
+import { parseServiceAccount, sendFcm } from './fcm.ts';
 
 // Serviços de push dos navegadores; qualquer outro destino é recusado, para não virar um proxy aberto
 const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /^[a-z0-9-]+\.push\.apple\.com$/, /^[a-z0-9-]+\.notify\.windows\.com$/];
@@ -13,6 +16,9 @@ const TTL_MAX = 28 * 24 * 60 * 60;
 const URGENCIES = ['very-low', 'low', 'normal', 'high'];
 const FORWARD_TIMEOUT_MS = 10_000;
 const ANSWER_MAX_CHARS = 500;
+// os dados de uma mensagem do FCM cabem em 4096 bytes; o aviso cifrado tem uns 200, e o base64 cresce 1/3
+export const FCM_BODY_MAX_BYTES = 2048;
+const FCM_TOKEN = /^[\w:-]{32,512}$/;
 
 export interface RateLimit {
 	limit(options: { key: string }): Promise<{ success: boolean }>;
@@ -25,6 +31,8 @@ export interface Env {
 	ORIGENS_LOCAIS?: string;
 	// 120 pedidos por minuto por IP (decidido em 2026-11-04): cabe a rajada de um grupo grande
 	LIMITE: RateLimit;
+	// JSON da conta de serviço do projeto do Firebase (secret; ADR-0011). Sem ele, os avisos ao app nativo dão 503
+	FCM_CONTA?: string;
 }
 
 // O que o app manda: o pedido ao serviço de push, desmontado em campos para o repassador conferir cada um
@@ -34,6 +42,13 @@ export interface PushRelayRequest {
 	urgency: string;
 	authorization: string;
 	// o aviso cifrado (aes128gcm), em base64url
+	body: string;
+}
+
+// Para o app nativo (ADR-0011): o token do FCM de quem recebe e o aviso cifrado para a chave do app
+export interface FcmRelayRequest {
+	fcm: string;
+	ttl: number;
 	body: string;
 }
 
@@ -74,13 +89,30 @@ function decodeBase64Url(text: string): Uint8Array<ArrayBuffer> | null {
 	return Uint8Array.from(bin, (c) => c.charCodeAt(0));
 }
 
-type Parsed = { ok: true; request: PushRelayRequest; body: Uint8Array<ArrayBuffer> } | { ok: false; erro: string };
+type Parsed =
+	| { ok: true; request: PushRelayRequest; body: Uint8Array<ArrayBuffer> }
+	| { ok: true; fcm: FcmRelayRequest }
+	| { ok: false; erro: string };
+
+function validTtl(ttl: unknown): ttl is number {
+	return typeof ttl === 'number' && Number.isInteger(ttl) && ttl >= 0 && ttl <= TTL_MAX;
+}
+
+function parseFcm(r: Record<string, unknown>): Parsed {
+	if (typeof r.fcm !== 'string' || !FCM_TOKEN.test(r.fcm)) return { ok: false, erro: 'token do FCM inválido' };
+	if (!validTtl(r.ttl)) return { ok: false, erro: 'ttl inválido' };
+	const body = typeof r.body === 'string' ? decodeBase64Url(r.body) : null;
+	if (!body || body.length === 0) return { ok: false, erro: 'body inválido' };
+	if (body.length > FCM_BODY_MAX_BYTES) return { ok: false, erro: 'body grande demais' };
+	return { ok: true, fcm: { fcm: r.fcm, ttl: r.ttl, body: r.body as string } };
+}
 
 export function parseRequest(value: unknown): Parsed {
 	if (!value || typeof value !== 'object') return { ok: false, erro: 'pedido inválido' };
 	const r = value as Record<string, unknown>;
+	if ('fcm' in r) return parseFcm(r);
 	if (typeof r.endpoint !== 'string' || !allowedEndpoint(r.endpoint)) return { ok: false, erro: 'destino não é um serviço de push conhecido' };
-	if (typeof r.ttl !== 'number' || !Number.isInteger(r.ttl) || r.ttl < 0 || r.ttl > TTL_MAX) return { ok: false, erro: 'ttl inválido' };
+	if (!validTtl(r.ttl)) return { ok: false, erro: 'ttl inválido' };
 	if (typeof r.urgency !== 'string' || !URGENCIES.includes(r.urgency)) return { ok: false, erro: 'urgency inválida' };
 	// só o formato do RFC 8292; a assinatura quem confere é o serviço de push
 	if (typeof r.authorization !== 'string' || !/^vapid t=[\w.-]+, k=[\w-]+$/.test(r.authorization) || r.authorization.length > 1024)
@@ -126,6 +158,7 @@ export async function handle(request: Request, env: Env, forward: typeof fetch):
 	}
 	const parsed = parseRequest(value);
 	if (!parsed.ok) return json(400, { erro: parsed.erro }, cors);
+	if ('fcm' in parsed) return relayFcm(parsed.fcm, env, forward, cors);
 
 	const { endpoint, ttl, urgency, authorization } = parsed.request;
 	let res: Response;
@@ -147,6 +180,20 @@ export async function handle(request: Request, env: Env, forward: typeof fetch):
 	} catch {
 		return json(502, { erro: 'serviço de push não respondeu' }, cors);
 	}
+	const resposta = (await res.text()).slice(0, ANSWER_MAX_CHARS);
+	return json(200, { status: res.status, resposta } satisfies PushRelayResult, cors);
+}
+
+async function relayFcm(request: FcmRelayRequest, env: Env, forward: typeof fetch, cors: Record<string, string>): Promise<Response> {
+	const account = parseServiceAccount(env.FCM_CONTA);
+	if (!account) return json(503, { erro: 'FCM não configurado' }, cors);
+	let res: Response;
+	try {
+		res = await sendFcm(account, request.fcm, request.body, request.ttl, forward);
+	} catch {
+		return json(502, { erro: 'FCM não respondeu' }, cors);
+	}
+	// 404 (UNREGISTERED): o app foi desinstalado ou trocou o token, e o remetente para de avisar esse aparelho
 	const resposta = (await res.text()).slice(0, ANSWER_MAX_CHARS);
 	return json(200, { status: res.status, resposta } satisfies PushRelayResult, cors);
 }

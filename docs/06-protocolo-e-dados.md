@@ -53,7 +53,7 @@ kind 1059  Gift wrap — assinado por chave descartável; tag ["p", <destinatár
 | Confirmação (entregue / lida) | `4441` | próprio | Uma tag `["e", <id>]` por mensagem (até 200), `["status", "entregue" ou "lida"]` e `alt`. Vai só a quem escreveu as mensagens (nos grupos também), sem cópia para mim. Seção 3.4 |
 | Controle de grupo | `4440` | próprio | Seção 3.3; tag `alt` "aviso de grupo do Lero-lero" |
 | Cartão de perfil | `4442` | próprio | Seção 3.10 |
-| Aparelho de aviso | `4445` | próprio | Decidido em 2026-11-04 ([ADR-0010](adr/0010-web-push-no-pwa.md)): só para mim mesmo, nos meus relays de DM, conta aos meus outros aparelhos onde este recebe notificações. Tags `["aparelho", <id sorteado>]` e, se ativo, uma `push` como a do cartão (seção 3.10); sem `push`, desativou. Seção 3.11 |
+| Aparelho de aviso | `4445` | próprio | Decidido em 2026-11-04 ([ADR-0010](adr/0010-web-push-no-pwa.md)): só para mim mesmo, nos meus relays de DM, conta aos meus outros aparelhos onde este recebe notificações. Tags `["aparelho", <id sorteado>]` e, se ativo, uma `push` ou `fcm` como a do cartão (seção 3.10); sem nenhuma delas, desativou. Seção 3.11 |
 | Pedido de reenvio | `4444` | próprio | Decidido em 2026-10-29 (RF-53): uma tag `["seq", <n>]` por número que falta (até 50), `alt` e, nos grupos, `g`. Vai só a quem escreveu, sem cópia para mim. Seção 3.5 |
 
 Os números dos kinds próprios devem ser escolhidos consultando o registro de kinds do repositório de NIPs, para evitar colisão (Q-P1). A faixa **4440–4449** fica reservada para os kinds próprios do Lero-lero (livre no registro em 2026-10-22).
@@ -228,6 +228,13 @@ Decidido em 2026-11-04 (`packages/core/src/push`).
   volta. O id do aparelho é sorteado e não vai no backup.
 - **Ao bloquear:** o aparelho onde se bloqueou gera par VAPID e inscrição novos, avisa os outros aparelhos e manda o
   cartão novo só a quem ficou. O bloqueado fica com um endereço que o serviço recusa.
+- **App nativo** (item 27, [ADR-0011](adr/0011-app-android-nativo.md)): o aparelho vai no cartão e no kind `4445` como
+  `["fcm", <token do FCM>, <p256dh>, <auth>]`. O par ECDH P-256 e o `auth` são gerados pelo próprio app, e a privada
+  fica fora do WebView, para o serviço do FCM decifrar com o app fechado. O aviso é o mesmo, cifrado do mesmo jeito
+  (RFC 8291); o pedido ao repassador é `{"fcm", "ttl", "body"}`, e o repassador manda pela API HTTP v1 do FCM uma
+  mensagem só de dados (`data.c` = o aviso em base64url), com `android.priority: HIGH`, que acorda o celular parado.
+  O 404 do FCM (token que não vale mais) tira o aparelho do cartão guardado, como o 410 do Web Push. Ao bloquear, o
+  app troca o token e o par. Versões antigas ignoram a tag `fcm` e só não avisam esse aparelho.
 - **No aparelho que recebe** (etapa 3, 2026-11-04): ativado em Ajustes → Notificações, só neste aparelho, ou pelo
   convite da tela inicial (2026-11-05, RF-82). O service
   worker mostra "Mensagem de <nome>", com o nome que este aparelho deu ao contato (o do aviso só sem contato

@@ -120,7 +120,6 @@ import {
 	storeProfile,
 	type ProfileRecord,
 	myDeviceId,
-	generateVapid,
 	myPushTarget,
 	myPushTargets,
 	PUSH_DEVICE_KIND,
@@ -129,6 +128,7 @@ import {
 	renewPushTarget,
 	setMyPushTarget,
 	storePushDevice,
+	targetKey,
 	type OutboxRecord,
 	SyncEngine,
 	upgradeSyncGeneration,
@@ -147,7 +147,7 @@ import { prepareFromFile, prepareProfileFromFile } from './photo-encoder.ts';
 import { m } from '#lib/paraglide/messages.js';
 import { memberName } from './notices.ts';
 import { relayList } from './relays.ts';
-import { currentPushEndpoint, subscribePush, unsubscribePush } from './push-subscription.ts';
+import { currentPushKey, newPushTarget, pushPermission, unsubscribePush } from './push-subscription.ts';
 
 export type Status = 'carregando' | 'erro' | 'sem-identidade' | 'bloqueado' | 'desbloqueado';
 
@@ -1539,13 +1539,12 @@ class Session {
 	}
 
 	/**
-	 * Ativa as notificações neste aparelho: pede a permissão, gera a chave VAPID e se inscreve no navegador. O cartão
-	 * novo vai a quem já me conhece e os meus outros aparelhos ficam sabendo. Sem permissão, `PushPermissionError`.
+	 * Ativa as notificações neste aparelho: pede a permissão e se inscreve (no navegador, com uma chave VAPID nova; no
+	 * app nativo, pelo FCM). O cartão novo vai a quem já me conhece e os meus outros aparelhos ficam sabendo. Sem
+	 * permissão, `PushPermissionError`.
 	 */
 	async enablePush() {
-		const vapid = await generateVapid();
-		const subscription = await subscribePush(vapid.publicKey);
-		await this.pushChanged(await setMyPushTarget(storage, { ...subscription, vapid }));
+		await this.pushChanged(await setMyPushTarget(storage, await newPushTarget()));
 	}
 
 	/** Desativa neste aparelho: o cartão sai sem ele, e a inscrição antiga passa a dar 410 a quem ainda mandar. */
@@ -1560,16 +1559,16 @@ class Session {
 	}
 
 	/**
-	 * Ao abrir: a pessoa pode ter tirado a permissão nas configurações, ou o navegador ter trocado a inscrição
-	 * sozinho. Sem permissão, desativa; com ela, se inscreve de novo, para o cartão não ficar com um endereço morto.
+	 * Ao abrir: a pessoa pode ter tirado a permissão nas configurações, ou o navegador (ou o FCM, no app nativo) ter
+	 * trocado a inscrição sozinho. Sem permissão, desativa; com ela, se inscreve de novo, para o cartão não ficar com
+	 * um endereço morto.
 	 */
 	private async checkPush() {
 		try {
 			const mine = await myPushTarget(storage);
 			if (!mine) return;
-			const endpoint = await currentPushEndpoint();
-			if (endpoint === mine.endpoint) return;
-			const tags = Notification.permission === 'granted' ? await renewPushTarget(storage, subscribePush) : await setMyPushTarget(storage, undefined);
+			if ((await currentPushKey()) === targetKey(mine)) return;
+			const tags = (await pushPermission()) === 'granted' ? await renewPushTarget(storage, () => newPushTarget()) : await setMyPushTarget(storage, undefined);
 			if (tags) await this.pushChanged(tags);
 		} catch {
 			// sem rede para a inscrição nova: tenta de novo na próxima abertura
@@ -1610,7 +1609,7 @@ class Session {
 	 */
 	private async renewPush() {
 		try {
-			const tags = await renewPushTarget(storage, subscribePush);
+			const tags = await renewPushTarget(storage, () => newPushTarget(true));
 			if (!tags) return;
 			await this.announcePushDevice(tags);
 			void this.sendProfile(await profileAudience(storage, this.current.publicKey));

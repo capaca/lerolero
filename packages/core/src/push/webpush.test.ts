@@ -42,7 +42,7 @@ describe('cifra do aviso (RFC 8291)', () => {
 		const device = await fakePushDevice();
 		const request = await pushRequest(device.target, { nome: 'Ana' });
 		expect(request).toMatchObject({ endpoint: device.target.endpoint, ttl: 86400, urgency: 'high' });
-		expect(request.authorization).toMatch(/^vapid t=[\w.-]+, k=[\w-]+$/);
+		expect('authorization' in request && request.authorization).toMatch(/^vapid t=[\w.-]+, k=[\w-]+$/);
 		expect(fromBase64Url(request.body).length).toBeLessThan(4096);
 	});
 });

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { openStorage } from '../storage/repositories.ts';
-import { fakePushDevice } from '../testing/fake-push.ts';
+import { fakeNativeDevice, fakePushDevice } from '../testing/fake-push.ts';
 import { PUSH_BURST_MS, PushNotifier } from './notifier.ts';
 import type { PushRelayRequest, PushTarget } from './webpush.ts';
 
@@ -41,9 +41,26 @@ describe('aviso de mensagem nova', () => {
 		notifier.notify(BIA, 'grupo1');
 		await vi.waitFor(() => expect(sent).toHaveLength(2));
 		expect(sent.map((s) => s.url)).toEqual([RELAY, RELAY]);
-		expect(sent.map((s) => s.request.endpoint).sort()).toEqual([phone.target.endpoint, laptop.target.endpoint].sort());
-		const forPhone = sent.find((s) => s.request.endpoint === phone.target.endpoint)!;
+		expect(sent.map((s) => 'endpoint' in s.request && s.request.endpoint).sort()).toEqual([phone.target.endpoint, laptop.target.endpoint].sort());
+		const forPhone = sent.find((s) => 'endpoint' in s.request && s.request.endpoint === phone.target.endpoint)!;
 		expect(await phone.open(forPhone.request.body)).toEqual({ v: 1, de: ME, nome: 'Ana Souza', grupo: 'grupo1' });
+	});
+
+	it('ao app nativo, pelo token do FCM, cifrado para a chave do app (ADR-0011)', async () => {
+		const app = await fakeNativeDevice();
+		const { sent, notifier } = await setup([app.target]);
+		notifier.notify(BIA);
+		await vi.waitFor(() => expect(sent).toHaveLength(1));
+		const { request } = sent[0];
+		expect(request).toEqual({ fcm: app.target.fcm, ttl: 86400, body: request.body });
+		expect(await app.open(request.body)).toEqual({ v: 1, de: ME, nome: 'Ana Souza' });
+	});
+
+	it('token do app que o FCM não conhece mais (404) sai do cartão guardado', async () => {
+		const [web, app] = [await fakePushDevice(), await fakeNativeDevice()];
+		const { storage, notifier } = await setup([web.target, app.target], 404);
+		notifier.notify(BIA);
+		await vi.waitFor(async () => expect((await storage.profiles.get(BIA))?.push).toBeUndefined());
 	});
 
 	it('uma rajada vira dois avisos: o primeiro na hora e um no fim da janela', async () => {

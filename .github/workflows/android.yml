@@ -41,6 +41,10 @@ jobs:
         run: APP_RELEASE="homolog-${GITHUB_SHA::7}" pnpm apk
         env:
           APP_AMBIENTE: homologacao
+      # a cifra do aviso do FCM (ADR-0011) contra o exemplo do RFC 8291, na JVM
+      - name: Testes do app nativo
+        working-directory: packages/android/android
+        run: ./gradlew testDebugUnitTest
       # o APK assinado só sai na release; aqui ele é montado com uma chave descartável, para um erro na assinatura ou na
       # versão aparecer no PR e não na hora da release
       - name: APK da release, com chave descartável

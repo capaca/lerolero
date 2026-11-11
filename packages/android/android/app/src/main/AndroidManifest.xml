@@ -29,6 +29,17 @@
 
         </activity>
 
+        <!-- o token do FCM só nasce quando a pessoa ativa as notificações em Ajustes, não a cada instalação -->
+        <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
+        <!-- avisos de mensagem nova pelo FCM (RF-82, ADR-0011), com o app fechado -->
+        <service
+            android:name=".MensagensService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -47,5 +58,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- avisos de mensagem nova (RF-82): o Android 13 em diante pergunta ao ativar em Ajustes -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

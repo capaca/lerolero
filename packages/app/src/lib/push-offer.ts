@@ -1,14 +1,14 @@
 // Convite para ativar as notificações (RF-82): na tela inicial, depois da primeira conversa, até a pessoa ativar ou
 // dispensar. Só deste aparelho, como a própria notificação; Ajustes continua com a opção.
 import { m } from '#lib/paraglide/messages.js';
-import { NoServiceWorkerError, pushSupport, PushPermissionError } from './push-subscription.ts';
+import { NoServiceWorkerError, pushPermission, pushSupport, PushPermissionError } from './push-subscription.ts';
 import { session } from './session.svelte.ts';
 
 const DISMISSED_KEY = 'lerolero:convite-notificacoes-dispensado';
 
 export async function pushOfferDue(): Promise<boolean> {
 	// bloqueada, o navegador nem pergunta: o convite só levaria ao erro
-	if (pushSupport() !== 'sim' || Notification.permission === 'denied') return false;
+	if (pushSupport() !== 'sim' || (await pushPermission()) === 'denied') return false;
 	try {
 		if (localStorage.getItem(DISMISSED_KEY)) return false;
 	} catch {

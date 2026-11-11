@@ -1,9 +1,10 @@
 name: Repassador de push
 
-# Publica o repassador de Web Push (ADR-0010, packages/repassador) no Cloudflare Workers da homologação a cada merge
+# Publica o repassador de push (ADR-0010 e ADR-0011, packages/repassador) no Cloudflare Workers da homologação a cada merge
 # que muda a pasta. A produção sai só na release (release.yml), com o commit validado na homologação.
 # Secrets: CLOUDFLARE_API_TOKEN ("lerolero-repassador-ci": Workers Scripts Read e Write na conta, vence em 2027-11-04,
-# com aviso no situacao.sh e na agenda do Pedro) e CLOUDFLARE_ACCOUNT_ID.
+# com aviso no situacao.sh e na agenda do Pedro), CLOUDFLARE_ACCOUNT_ID e FCM_CONTA_DE_SERVICO (o JSON da conta de
+# serviço do projeto do Firebase, que o Pedro gerou no console; vai ao Worker como o secret FCM_CONTA).
 
 on:
   push:
@@ -41,7 +42,20 @@ jobs:
           [ "${#conta}" = "${#CONTA}" ] || echo "::warning::O secret CLOUDFLARE_ACCOUNT_ID tinha espaços ou quebras de linha"
           [ "${#token}" = "${#TOKEN}" ] || echo "::warning::O secret CLOUDFLARE_API_TOKEN tinha espaços ou quebras de linha"
           [[ "$conta" =~ ^[0-9a-f]{32}$ ]] || { echo "::error::O secret CLOUDFLARE_ACCOUNT_ID não parece um Account ID (32 caracteres hexadecimais)"; exit 1; }
-          CLOUDFLARE_ACCOUNT_ID=$conta CLOUDFLARE_API_TOKEN=$token pnpm deploy:homologacao
+          # a conta de serviço do Firebase (ADR-0011) sobe junto como o secret FCM_CONTA; sem ela, só o app nativo
+          # fica sem aviso (o repassador responde 503)
+          segredos=()
+          if [ -n "$FCM" ]; then
+            node -e 'process.stdout.write(JSON.stringify({ FCM_CONTA: process.env.FCM }))' > "$RUNNER_TEMP/segredos.json"
+            node -e 'const j = JSON.parse(process.env.FCM); if (!j.project_id || !j.private_key) process.exit(1)' ||
+              { echo "::error::O secret FCM_CONTA_DE_SERVICO não parece a conta de serviço do Firebase (JSON com project_id e private_key)"; exit 1; }
+            segredos=(--secrets-file "$RUNNER_TEMP/segredos.json")
+          else
+            echo "::warning::Sem o secret FCM_CONTA_DE_SERVICO: o app nativo não recebe avisos"
+          fi
+          CLOUDFLARE_ACCOUNT_ID=$conta CLOUDFLARE_API_TOKEN=$token pnpm deploy:homologacao "${segredos[@]}"
+          rm -f "$RUNNER_TEMP/segredos.json"
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CONTA: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FCM: ${{ secrets.FCM_CONTA_DE_SERVICO }}

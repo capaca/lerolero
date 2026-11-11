@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { KdfParams } from '../crypto/seal.ts';
 import { createVault, PUSH_DEVICE_KIND } from '../identity/vault.ts';
 import { openStorage } from '../storage/repositories.ts';
-import { fakePushDevice } from '../testing/fake-push.ts';
+import { fakeNativeDevice, fakePushDevice } from '../testing/fake-push.ts';
 import { dropPushTarget, myDeviceId, myPushTarget, myPushTargets, pushTags, renewPushTarget, setMyPushTarget, storePushDevice, targetsFromTags } from './targets.ts';
+import { targetKey } from './webpush.ts';
 
 const FAST: KdfParams = { memoryKiB: 64, iterations: 1, parallelism: 1 };
 const closers: Array<() => void> = [];
@@ -95,16 +96,9 @@ describe('chaves novas ao bloquear', () => {
 		const { target } = await fakePushDevice();
 		await setMyPushTarget(storage, target, T0);
 		const fresh = await fakePushDevice();
-		let asked = '';
-		const tags = await renewPushTarget(storage, async (vapidPublicKey) => {
-			asked = vapidPublicKey;
-			return { endpoint: fresh.target.endpoint, p256dh: fresh.target.p256dh, auth: fresh.target.auth };
-		});
-		const renewed = (await myPushTarget(storage))!;
-		expect(renewed.endpoint).toBe(fresh.target.endpoint);
-		expect(renewed.vapid.publicKey).toBe(asked);
-		expect(renewed.vapid.publicKey).not.toBe(target.vapid.publicKey);
-		expect(targetsFromTags(tags!)).toEqual([renewed]);
+		const tags = await renewPushTarget(storage, async () => fresh.target);
+		expect(await myPushTarget(storage)).toEqual(fresh.target);
+		expect(targetsFromTags(tags!)).toEqual([fresh.target]);
 	});
 
 	it('sem notificações ativas aqui, não pede inscrição', async () => {
@@ -124,5 +118,43 @@ describe('inscrição de contato que acabou', () => {
 		expect((await storage.profiles.get(publicKey))?.push).toEqual([b.target]);
 		await dropPushTarget(storage, publicKey, b.target.endpoint);
 		expect((await storage.profiles.get(publicKey))?.push).toBeUndefined();
+	});
+
+	it('o do app nativo sai pelo token', async () => {
+		const storage = storageFor();
+		const [web, native] = [await fakePushDevice(), await fakeNativeDevice()];
+		const publicKey = 'f'.repeat(64);
+		await storage.profiles.put({ publicKey, name: 'Bia', relays: [], features: [], push: [web.target, native.target], updatedAt: 1 });
+		await dropPushTarget(storage, publicKey, targetKey(native.target));
+		expect((await storage.profiles.get(publicKey))?.push).toEqual([web.target]);
+	});
+});
+
+describe('app nativo (ADR-0011)', () => {
+	it('vai no cartão ao lado do navegador e volta igual', async () => {
+		const [web, native] = [await fakePushDevice(), await fakeNativeDevice()];
+		const tags = pushTags([web.target, native.target]);
+		expect(tags[1]).toEqual(['fcm', native.target.fcm, native.target.p256dh, native.target.auth]);
+		expect(targetsFromTags(tags)).toEqual([web.target, native.target]);
+	});
+
+	it('token ou chave que não confere é descartado', async () => {
+		const { target } = await fakeNativeDevice();
+		expect(targetsFromTags([['fcm', 'curto', target.p256dh, target.auth]])).toEqual([]);
+		expect(targetsFromTags([['fcm', `${target.fcm}/../x`, target.p256dh, target.auth]])).toEqual([]);
+		expect(targetsFromTags([['fcm', target.fcm, target.auth, target.auth]])).toEqual([]);
+		expect(targetsFromTags([['fcm', target.fcm, target.p256dh]])).toEqual([]);
+	});
+
+	it('o aviso entre aparelhos traz o app nativo; estragado não vira "desativei"', async () => {
+		const me = await account();
+		const [phone, app] = [storageFor(), storageFor()];
+		const { target } = await fakeNativeDevice();
+		const tags = await setMyPushTarget(app, target, T0);
+		expect(await storePushDevice(phone, me.publicKey, announce(me, tags, T0 / 1000))).toEqual({ changed: true, unknown: true });
+		expect(await myPushTargets(phone)).toEqual([target]);
+		const broken = tags.map((t) => (t[0] === 'fcm' ? ['fcm', 'x', t[2], t[3]] : t));
+		expect(await storePushDevice(phone, me.publicKey, announce(me, broken, T0 / 1000 + 60))).toEqual({ changed: false, unknown: false });
+		expect(await myPushTargets(phone)).toEqual([target]);
 	});
 });

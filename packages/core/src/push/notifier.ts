@@ -5,7 +5,7 @@
 import type { Storage } from '../storage/repositories.ts';
 import { cleanName } from '../contacts/invite.ts';
 import { dropPushTarget } from './targets.ts';
-import { pushRequest } from './webpush.ts';
+import { pushRequest, targetKey } from './webpush.ts';
 
 /** Depois de um aviso, os outros para a mesma pessoa esperam isto e saem juntos num só. */
 export const PUSH_BURST_MS = 15_000;
@@ -78,7 +78,7 @@ export class PushNotifier {
 					if (!res.ok) return;
 					const { status } = (await res.json()) as { status?: number };
 					// a pessoa desativou ou trocou as chaves (bloqueou alguém): o cartão novo traz o endereço novo
-					if (status === 404 || status === 410) await dropPushTarget(storage, recipient, target.endpoint);
+					if (status === 404 || status === 410) await dropPushTarget(storage, recipient, targetKey(target));
 				})
 			);
 		} catch {
