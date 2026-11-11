@@ -5,6 +5,16 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-11: Item 28c: a mensagem enviada na tela em menos de 100 ms (RNF-12)
+
+- Até o balão aparecer, o envio passava pela cifra no worker (selo e embrulho, duas vezes, com as assinaturas), pela
+  gravação e pela recarga: ~115 ms no Redmi. Agora o rumor (sem assinatura, o id é só um hash) é montado fora do
+  cofre (`newRumor`), guardado e mostrado; a cifra vem depois, num método novo do cofre (`wrapMine`) que só sela e
+  embrulha texto e arquivo meus, com o id certo e para quem está nas tags `p`, as mesmas conferências do `rewrap`.
+  Se a cifra falhar, a mensagem sai da tela e o texto volta para o campo, como antes.
+- Reação, pedido de apagar, edição e confirmação continuam no caminho de antes: não viram balão novo.
+- No Redmi, com 2.000 mensagens: 79 ms de mediana (56 a 104 ms). Com isso o item 28 terminou.
+
 ## 2026-11-11: Item 28b: rolagem da conversa longa (RNF-14)
 
 - Perfil da rolagem no Redmi (pelo CDP, com as 2.000 mensagens que a medição deixa no aparelho): com tudo carregado,

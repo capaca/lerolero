@@ -49,6 +49,7 @@ export {
 	LockedError,
 	MAX_TEXT_LENGTH,
 	MAX_RECEIPT_IDS,
+	newRumor,
 	EDIT_KIND,
 	RESEND_KIND,
 	PROFILE_KIND,

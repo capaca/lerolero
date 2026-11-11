@@ -22,6 +22,7 @@ import {
 	SESSION_IDLE_MS,
 	indexedDbSessionStore,
 	memorySessionStore,
+	newRumor,
 	sessionIsOpen
 } from './vault.ts';
 import { getEventHash, getPublicKey, generateSecretKey, finalizeEvent } from 'nostr-tools/pure';
@@ -259,6 +260,28 @@ describe('cofre: assinar e abrir mensagens', () => {
 		const other = getPublicKey(generateSecretKey());
 		const wrap = wrapEvent({ kind: 14, content: 'oi', tags: [] }, generateSecretKey(), other);
 		expect(() => vault.unwrap(wrap)).toThrow(InvalidWrapError);
+	});
+
+	it('embrulha a mensagem montada fora do cofre (RNF-12), só se for minha, de texto ou arquivo e para quem está nela', async () => {
+		const ana = createVault({ kdf: FAST });
+		const bia = createVault({ kdf: FAST });
+		const { publicKey: anaKey } = await ana.create('123456');
+		const { publicKey: biaKey } = await bia.create('123456');
+		const caio = getPublicKey(generateSecretKey());
+		const rumor = newRumor(anaKey, 14, 'oi', [['p', biaKey]], 1000);
+		expect(rumor.id).toBe(getEventHash(rumor));
+
+		const wrapped = ana.wrapMine(rumor, [biaKey]);
+		expect(bia.unwrap(wrapped.toRecipients[0].wrap)).toEqual(rumor);
+		expect(ana.unwrap(wrapped.toSelf)).toEqual(rumor);
+
+		expect(() => ana.wrapMine(rumor, [caio])).toThrow('destinatários inválidos');
+		expect(() => ana.wrapMine(rumor, [anaKey])).toThrow('destinatários inválidos');
+		expect(() => ana.wrapMine({ ...rumor, content: 'outro' }, [biaKey])).toThrow('mensagens minhas');
+		expect(() => ana.wrapMine(newRumor(biaKey, 14, 'oi', [['p', anaKey]]), [anaKey])).toThrow('mensagens minhas');
+		const reaction = ana.wrapDirectMessage(biaKey, '👍', [['e', 'a'.repeat(64)], ['k', '14']], 7).rumor;
+		expect(() => ana.wrapMine(reaction, [biaKey])).toThrow('mensagens minhas');
+		expect(() => newRumor(anaKey, 14, '   ', [['p', biaKey]])).toThrow('vazia');
 	});
 
 	it('refaz o embrulho de um rumor meu, para quem estava nele ou para mim, e de mais nada (P4)', async () => {
