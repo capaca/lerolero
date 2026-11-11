@@ -5,6 +5,23 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-11: Item 28b: rolagem da conversa longa (RNF-14)
+
+- Perfil da rolagem no Redmi (pelo CDP, com as 2.000 mensagens que a medição deixa no aparelho): com tudo carregado,
+  o quadro fica em 16,7 ms; os engasgos vinham só de "carregar anteriores". Os blocos com `content-visibility` eram
+  fatiados pelo índice a partir do começo: 200 mensagens a mais em cima trocavam todas de bloco, e cada bloco tem o
+  seu `{#each}`, então todos os balões eram destruídos e refeitos (até ~300 ms). E o teste tocava três vezes no botão
+  durante o carregamento, cada toque somando uma página.
+- O que mudou: cada mensagem tem uma vaga fixa enquanto a conversa está aberta (as anteriores entram em blocos novos
+  na frente); "carregar anteriores" lê só a página de antes e a mostra 25 por quadro, mantendo a posição de leitura;
+  toque durante o carregamento não pede outra página. Teste novo em `conversa-longa` (230 mensagens, algumas no mesmo
+  segundo na divisa da página, dois toques seguidos).
+- Resultado no Redmi: 57,5 a 57,9 fps na medição (antes, 55 a 57), com 0 a 2 tarefas longas (antes, 2 a 5); os
+  quadros lentos que restam são da criação dos balões (~1,3 ms cada no aparelho). Decidido pelo Pedro: aceitar como
+  limite conhecido. Rejeitados por ora: carregar antes de chegar ao topo e virtualizar a lista.
+- `medir-celular.ts`: a contagem de quando o relay tem todas passou a olhar os dois relays (saía 0).
+- Falta o 28c: a mensagem enviada na tela em menos de 100 ms (RNF-12; ~115 ms no Redmi).
+
 ## 2026-11-11: Item 28a: a conversa aberta não recarrega inteira a cada mudança (P17)
 
 - Medido antes de mexer, no Chrome do Mac com a CPU 6× mais lenta e os relays locais (o medidor ficou fora do

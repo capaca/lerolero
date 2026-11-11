@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Conversa (1:1 ou grupo): mensagens, avisos de grupo, menu da mensagem e campo de envio.
 	// O topo e os avisos de cima ficam com a tela que usa o componente.
-	import { applyChanges, canEdit, contactName, deliveryOf, forwardOf, isBlockedFile, keepUnchanged, keepUnchangedGroups, sameRecord, saveName, withMentionLabels, type MessageRecord, type ReactionRecord } from '@lerolero/core';
+	import { applyChanges, canEdit, contactName, deliveryOf, forwardOf, isBlockedFile, keepUnchanged, keepUnchangedGroups, olderPage, sameRecord, saveName, withMentionLabels, type MessageRecord, type ReactionRecord } from '@lerolero/core';
 	import { page } from '$app/state';
 	import { onDestroy, tick, type Snippet } from 'svelte';
 	import Composer from './Composer.svelte';
@@ -40,6 +40,8 @@
 	// em blocos com content-visibility: o modo que rolou melhor no celular (prototipos/medicao).
 	const PAGE_SIZE = 200;
 	const BLOCK_SIZE = 50;
+	// "carregar anteriores" põe na tela tantas por quadro: 50 balões levavam 55 a 80 ms no celular de referência
+	const OLDER_CHUNK = 25;
 	// numa rajada do que chega pela rede, o intervalo mínimo entre uma recarga e a seguinte (P17)
 	const RELOAD_GAP_MS = 250;
 	// as últimas que a recarga parcial relê sempre, além das que a sessão avisou que mudaram
@@ -302,16 +304,31 @@
 		| { type: 'dia'; key: number; label: string }
 		| { type: 'novas' }
 		| { type: 'msg'; message: MessageRecord; first: boolean; last: boolean; day: string };
+	// Cada mensagem tem uma vaga fixa enquanto a conversa está aberta, herdada da recarga anterior, e o bloco é a vaga
+	// dividida por BLOCK_SIZE. Fatiar pelo índice fazia "carregar anteriores" (200 em cima) trocar todas as mensagens
+	// de bloco, e cada bloco tem o seu {#each}: todos os balões eram destruídos e refeitos, e a rolagem engasgava
+	// (RNF-14). Assim as anteriores entram em blocos novos na frente e os da tela ficam como estão.
+	let slotOf = new Map<string, number>();
 	const blocks = $derived.by(() => {
-		const items: Item[] = [];
+		const known = messages.findIndex((x) => slotOf.has(x.id));
+		const base = known < 0 ? 0 : slotOf.get(messages[known].id)! - known;
+		slotOf = new Map(messages.map((x, i) => [x.id, base + i]));
+		const out: { key: number; items: Item[] }[] = [];
+		let block: { key: number; items: Item[] } | undefined;
+		const add = (item: Item, slot: number) => {
+			const key = Math.floor(slot / BLOCK_SIZE);
+			if (block?.key !== key) out.push((block = { key, items: [] }));
+			block.items.push(item);
+		};
 		let lastDay: number | undefined;
 		let dayLabel = '';
 		let previous: Extract<Item, { type: 'msg' }> | undefined;
-		for (const message of messages) {
+		for (const [i, message] of messages.entries()) {
+			const slot = base + i;
 			const day = dayKey(message.createdAt);
 			if (day !== lastDay) {
 				dayLabel = formatDay(message.createdAt);
-				items.push({ type: 'dia', key: day, label: dayLabel });
+				add({ type: 'dia', key: day, label: dayLabel }, slot);
 			}
 			const first =
 				day !== lastDay ||
@@ -322,13 +339,11 @@
 				message.id === newFrom;
 			if (first && previous) previous.last = true;
 			lastDay = day;
-			if (message.id === newFrom) items.push({ type: 'novas' });
+			if (message.id === newFrom) add({ type: 'novas' }, slot);
 			previous = { type: 'msg', message, first, last: false, day: dayLabel };
-			items.push(previous);
+			add(previous, slot);
 		}
 		if (previous) previous.last = true;
-		const out: Item[][] = [];
-		for (let i = 0; i < items.length; i += BLOCK_SIZE) out.push(items.slice(i, i + BLOCK_SIZE));
 		return out;
 	});
 
@@ -414,7 +429,8 @@
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let lastEnd = -Infinity;
 	function refresh(now = false) {
-		if (running) {
+		// enquanto as anteriores entram na tela, a recarga espera: senão gravaria a janela sem o pedaço que entrou
+		if (running || loadingOlder) {
 			again = true;
 			againNow ||= now;
 			return;
@@ -501,7 +517,7 @@
 		return { list, older: older || hasOlder, conversation };
 	}
 
-	/** "Carregar anteriores" pediu mais uma página em cima: relê tudo */
+	/** a recarga parcial falhou e as mudanças já saíram da sessão: a próxima relê tudo */
 	let wantsAll = false;
 
 	async function load() {
@@ -605,15 +621,53 @@
 	});
 	onDestroy(() => (session.openConversationId = undefined));
 
+	// "Carregar anteriores" (RNF-14): lê só a página de antes da primeira da tela e a mostra aos poucos (OLDER_CHUNK por quadro),
+	// mantendo na tela a mensagem que a pessoa estava lendo. Pôr 200 balões de uma vez travava a rolagem no celular
+	// de referência (até ~300 ms); um toque a mais durante o carregamento não pede outra página.
+	// variável comum: o refresh, chamado dentro de um $effect, não pode passar a depender dela
+	let loadingOlder = false;
+	let olderBusy = $state(false);
 	async function loadOlder() {
-		const before = scroller!.scrollHeight;
-		extraPages++;
-		wantsAll = true;
-		while (running) await running;
-		refresh(true);
-		await running;
-		// mantém na tela a mensagem que a pessoa estava lendo
-		scroller!.scrollTop += scroller!.scrollHeight - before;
+		if (loadingOlder || !messages.length) return;
+		loadingOlder = olderBusy = true;
+		try {
+			while (running) await running;
+			const first = messages[0];
+			const sameSecond = messages.filter((x) => x.createdAt === first.createdAt).length;
+			const read = await session.getMessages(conversationId, PAGE_SIZE + 1 + sameSecond, first.createdAt + 1);
+			const { page, more } = olderPage(read, first, PAGE_SIZE);
+			// a recarga inteira, se vier, já lê a janela com esta página
+			extraPages++;
+			await quoteFromBefore(page);
+			for (let end = page.length; end > 0; end -= OLDER_CHUNK) {
+				const chunk = page.slice(Math.max(0, end - OLDER_CHUNK), end);
+				const before = scroller!.scrollHeight;
+				messages = [...chunk, ...messages.filter((x) => !chunk.some((c) => c.id === x.id))];
+				await tick();
+				scroller!.scrollTop += scroller!.scrollHeight - before;
+				if (end > OLDER_CHUNK) await new Promise(requestAnimationFrame);
+			}
+			hasOlder = more;
+		} finally {
+			loadingOlder = olderBusy = false;
+			if (again) {
+				const urgent = againNow;
+				again = againNow = false;
+				refresh(urgent);
+			}
+		}
+	}
+	/** As citações das anteriores a mensagens de mais antes ainda, que não estão na tela. */
+	async function quoteFromBefore(page: MessageRecord[]) {
+		const here = new Set([...page, ...messages].map((x) => x.id));
+		const missing = [...new Set(page.flatMap((x) => (x.replyTo && !here.has(x.replyTo) && !quoted.has(x.replyTo) ? [x.replyTo] : [])))];
+		if (!missing.length) return;
+		const next = new Map(quoted);
+		for (const id of missing) {
+			const original = await session.getMessage(id);
+			if (original) next.set(id, original);
+		}
+		quoted = next;
 	}
 
 </script>
@@ -647,14 +701,14 @@
 		<p class="floating-day" class:visible={showDay} aria-hidden="true">{floatingDay}</p>
 		<div class="messages" bind:this={scroller} {onscroll} aria-live="polite">
 			{#if hasOlder}
-				<button class="link older" onclick={loadOlder}>{m.conversa_carregar_anteriores()}</button>
+				<button class="link older" onclick={loadOlder} disabled={olderBusy}>{m.conversa_carregar_anteriores()}</button>
 			{/if}
 			{#if messages.length === 0 && loaded}
 				<p class="hint empty">{m.conversa_vazia()}</p>
 			{/if}
-			{#each blocks as block, b (b)}
-				<div class="block" style:--block-estimate="{block.length * 56}px">
-					{#each block as item (item.type === 'msg' ? item.message.id : item.type === 'dia' ? `d${item.key}` : 'novas')}
+			{#each blocks as block (block.key)}
+				<div class="block" style:--block-estimate="{block.items.length * 56}px">
+					{#each block.items as item (item.type === 'msg' ? item.message.id : item.type === 'dia' ? `d${item.key}` : 'novas')}
 						{#if item.type === 'novas'}
 							<p class="new-line"><span>{m.conversa_novas()}</span></p>
 						{:else if item.type === 'dia'}
