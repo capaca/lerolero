@@ -37,9 +37,13 @@ test('"Carregar anteriores" traz a página de antes uma vez só, na ordem, mesmo
 	const { page } = await novaPessoa('Maria');
 	const outro = 'cd'.repeat(32);
 	await page.goto(`./conversa/${outro}`);
-	// 230 mensagens do contato direto no aparelho; da 25 à 35 no mesmo segundo, bem na divisa da página de 200
+	// 230 mensagens do contato direto no aparelho, de tamanhos variados; da 25 à 35 no mesmo segundo, bem na divisa da
+	// página de 200
 	const agora = Math.floor(Date.now() / 1000) - 3600;
-	const lista = Array.from({ length: 230 }, (_, i) => [`m${String(i + 1).padStart(3, '0')}`, `Antiga ${i + 1}`, i >= 24 && i < 35 ? agora + 24 : agora + i] as const);
+	const lista = Array.from(
+		{ length: 230 },
+		(_, i) => [`m${String(i + 1).padStart(3, '0')}`, `Antiga ${i + 1}.` + ' lero'.repeat((i * 7) % 40), i >= 24 && i < 35 ? agora + 24 : agora + i] as const
+	);
 	await page.evaluate(
 		({ lista, outro }) =>
 			new Promise<void>((ok, falha) => {
@@ -61,10 +65,17 @@ test('"Carregar anteriores" traz a página de antes uma vez só, na ordem, mesmo
 	await expect(linhas).toHaveCount(200);
 	await expect(page.locator('.row', { hasText: 'Antiga 230' })).toBeInViewport();
 	const botao = page.getByRole('button', { name: 'Carregar mensagens anteriores' });
+	// no topo, a primeira mensagem inteira na tela é a que a pessoa está lendo
+	await page.locator('.messages').evaluate((el) => (el.scrollTop = 0));
+	const lendo = page.locator('.row', { hasText: /Antiga 31\./ });
+	const antes = (await lendo.boundingBox())!.y;
 	// dois toques seguidos: o segundo, durante o carregamento, não pede outra página
 	await botao.evaluate((b: HTMLButtonElement) => (b.click(), b.click()));
 	await expect(linhas).toHaveCount(230);
 	await expect(botao).toHaveCount(0);
+	// regressão (2026-11-11): com textos de tamanhos diferentes, a leitura andava até ~1.500 px
+	await page.waitForTimeout(800);
+	expect(Math.abs((await lendo.boundingBox())!.y - antes)).toBeLessThan(4);
 	const textos = await linhas.evaluateAll((rows) => rows.map((r) => r.querySelector('p')?.textContent));
 	expect(textos).toEqual(lista.map(([, text]) => text));
 });

@@ -20,6 +20,11 @@ conhecidos".
   quadros lentos que restam são da criação dos balões (~1,3 ms cada no aparelho). Decidido pelo Pedro: aceitar como
   limite conhecido. Rejeitados por ora: carregar antes de chegar ao topo e virtualizar a lista.
 - `medir-celular.ts`: a contagem de quando o relay tem todas passou a olhar os dois relays (saía 0).
+- Achado na validação da homologação: depois de "carregar anteriores", a mensagem que a pessoa lia andava até ~1.500 px
+  (com textos de tamanhos diferentes; já acontecia antes do 28b). O ajuste pela diferença do `scrollHeight` não
+  via que o bloco novo logo acima da tela nasce com a altura estimada do `content-visibility` e cresce depois.
+  Corrigido ancorando na primeira mensagem inteira na tela, segurada por alguns quadros até os blocos assentarem
+  (para se a pessoa rolar); teste de regressão em `conversa-longa`.
 - Falta o 28c: a mensagem enviada na tela em menos de 100 ms (RNF-12; ~115 ms no Redmi).
 
 ## 2026-11-11: Item 28a: a conversa aberta não recarrega inteira a cada mudança (P17)
