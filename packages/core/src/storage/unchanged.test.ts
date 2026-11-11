@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyChanges, keepUnchanged, keepUnchangedGroups, sameRecord } from './unchanged.ts';
+import { applyChanges, keepUnchanged, keepUnchangedGroups, olderPage, sameRecord } from './unchanged.ts';
 
 describe('reaproveitar o que não mudou (P17)', () => {
 	it('compara campos e objetos de dentro pelo conteúdo', () => {
@@ -74,5 +74,16 @@ describe('aplicar só as mensagens que mudaram (P17)', () => {
 		const { list, older } = applyChanges(janela, [['d', msg('d', 40)]], 'direta:x', 3);
 		expect(list.map((x) => x.id)).toEqual(['b', 'c', 'd']);
 		expect(older).toBe(true);
+	});
+});
+
+describe('carregar anteriores em páginas (RNF-14)', () => {
+	const msg = (id: string, createdAt: number) => ({ id, createdAt });
+
+	it('pega as mais próximas da primeira da tela, sem ela nem as do mesmo segundo que vêm depois', () => {
+		const primeira = msg('m', 50);
+		const lidas = [msg('a', 10), msg('b', 20), msg('c', 30), msg('d', 50), msg('m', 50), msg('z', 50)];
+		expect(olderPage(lidas, primeira, 2)).toEqual({ page: [msg('c', 30), msg('d', 50)], more: true });
+		expect(olderPage(lidas, primeira, 4)).toEqual({ page: [msg('a', 10), msg('b', 20), msg('c', 30), msg('d', 50)], more: false });
 	});
 });

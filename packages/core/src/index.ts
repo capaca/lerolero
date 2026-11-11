@@ -12,7 +12,7 @@ export { POW_DIFFICULTY, powOf } from './crypto/pow.ts';
 export { connect, expose, RemoteError, type Endpoint, type Remote } from './worker/rpc.ts';
 export { openStorage, type Storage } from './storage/repositories.ts';
 export type * from './storage/records.ts';
-export { applyChanges, keepUnchanged, keepUnchangedGroups, sameRecord } from './storage/unchanged.ts';
+export { applyChanges, keepUnchanged, keepUnchangedGroups, olderPage, sameRecord } from './storage/unchanged.ts';
 export {
 	generatePhrase,
 	InvalidPhraseError,

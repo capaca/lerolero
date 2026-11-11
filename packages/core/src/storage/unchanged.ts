@@ -76,3 +76,13 @@ export function applyChanges<T extends { id: string; conversationId: string; cre
 	}
 	return { list, older };
 }
+
+/**
+ * A página antes da primeira da janela, a partir do que o banco devolveu até o segundo dela (inclusive: no mesmo
+ * segundo, quem vem antes é decidido pelo id). Devolve até `size` mensagens, as mais próximas da janela, e se ainda
+ * há mais antigas.
+ */
+export function olderPage<T extends { id: string; createdAt: number }>(read: readonly T[], first: T, size: number): { page: T[]; more: boolean } {
+	const before = read.filter((item) => byDbOrder(item, first) < 0);
+	return { page: before.slice(Math.max(0, before.length - size)), more: before.length > size };
+}

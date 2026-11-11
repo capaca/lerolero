@@ -75,7 +75,9 @@ log(`enviando ${N} mensagens`);
 // quando o relay tem todas as do celular (a chave dele está no endereço da conversa da Ana): o que passar disso até
 // ele mostrar a última é o atraso do celular
 const chaveDoCelular = ana.url().split('/conversa/')[1];
-const paraOCelular = () => dm.events.filter((e) => e.kind === 1059 && e.tags.some((t) => t[0] === 'p' && t[1] === chaveDoCelular)).length;
+// nos dois relays: um mesmo embrulho pode estar nos dois, então conta os ids
+const paraOCelular = () =>
+	new Set([...dm.events, ...geral.events].filter((e) => e.kind === 1059 && e.tags.some((t) => t[0] === 'p' && t[1] === chaveDoCelular)).map((e) => e.id)).size;
 const noRelayAntes = paraOCelular();
 let noRelayS = 0;
 const vigia = setInterval(() => {
