@@ -34,6 +34,7 @@ import {
 	GROUP_CONTROL_KIND,
 	joinersOf,
 	needsProof,
+	newRumor,
 	POW_DIFFICULTY,
 	powOf,
 	trimSuspects,
@@ -954,17 +955,12 @@ class Session {
 			const groupTag = ['g', conversationId.slice('grupo:'.length)];
 			const nameTags = kind !== 14 && kind !== 15 ? [] : await nameTagFor(storage, conversationId, this.current.displayName);
 			const seqTags = store && (kind === 14 || kind === 15) ? nextSeqTag(conversation) : [];
-			const wrapped = await vault.wrapGroupMessage(
-				conversation.members,
-				content,
-				[...nameTags, ...tags, ...seqTags, groupTag],
-				kind,
-				at ?? sendTime(conversation)
-			);
-			if (store) {
-				await storeOutgoing(storage, wrapped.rumor);
-				this.changed(conversationId, [wrapped.rumor.id]);
-			}
+			const allTags = [...nameTags, ...tags, ...seqTags, groupTag];
+			const createdAt = at ?? sendTime(conversation);
+			const wrapped =
+				store && (kind === 14 || kind === 15)
+					? await this.storeThenWrap(conversationId, kind, content, allTags, createdAt, conversation.members)
+					: await vault.wrapGroupMessage(conversation.members, content, allTags, kind, createdAt);
 			for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap, store ? wrapped.rumor.id : undefined, wrapped.rumor);
 			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays(), undefined, wrapped.rumor);
 			if (store) void this.sendProfile(conversation.members);
@@ -975,13 +971,18 @@ class Session {
 		const conversation = await storage.conversations.get(conversationId);
 		// numerada (RF-53): quem recebe nota se faltar alguma; edição e pedido de apagar não contam
 		const seqTags = store && (kind === 14 || kind === 15) ? nextSeqTag(conversation) : [];
-		const wrapped = await vault.wrapDirectMessage(recipient, content, [...nameTags, ...tags, ...seqTags], kind, at ?? sendTime(conversation));
+		const allTags = [...nameTags, ...tags, ...seqTags];
+		const createdAt = at ?? sendTime(conversation);
 		// guarda antes de buscar onde o contato recebe: com relays fora do ar a busca leva até ~10 s e, sem isto, a
 		// mensagem não aparecia nem ficava na fila (RNF-12)
-		if (store) {
-			await storeOutgoing(storage, wrapped.rumor, recipient);
-			this.changed(conversationId, [wrapped.rumor.id]);
-		}
+		const wrapped =
+			store && (kind === 14 || kind === 15)
+				? await this.storeThenWrap(conversationId, kind, content, allTags, createdAt, [recipient], recipient).then((w) => ({
+						rumor: w.rumor,
+						toRecipient: w.toRecipients[0].wrap,
+						toSelf: w.toSelf
+					}))
+				: await vault.wrapDirectMessage(recipient, content, allTags, kind, createdAt);
 		const deliver = async () => {
 			let relays: string[];
 			try {
@@ -1002,6 +1003,34 @@ class Session {
 			if (store) void this.sendProfile([recipient]);
 		};
 		return { rumor: wrapped.rumor, deliver };
+	}
+
+	/**
+	 * Mensagem minha na tela antes da cifra (RNF-12): o rumor é montado aqui, guardado e mostrado, e só depois o cofre
+	 * sela e embrulha, uma vez para cada destinatário e outra para mim. A cifra levava a maior parte do tempo até o
+	 * balão aparecer. Se ela falhar, a mensagem sai da tela e o erro sobe (o texto volta para o campo).
+	 */
+	private async storeThenWrap(
+		conversationId: string,
+		kind: 14 | 15,
+		content: string,
+		tags: string[][],
+		createdAt: number,
+		members: string[],
+		recipient?: string
+	) {
+		const me = this.current.publicKey;
+		const others = [...new Set(members)].filter((k) => k !== me);
+		const rumor = newRumor(me, kind, content, [...others.map((k) => ['p', k]), ...tags], createdAt);
+		await storeOutgoing(storage, rumor, recipient);
+		this.changed(conversationId, [rumor.id]);
+		try {
+			return { rumor, ...(await vault.wrapMine(rumor, others)) };
+		} catch (err) {
+			await deleteForMe(storage, rumor.id);
+			this.changed(conversationId, [rumor.id]);
+			throw err;
+		}
 	}
 
 	/**

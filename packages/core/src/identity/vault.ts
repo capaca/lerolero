@@ -72,6 +72,16 @@ export type WrappedMessage = { rumor: Rumor; toRecipient: NostrEvent; toSelf: No
 /** Mensagem de grupo embrulhada: um gift wrap por membro, mais a minha cópia. */
 export type WrappedGroupMessage = { rumor: Rumor; toRecipients: { recipient: string; wrap: NostrEvent }[]; toSelf: NostrEvent };
 
+/**
+ * O rumor (NIP-59, sem assinatura) de uma mensagem minha, montado fora do cofre: não precisa da chave, só da pública.
+ * Com ele a mensagem é guardada e aparece na tela antes da cifra, que vem depois em `wrapMine` (RNF-12).
+ */
+export function newRumor(pubkey: string, kind: 14 | 15, content: string, tags: string[][], createdAt = Math.floor(Date.now() / 1000)): Rumor {
+	checkMessage(kind, content, tags);
+	const rumor = { pubkey, kind, content, tags, created_at: createdAt };
+	return { ...rumor, id: getEventHash(rumor) };
+}
+
 export const MAX_TEXT_LENGTH = 4000;
 
 /** Reação (NIP-25) e confirmação de entrega/leitura (kind próprio, docs/06 §3.4); o 4441 sai da faixa 4440–4449 reservada. */
@@ -122,7 +132,7 @@ async function provenWrap(rumor: Rumor, secretKey: Uint8Array, recipient: string
 const TWO_DAYS_S = 2 * 24 * 60 * 60;
 
 /** Regras comuns a mensagens 1:1 e de grupo: o cofre não embrulha qualquer coisa. */
-function checkMessage(kind: number, content: string, tags: string[][]) {
+export function checkMessage(kind: number, content: string, tags: string[][]) {
 	if (kind === 14 && (!content.trim() || content.length > MAX_TEXT_LENGTH)) throw new Error('mensagem vazia ou longa demais');
 	if (kind === 15 && !/^https:\/\/\S+$/.test(content)) throw new Error('arquivo sem endereço https');
 	if (kind === 5 && !tags.some((t) => t[0] === 'e')) throw new Error('pedido de apagar sem a mensagem');
@@ -357,6 +367,30 @@ export function createVault({
 			const addressed = new Set(rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1]));
 			if (rumor.kind !== 4440 && !recipients.every((r) => addressed.has(r))) throw new Error('destinatário fora da mensagem');
 			return recipients.map((recipient) => ({ recipient, wrap: createWrap(createSeal(rumor, secretKey!, recipient), recipient) }));
+		},
+
+		/**
+		 * Sela e embrulha uma mensagem minha já montada (`newRumor`): um gift wrap para cada destinatário e um para mim.
+		 * Só texto e arquivo (kind 14 e 15), escritos por mim, com o id certo e para quem está nas tags `p`: o cofre não
+		 * assina por fora do que `wrapDirectMessage` e `wrapGroupMessage` aceitariam.
+		 */
+		wrapMine(rumor: Rumor, recipients: string[]): { toRecipients: { recipient: string; wrap: NostrEvent }[]; toSelf: NostrEvent } {
+			if (!secretKey) throw new LockedError();
+			const me = getPublicKey(secretKey);
+			if (rumor.pubkey !== me || (rumor.kind !== 14 && rumor.kind !== 15) || getEventHash(rumor) !== rumor.id) {
+				throw new Error('só embrulho mensagens minhas de texto ou arquivo');
+			}
+			checkMessage(rumor.kind, rumor.content, rumor.tags);
+			const addressed = new Set(rumor.tags.filter((t) => t[0] === 'p').map((t) => t[1]));
+			const unique = [...new Set(recipients)];
+			// grupo em que só restei eu: vai só para os meus aparelhos, como em wrapGroupMessage
+			if (unique.length > MAX_GROUP_RECIPIENTS || !unique.every((r) => isPublicKey(r) && r !== me && addressed.has(r))) {
+				throw new Error('destinatários inválidos');
+			}
+			return {
+				toRecipients: unique.map((recipient) => ({ recipient, wrap: createWrap(createSeal(rumor, secretKey!, recipient), recipient) })),
+				toSelf: createWrap(createSeal(rumor, secretKey, me), me)
+			};
 		},
 
 		/**
