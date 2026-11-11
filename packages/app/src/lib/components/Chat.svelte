@@ -42,6 +42,8 @@
 	const BLOCK_SIZE = 50;
 	// "carregar anteriores" põe na tela tantas por quadro: 50 balões levavam 55 a 80 ms no celular de referência
 	const OLDER_CHUNK = 25;
+	// quadros em que a mensagem que a pessoa lia é segurada no lugar depois de carregar as anteriores
+	const SETTLE_FRAMES = 30;
 	// numa rajada do que chega pela rede, o intervalo mínimo entre uma recarga e a seguinte (P17)
 	const RELOAD_GAP_MS = 250;
 	// as últimas que a recarga parcial relê sempre, além das que a sessão avisou que mudaram
@@ -639,15 +641,34 @@
 			// a recarga inteira, se vier, já lê a janela com esta página
 			extraPages++;
 			await quoteFromBefore(page);
+			// A âncora é a primeira mensagem inteira na tela: ela volta ao mesmo ponto depois de cada pedaço e de novo no
+			// quadro seguinte. Pela diferença do scrollHeight, a leitura andava até ~1.500 px: o bloco novo logo acima da
+			// tela nasce com a altura estimada (content-visibility) e só depois cresce para a real.
+			const anchor = firstVisibleRow();
+			const anchorTop = anchor?.getBoundingClientRect().top ?? 0;
+			let expected = scroller!.scrollTop;
+			const keep = () => {
+				if (anchor?.isConnected) scroller!.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
+				expected = scroller!.scrollTop;
+			};
 			for (let end = page.length; end > 0; end -= OLDER_CHUNK) {
 				const chunk = page.slice(Math.max(0, end - OLDER_CHUNK), end);
-				const before = scroller!.scrollHeight;
 				messages = [...chunk, ...messages.filter((x) => !chunk.some((c) => c.id === x.id))];
 				await tick();
-				scroller!.scrollTop += scroller!.scrollHeight - before;
-				if (end > OLDER_CHUNK) await new Promise(requestAnimationFrame);
+				keep();
+				await new Promise(requestAnimationFrame);
+				keep();
 			}
 			hasOlder = more;
+			await tick();
+			keep();
+			// os blocos perto da tela ainda crescem para a altura real nos quadros seguintes; segura a âncora até
+			// assentar, mas para assim que a pessoa rolar
+			for (let frame = 0; frame < SETTLE_FRAMES; frame++) {
+				await new Promise(requestAnimationFrame);
+				if (Math.abs(scroller!.scrollTop - expected) > 2) break;
+				keep();
+			}
 		} finally {
 			loadingOlder = olderBusy = false;
 			if (again) {
@@ -656,6 +677,10 @@
 				refresh(urgent);
 			}
 		}
+	}
+	function firstVisibleRow() {
+		const top = scroller!.getBoundingClientRect().top;
+		return [...scroller!.querySelectorAll<HTMLElement>('.row')].find((row) => row.getBoundingClientRect().top >= top);
 	}
 	/** As citações das anteriores a mensagens de mais antes ainda, que não estão na tela. */
 	async function quoteFromBefore(page: MessageRecord[]) {
