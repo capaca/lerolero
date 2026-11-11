@@ -5,6 +5,30 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-11: Item 28a: a conversa aberta não recarrega inteira a cada mudança (P17)
+
+- Medido antes de mexer, no Chrome do Mac com a CPU 6× mais lenta e os relays locais (o medidor ficou fora do
+  repositório): 300 mensagens com a conversa aberta chegavam a 3,75 por segundo, como no Redmi. Mas o relay também
+  recebia devagar: quem recebe nunca tinha escrito para quem envia, e cada mensagem saía com prova de trabalho
+  (RF-90). Com a resposta antes, a conversa aberta levava 42 s e os Ajustes, 19 s (o ritmo de quem envia). O
+  `medir-celular.ts` passou a fazer o celular responder antes e a anotar quando o relay tem todas.
+- O que mudou, medido um por um: reaproveitar os registros que não mudaram, para o Svelte redesenhar só o balão que
+  mudou (38 s); pedir a "lida" de cada mensagem uma vez, sem reconferir todas no banco a cada recarga (30 s); versão
+  por conversa (mudança em outra conversa não recarrega a aberta); a sessão anota quais mensagens mudaram e a tela
+  relê só essas, as últimas 20 e a conversa (27 s); numa rajada vinda da rede, no máximo uma recarga a cada 250 ms,
+  e o que a pessoa faz (enviar, reagir) recarrega na hora (RNF-12): 18 s, o ritmo de quem envia.
+- Rejeitado: segurar o topo da janela para os blocos não se deslocarem (piorou para 40 s: a lista cresce e cada
+  recarga desenha mais); só juntar as recargas que se sobrepõem (não mudou nada: elas não se sobrepunham).
+- Achado pelo e2e no caminho: a tela que abre antes de a conversa existir ficava sem destinatários e a "lida" não
+  aparecia; e a "lida" pedida antes de aceitar o pedido não era pedida de novo. Os dois corrigidos; teste novo
+  `conversa-longa` (rajada de 40 chega na ordem e volta como lida).
+- No Redmi, com o `medir-celular.ts` corrigido: as 2.000 mensagens chegaram em 106 s com a conversa aberta, 2 s depois de
+  o Mac terminar de enviar (no item 20, 551 s). Na mesma rodada, a rolagem com 2.000 mensagens deu 55 a 57 fps (no item
+  20, 31 a 36), abrir a conversa 277 ms, o envio na tela 119 ms (pior 150; RNF-12 pede < 100) e a partida a frio até a
+  lista 3,7 a 4,6 s.
+- Falta o 28b: a rolagem melhorou sem mexer nela, mas ainda não chega a 60 fps, e o envio na tela continua acima de
+  100 ms.
+
 ## 2026-11-11: Item 20: medição no aparelho de referência
 
 - O Pedro conseguiu o celular mais simples que pôde: um Xiaomi Redmi Note 8 (2019, Snapdragon 665, 4 GB, Android 10,

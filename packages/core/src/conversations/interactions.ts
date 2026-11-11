@@ -49,19 +49,20 @@ export async function conversationOf(storage: Storage, me: string, rumor: Rumor)
  * Guarda uma reação (minha, vinda de outro aparelho, ou de quem está na conversa). Cada pessoa tem uma por mensagem:
  * a mais recente substitui a anterior. Devolve se algo mudou.
  */
-async function storeReactionNow(storage: Storage, me: string, rumor: Rumor): Promise<boolean> {
+/** Devolve a conversa da reação guardada, ou undefined se ela não vale (a tela recarrega só essa, P17). */
+async function storeReactionNow(storage: Storage, me: string, rumor: Rumor): Promise<string | undefined> {
 	const target = rumor.tags.find((t) => t[0] === 'e')?.[1];
 	const emoji = rumor.content.trim();
-	if (!isId(target) || !emoji || [...emoji].length > 16) return false;
-	if (rumor.pubkey !== me && (await storage.contacts.get(rumor.pubkey))?.state === 'bloqueado') return false;
+	if (!isId(target) || !emoji || [...emoji].length > 16) return undefined;
+	if (rumor.pubkey !== me && (await storage.contacts.get(rumor.pubkey))?.state === 'bloqueado') return undefined;
 	const conversation = await conversationOf(storage, me, rumor);
-	if (!conversation) return false;
-	if (await storage.reactions.get(rumor.id)) return false;
+	if (!conversation) return undefined;
+	if (await storage.reactions.get(rumor.id)) return undefined;
 	// a reação tem de ser à mensagem desta conversa: a de outra não pode ser escrita por aqui
 	const message = await storage.messages.get(target);
-	if (message && message.conversationId !== conversation.id) return false;
+	if (message && message.conversationId !== conversation.id) return undefined;
 	const previous = await storage.reactions.listBySender(target, rumor.pubkey);
-	if (previous.some((r) => r.createdAt > rumor.created_at)) return false;
+	if (previous.some((r) => r.createdAt > rumor.created_at)) return undefined;
 	for (const old of previous) await storage.reactions.delete(old.id);
 	await storage.reactions.put({
 		id: rumor.id,
@@ -71,20 +72,20 @@ async function storeReactionNow(storage: Storage, me: string, rumor: Rumor): Pro
 		emoji,
 		createdAt: rumor.created_at
 	});
-	return true;
+	return conversation.id;
 }
 
-/** Pedido de apagar (kind 5) que cita uma reação: só vale de quem a escreveu. Devolve se desfez alguma. */
-async function removeReactionsNow(storage: Storage, rumor: Rumor): Promise<boolean> {
-	let changed = false;
+/** Pedido de apagar (kind 5) que cita uma reação: só vale de quem a escreveu. Devolve as conversas onde desfez alguma. */
+async function removeReactionsNow(storage: Storage, rumor: Rumor): Promise<string[]> {
+	const changed = new Set<string>();
 	for (const id of rumor.tags.filter((t) => t[0] === 'e').map((t) => t[1])) {
 		const reaction = await storage.reactions.get(id);
 		if (reaction && reaction.sender === rumor.pubkey) {
 			await storage.reactions.delete(id);
-			changed = true;
+			changed.add(reaction.conversationId);
 		}
 	}
-	return changed;
+	return [...changed];
 }
 
 const RANK: Record<Receipt, number> = { entregue: 1, lida: 2 };
@@ -92,15 +93,15 @@ const RANK: Record<Receipt, number> = { entregue: 1, lida: 2 };
 /**
  * Confirmação recebida: marca as minhas mensagens citadas como entregues ou lidas por quem a enviou. Só vale de quem
  * está na conversa e só para mensagem minha; "lida" só conta com a confirmação de leitura ligada (RF-51: quem desliga
- * também deixa de ver as dos outros). Devolve se algo mudou.
+ * também deixa de ver as dos outros). Devolve as mensagens que mudaram.
  */
-async function storeReceiptNow(storage: Storage, me: string, rumor: Rumor, options: { readReceipts: boolean }): Promise<boolean> {
-	if (rumor.pubkey === me) return false;
+async function storeReceiptNow(storage: Storage, me: string, rumor: Rumor, options: { readReceipts: boolean }): Promise<MessageRecord[]> {
+	if (rumor.pubkey === me) return [];
 	const status = rumor.tags.find((t) => t[0] === 'status')?.[1];
-	if (status !== 'entregue' && status !== 'lida') return false;
+	if (status !== 'entregue' && status !== 'lida') return [];
 	const receipt: Receipt = status === 'lida' && !options.readReceipts ? 'entregue' : status;
 	const ids = rumor.tags.filter((t) => t[0] === 'e' && isId(t[1])).map((t) => t[1]);
-	let changed = false;
+	const changed: MessageRecord[] = [];
 	for (const id of ids.slice(0, 200)) {
 		const message = await storage.messages.get(id);
 		if (!message || message.sender !== me || message.deleted || message.notice) continue;
@@ -108,8 +109,9 @@ async function storeReceiptNow(storage: Storage, me: string, rumor: Rumor, optio
 		if (!conversation || !conversation.members.includes(rumor.pubkey)) continue;
 		const current = message.receipts?.[rumor.pubkey];
 		if (current && RANK[current] >= RANK[receipt]) continue;
-		await storage.messages.put({ ...message, receipts: { ...message.receipts, [rumor.pubkey]: receipt } });
-		changed = true;
+		const updated = { ...message, receipts: { ...message.receipts, [rumor.pubkey]: receipt } };
+		await storage.messages.put(updated);
+		changed.push(updated);
 	}
 	return changed;
 }

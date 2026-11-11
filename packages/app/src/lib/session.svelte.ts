@@ -1,6 +1,7 @@
 // Estado da sessão: se há identidade no aparelho e se ela está desbloqueada.
 // As telas chamam estas funções; a chave privada fica no worker, nunca aqui.
 
+import { SvelteMap } from 'svelte/reactivity';
 import {
 	acceptRequest,
 	acceptGroupRequest,
@@ -189,6 +190,8 @@ const DM_LIST_ID = 'relays-dm';
 const BACKUP_ID = 'backup';
 /** Espera depois de uma mudança, para juntar várias num backup só (RF-06: economizar dados). */
 const BACKUP_DELAY_MS = 5_000;
+/** Mais mudanças que isto numa conversa sem a tela ler: ela relê a página inteira (P17). */
+const MAX_PENDING_CHANGES = 100;
 /** Quando a conta foi restaurada neste aparelho (segundos): o que chegou antes entra como lido (storeIncoming). */
 const RESTORED_AT_KEY = 'restauradaEm';
 
@@ -199,6 +202,53 @@ class Session {
 	private network?: { pool: RelayPool; engine: SyncEngine };
 	/** muda a cada mensagem ou conversa alterada: as telas observam e recarregam */
 	version = $state(0);
+	// A conversa aberta observa só a versão dela (P17): uma mensagem em outra conversa recarregava a aberta inteira.
+	// `anyChange` é para o que não se sabe de qual conversa é (backup, bloqueio...): todas recarregam.
+	private conversationChanges = new SvelteMap<string, number>();
+	private anyChange = $state(0);
+	// As mensagens que mudaram em cada conversa desde a última vez que a tela leu (takeChanges): com elas, a conversa
+	// aberta relê só essas. 'tudo' quando mudou o que não é mensagem (reação, membros, apagar) ou mudou demais.
+	private pendingChanges = new Map<string, Set<string> | 'tudo'>();
+	/** conversas com mudança feita por mim ainda não lida pela tela: recarregam na hora (RNF-12) */
+	private changesByMe = new Set<string>();
+
+	/**
+	 * Mudou a conversa (ou, sem ela, qualquer uma): as listas e a conversa aberta recarregam. Com `messageIds`, só essas
+	 * mensagens mudaram (novas, enviadas, editadas, confirmadas). `byMe` false: veio da rede, e a conversa aberta pode
+	 * juntar com as próximas antes de desenhar (P17); o que eu faço aparece na hora (RNF-12).
+	 */
+	private changed(conversationIds?: string | string[], messageIds?: string[], byMe = true) {
+		this.version++;
+		if (conversationIds === undefined) {
+			this.anyChange++;
+			this.pendingChanges.clear();
+			return;
+		}
+		for (const id of typeof conversationIds === 'string' ? [conversationIds] : conversationIds) {
+			if (byMe) this.changesByMe.add(id);
+			const pending = this.pendingChanges.get(id) ?? new Set<string>();
+			if (pending !== 'tudo' && messageIds && pending.size + messageIds.length <= MAX_PENDING_CHANGES) {
+				for (const messageId of messageIds) pending.add(messageId);
+				this.pendingChanges.set(id, pending);
+			} else this.pendingChanges.set(id, 'tudo');
+			this.conversationChanges.set(id, (this.conversationChanges.get(id) ?? 0) + 1);
+		}
+	}
+	/** O que a conversa aberta observa para recarregar. */
+	conversationVersion(conversationId: string) {
+		return this.anyChange + (this.conversationChanges.get(conversationId) ?? 0);
+	}
+	/** As mensagens da conversa que mudaram desde a última chamada, ou 'tudo' para reler a página inteira. */
+	takeChanges(conversationId: string): Set<string> | 'tudo' {
+		const pending = this.pendingChanges.get(conversationId) ?? 'tudo';
+		this.pendingChanges.delete(conversationId);
+		this.changesByMe.delete(conversationId);
+		return pending;
+	}
+	/** Mudou por ação minha (ou não se sabe por quem): a conversa aberta recarrega sem esperar (RNF-12). */
+	changedByMe(conversationId: string) {
+		return this.changesByMe.has(conversationId) || !this.pendingChanges.has(conversationId);
+	}
 	/** conversa na tela agora: mensagens dela não contam como não lidas */
 	openConversationId: string | undefined;
 	// $state.raw: o registro tem bytes que vão para o worker e para o IndexedDB, que não aceitam proxies
@@ -409,8 +459,8 @@ class Session {
 					if (item.messageId === DM_LIST_ID) await storage.settings.set('relaysDmPublicados', relaysOf(item.event.tags));
 					else if (item.messageId === BACKUP_ID) return;
 					else if (item.messageId) {
-						await markSent(storage, item.messageId);
-						this.version++;
+						const changed = await markSent(storage, item.messageId);
+						if (changed) this.changed(changed, [item.messageId], false);
 						void this.notifyRecipient(item);
 					}
 				}
@@ -537,7 +587,7 @@ class Session {
 			const { backup, checked } = await this.findBackup(this.current.publicKey, network.pool);
 			if (backup) {
 				await applyBackup(storage, this.current.publicKey, backup);
-				this.version++;
+				this.changed();
 			}
 			if (!checked) return;
 			await storage.settings.set(BACKUP_CHECKED_KEY, true);
@@ -580,7 +630,7 @@ class Session {
 		const conflict = this.backupConflict;
 		if (!conflict) return;
 		await applyBackup(storage, this.current.publicKey, conflict.backup);
-		this.version++;
+		this.changed();
 		this.backupConflict = undefined;
 		await this.publishBackup(true);
 	}
@@ -601,34 +651,43 @@ class Session {
 		if (rumor.kind === GROUP_CONTROL_KIND) return this.receiveGroupControl(rumor, proven);
 		const me = this.current.publicKey;
 		if (rumor.kind === EDIT_KIND) {
-			if (await storeEdit(storage, me, rumor)) this.version++;
+			const edited = await storeEdit(storage, me, rumor);
+			if (edited) this.changed(edited.conversationId, [edited.id], false);
 			return;
 		}
 		if (rumor.kind === PROFILE_KIND) {
 			const card = await storeProfile(storage, me, rumor);
 			if (card) {
-				this.version++;
+				this.changed();
 				await this.refreshPhoto(card.publicKey);
 			}
 			return;
 		}
 		if (rumor.kind === REACTION_KIND) {
-			if (await storeReaction(storage, me, rumor)) this.version++;
+			const changed = await storeReaction(storage, me, rumor);
+			if (changed) this.changed(changed, undefined, false);
 			return;
 		}
 		if (rumor.kind === RESEND_KIND) return this.answerResend(rumor);
 		if (rumor.kind === PUSH_DEVICE_KIND) return this.receivePushDevice(rumor);
 		if (rumor.kind === RECEIPT_KIND) {
 			const readReceipts = await this.readReceiptsOn();
-			if (await storeReceipt(storage, me, rumor, { readReceipts })) this.version++;
+			const changed = await storeReceipt(storage, me, rumor, { readReceipts });
+			for (const conversationId of new Set(changed.map((m) => m.conversationId))) {
+				this.changed(conversationId, changed.filter((m) => m.conversationId === conversationId).map((m) => m.id), false);
+			}
 			return;
 		}
 		const readBefore = await storage.settings.get<number>(RESTORED_AT_KEY);
 		const stored = await storeIncoming(storage, me, rumor, { openConversationId: this.openConversationId, readBefore, proven });
 		if (stored?.isNew && !proven) void trimSuspects(storage, (id) => this.discardUpload(id));
-		if (rumor.kind === 5 && (await removeReactions(storage, rumor))) this.version++;
+		if (rumor.kind === 5) {
+			const changed = await removeReactions(storage, rumor);
+			if (changed.length) this.changed(changed, undefined, false);
+		}
 		if (stored?.isNew) {
-			this.version++;
+			// o pedido de apagar também tira as reações: relê a conversa inteira
+			this.changed(stored.message.conversationId, rumor.kind === 5 ? undefined : [stored.message.id], false);
 			// chegou aqui: "entregue" (RF-50); a "lida" vem quando a conversa aparece na tela
 			if (stored.message.sender !== me && !stored.message.notice) void this.acknowledge([stored.message.id], 'entregue');
 		}
@@ -754,7 +813,7 @@ class Session {
 		const missing = lostRecipients(message, conversation.members);
 		if (!missing.length) return;
 		await markResent(storage, messageId, Date.now() / 1000);
-		this.version++;
+		this.changed(message.conversationId, [messageId]);
 		await this.resendTo(message.rumor, missing);
 	}
 
@@ -763,7 +822,7 @@ class Session {
 		const me = this.current.publicKey;
 		const change = await storeGroupControl(storage, me, rumor, Date.now(), proven);
 		if (!change?.isNew) return;
-		this.version++;
+		this.changed();
 		this.backupSoon();
 		// quem entrou no grupo passa a poder aparecer com foto
 		void this.refreshPhotos();
@@ -793,7 +852,7 @@ class Session {
 		const proofFor = new Set<string>();
 		for (const k of joiners) if (await needsProof(storage, k)) proofFor.add(k);
 		await storeGroupControl(storage, this.current.publicKey, wrapped.rumor);
-		this.version++;
+		this.changed();
 		this.backupSoon();
 		// os relays de todos são buscados antes de devolver e a fila recebe os avisos na sequência: se a página
 		// recarregasse no meio da busca solta, o aviso sumia e o membro nunca era adicionado ao grupo
@@ -904,7 +963,7 @@ class Session {
 			);
 			if (store) {
 				await storeOutgoing(storage, wrapped.rumor);
-				this.version++;
+				this.changed(conversationId, [wrapped.rumor.id]);
 			}
 			for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap, store ? wrapped.rumor.id : undefined, wrapped.rumor);
 			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays(), undefined, wrapped.rumor);
@@ -921,7 +980,7 @@ class Session {
 		// mensagem não aparecia nem ficava na fila (RNF-12)
 		if (store) {
 			await storeOutgoing(storage, wrapped.rumor, recipient);
-			this.version++;
+			this.changed(conversationId, [wrapped.rumor.id]);
 		}
 		const deliver = async () => {
 			let relays: string[];
@@ -931,7 +990,7 @@ class Session {
 				// sem para onde enviar: não deixa uma "pendente" eterna, o texto volta para o campo
 				if (store) {
 					await deleteForMe(storage, wrapped.rumor.id);
-					this.version++;
+					this.changed(conversationId, [wrapped.rumor.id]);
 				}
 				throw err;
 			}
@@ -953,7 +1012,7 @@ class Session {
 		const before = await storage.messages.get(messageId);
 		const edited = await editMine(storage, this.current.publicKey, messageId, text);
 		if (!edited.editedAt || edited.editedAt === before?.editedAt) return;
-		this.version++;
+		this.changed(edited.conversationId, [edited.id]);
 		await this.sendTo(conversationId, edited.text, editTags(edited), EDIT_KIND, false, edited.editedAt);
 	}
 
@@ -973,19 +1032,19 @@ class Session {
 		const [current] = await storage.reactions.listBySender(messageId, me);
 		if (current?.emoji === emoji) {
 			await storage.reactions.delete(current.id);
-			this.version++;
+			this.changed(conversationId);
 			// desfazer é um pedido de apagar a reação (NIP-25 e NIP-09)
 			await this.sendTo(conversationId, '', [['e', current.id], ['k', String(REACTION_KIND)]], 5, false);
 			return;
 		}
 		const rumor = await this.sendTo(conversationId, emoji, reactionTags(message), REACTION_KIND, false);
-		if (rumor && (await storeReaction(storage, me, rumor))) this.version++;
+		if (rumor && (await storeReaction(storage, me, rumor))) this.changed(conversationId);
 	}
 
 	/** Favoritar ou tirar dos favoritos (RF-28): só neste aparelho. */
 	async setStarred(messageIds: string[], starred: boolean) {
 		await setStarred(storage, messageIds, starred);
-		this.version++;
+		this.changed();
 	}
 
 	/**
@@ -1063,7 +1122,7 @@ class Session {
 			throw new NotInGroupError();
 		}
 		const message = await startPendingAudio(storage, { conversationId, me: this.current.publicKey, file, duration, start });
-		this.version++;
+		this.changed(conversationId, [message.id]);
 		void this.runUpload(message.id);
 	}
 
@@ -1074,7 +1133,7 @@ class Session {
 		}
 		const { file, width, height, thumb } = await prepareFromFile(original);
 		const message = await startPendingPhoto(storage, { conversationId, me: this.current.publicKey, file, width, height, thumb });
-		this.version++;
+		this.changed(conversationId, [message.id]);
 		void this.runUpload(message.id);
 	}
 
@@ -1094,7 +1153,7 @@ class Session {
 		if (!original.size) throw new FileRefusedError('vazio');
 		const file = original.type.startsWith('audio/') ? new Blob([original], { type: 'application/octet-stream' }) : original;
 		const message = await startPendingFile(storage, { conversationId, me: this.current.publicKey, file, name });
-		this.version++;
+		this.changed(conversationId, [message.id]);
 		void this.runUpload(message.id);
 	}
 
@@ -1120,7 +1179,7 @@ class Session {
 			}
 		} finally {
 			this.uploading.delete(id);
-			this.version++;
+			this.changed();
 		}
 	}
 
@@ -1132,7 +1191,7 @@ class Session {
 	/** "Tentar de novo" num áudio que não saiu. */
 	async retryUpload(messageId: string) {
 		if (await retryPendingUpload(storage, messageId)) {
-			this.version++;
+			this.changed();
 			void this.runUpload(messageId);
 		}
 	}
@@ -1142,20 +1201,20 @@ class Session {
 		clearTimeout(this.uploadTimers.get(messageId));
 		this.uploadTimers.delete(messageId);
 		await discardPendingUpload(storage, messageId);
-		this.version++;
+		this.changed();
 	}
 
 	/** Apagar para mim (RF-25): some deste aparelho, sem avisar ninguém. */
 	async deleteForMe(messageId: string) {
 		if ((await storage.messages.get(messageId))?.upload) return this.discardUpload(messageId);
 		await deleteForMe(storage, messageId);
-		this.version++;
+		this.changed();
 	}
 
 	/** Excluir conversa: some deste aparelho, sem avisar ninguém; o contato fica. Mensagem nova recomeça a conversa. */
 	async deleteConversation(conversationId: string) {
 		await deleteConversation(storage, conversationId, (id) => this.discardUpload(id));
-		this.version++;
+		this.changed();
 	}
 
 	/**
@@ -1169,7 +1228,7 @@ class Session {
 		// ainda não saiu: ninguém recebeu nada para apagar
 		if (message.upload) return this.discardUpload(messageId);
 		await markDeleted(storage, message);
-		this.version++;
+		this.changed();
 		await this.sendTo(conversationId, '', deletionTags(message), 5, false);
 		// arquivo que nenhuma outra mensagem usa (markDeleted já tirou do aparelho): sai dos servidores
 		const media = message.media;
@@ -1254,6 +1313,7 @@ class Session {
 
 	async markRead(conversationId: string) {
 		await markRead(storage, conversationId);
+		// só o contador da lista muda: a conversa aberta não recarrega
 		this.version++;
 	}
 
@@ -1318,20 +1378,20 @@ class Session {
 		const accepted = await acceptGroupRequest(storage, conversationId);
 		this.backupSoon();
 		if (accepted) await this.afterGroupChange({ conversation: accepted, isNew: true, joined: true, newMembers: [] });
-		this.version++;
+		this.changed();
 	}
 
 	/** Bloquear o grupo (RF-13): bloqueia quem me adicionou e descarta o grupo daqui, sem aviso a ninguém. */
 	async blockGroupRequest(conversationId: string) {
 		await blockGroupRequest(storage, conversationId, (id) => this.discardUpload(id));
-		this.version++;
+		this.changed();
 		this.backupSoon();
 		void this.renewPush();
 	}
 
 	async acceptRequest(publicKey: string) {
 		await acceptRequest(storage, publicKey);
-		this.version++;
+		this.changed();
 		this.backupSoon();
 		// aceito: a foto do cartão, que ficou guardada, passa a aparecer (T9)
 		await this.refreshPhoto(publicKey);
@@ -1340,7 +1400,7 @@ class Session {
 	/** Bloquear (RF-13): a conversa some daqui e o que vier dessa chave é descartado. */
 	async blockContact(publicKey: string) {
 		await blockContact(storage, publicKey, (id) => this.discardUpload(id));
-		this.version++;
+		this.changed();
 		this.backupSoon();
 		void this.renewPush();
 		await this.refreshPhoto(publicKey);
@@ -1348,7 +1408,7 @@ class Session {
 
 	async unblockContact(publicKey: string) {
 		await unblockContact(storage, publicKey);
-		this.version++;
+		this.changed();
 		this.backupSoon();
 		await this.refreshPhoto(publicKey);
 	}
@@ -1436,7 +1496,7 @@ class Session {
 			if ((await storage.messages.countUsingMedia(old.ox)) === 0) await storage.media.delete(old.ox);
 			void removeFromBlossom(old.urls, old.x, (template) => vault.sign(template)).catch(() => {});
 		}
-		this.version++;
+		this.changed();
 		this.backupSoon();
 		await this.refreshPhoto(me);
 		void this.sendProfile(await profileAudience(storage, me));

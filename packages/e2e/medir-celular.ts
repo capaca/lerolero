@@ -64,9 +64,23 @@ await tel.goto(conversaNoCelular);
 await ana.goto(convite);
 await confirmarConvite(ana);
 await ana.getByRole('link', { name: 'Conversar' }).click();
+// O celular responde antes: sem isso, cada mensagem da Ana leva prova de trabalho (RF-90, quem nunca me escreveu) e
+// quem limita a rajada é o envio no Mac, não o celular (foi o que a medição de 2026-11-11 mediu sem saber).
+await tel.getByLabel('Mensagem').fill('oi, Ana');
+await tel.getByRole('button', { name: 'Enviar', exact: true }).click();
+await ana.locator('.row', { hasText: 'oi, Ana' }).waitFor({ timeout: 60_000 });
 
 // ---------- Ana escreve N mensagens; o celular recebe com a conversa aberta ----------
 log(`enviando ${N} mensagens`);
+// quando o relay tem todas as do celular (a chave dele está no endereço da conversa da Ana): o que passar disso até
+// ele mostrar a última é o atraso do celular
+const chaveDoCelular = ana.url().split('/conversa/')[1];
+const paraOCelular = () => dm.events.filter((e) => e.kind === 1059 && e.tags.some((t) => t[0] === 'p' && t[1] === chaveDoCelular)).length;
+const noRelayAntes = paraOCelular();
+let noRelayS = 0;
+const vigia = setInterval(() => {
+	if (!noRelayS && paraOCelular() - noRelayAntes >= N) noRelayS = (Date.now() - t0) / 1000;
+}, 500);
 const t0 = Date.now();
 const campo = ana.getByLabel('Mensagem');
 const enviar = ana.getByRole('button', { name: 'Enviar', exact: true });
@@ -79,6 +93,8 @@ for (let i = 1; i <= N; i++) {
 resultado.digitadasNoMacS = (Date.now() - t0) / 1000;
 await tel.locator('.row', { hasText: `Mensagem ${N} de ${N}:` }).waitFor({ timeout: 600_000 });
 resultado.recebidasNoCelularS = (Date.now() - t0) / 1000;
+clearInterval(vigia);
+resultado.todasNoRelayS = noRelayS;
 log('recebidas', resultado.recebidasNoCelularS, 's');
 
 // ---------- RNF-11: abrir a conversa (do início até a última mensagem na tela), 5 vezes ----------
