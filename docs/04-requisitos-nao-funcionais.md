@@ -22,9 +22,9 @@ Metas de qualidade que valem para todo o app. Os números de desempenho foram me
 |---|---|---|
 | RNF-10 | Abrir o app (já instalado, partida a frio) até a lista de conversas | < 3 s. ❌ Medido 3,9 a 5,0 s no Chrome (limite superior), dos quais ~1,8 s são o Chrome abrindo e ~1,2 s a página carregando. Rever no app nativo (item 27) |
 | RNF-11 | Abrir uma conversa com histórico | < 500 ms. ✅ 187 ms com 50 mensagens; 247 ms (pior 316 ms) com 2.000 |
-| RNF-12 | Mensagem enviada aparece na tela de quem envia | < 100 ms (antes mesmo de chegar ao relay). ❌ 107 ms com 50 mensagens; 158 ms (pior 219 ms) com 2.000. Item 28 |
+| RNF-12 | Mensagem enviada aparece na tela de quem envia | < 100 ms (antes mesmo de chegar ao relay). ❌ 107 ms com 50 mensagens; 158 ms (pior 219 ms) com 2.000; 119 ms (pior 150 ms) com 2.000 depois do item 28a. Item 28 |
 | RNF-13 | Entrega com os dois usuários online | < 2 s em 95% dos casos. Ida e volta de um gift wrap pelo celular: 0,3 s (auth.nostr1.com) e 2,0 s (relay.primal.net); depende mais dos relays que do aparelho. Com 2.000 mensagens seguidas e a conversa aberta, o celular recebeu ~3,6 por segundo (item 28) |
-| RNF-14 | Rolagem de conversa longa sem travar | 60 fps, sem engasgos perceptíveis. ❌ 60 fps com 50 mensagens; 31 a 36 fps, com 3 a 6 engasgos, com 2.000 e as anteriores carregadas. No protótipo, os blocos com `content-visibility` rolam 2.000 a 60 fps. Item 28 |
+| RNF-14 | Rolagem de conversa longa sem travar | 60 fps, sem engasgos perceptíveis. ❌ 60 fps com 50 mensagens; 31 a 36 fps, com 3 a 6 engasgos, com 2.000 e as anteriores carregadas; 55 a 57 fps, com 2 a 4 engasgos, depois do item 28a. No protótipo, os blocos com `content-visibility` rolam 2.000 a 60 fps. Item 28 |
 | RNF-15 | Memória usada pelo app | < 150 MB. ⚠️ Heap JS de 53 MB com 50 mensagens e 114 MB depois das 2.000 (o processo da aba no Chrome, 341 MB) |
 | RNF-16 | Tamanho do download inicial do PWA (código) | < 500 KB comprimido |
 | RNF-17 | Tamanho do APK | < 15 MB |

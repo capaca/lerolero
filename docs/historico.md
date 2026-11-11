@@ -22,7 +22,12 @@ conhecidos".
 - Achado pelo e2e no caminho: a tela que abre antes de a conversa existir ficava sem destinatários e a "lida" não
   aparecia; e a "lida" pedida antes de aceitar o pedido não era pedida de novo. Os dois corrigidos; teste novo
   `conversa-longa` (rajada de 40 chega na ordem e volta como lida).
-- Falta: conferir no Redmi com o `medir-celular.ts` (precisa do Pedro com o celular no USB) e o 28b (rolagem).
+- No Redmi, com o `medir-celular.ts` corrigido: as 2.000 mensagens chegaram em 106 s com a conversa aberta, 2 s depois de
+  o Mac terminar de enviar (no item 20, 551 s). Na mesma rodada, a rolagem com 2.000 mensagens deu 55 a 57 fps (no item
+  20, 31 a 36), abrir a conversa 277 ms, o envio na tela 119 ms (pior 150; RNF-12 pede < 100) e a partida a frio até a
+  lista 3,7 a 4,6 s.
+- Falta o 28b: a rolagem melhorou sem mexer nela, mas ainda não chega a 60 fps, e o envio na tela continua acima de
+  100 ms.
 
 ## 2026-11-11: Item 20: medição no aparelho de referência
 
