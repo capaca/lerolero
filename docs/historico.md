@@ -5,6 +5,19 @@ descartadas, os bugs achados no caminho e o que ficou de fora. O roadmap guarda 
 para cá, com a entrada mais recente no topo. Os limites que continuam valendo também estão no roadmap, em "Limites
 conhecidos".
 
+## 2026-11-18: Correções do app Android e do envio de mídia
+
+- O balão de áudio, foto ou arquivo aparecia duplicado por um instante ao terminar de subir, e o texto em volta
+  piscava. Desde o 28c a mensagem de verdade aparece antes da cifra, mas o balão provisório só saía depois dela.
+  Agora o provisório sai no mesmo passo em que a mensagem entra. Se o envio falhar, ele volta, com o arquivo, para a
+  próxima tentativa. Teste novo em `arquivos`, com a CPU 6× mais lenta. Achado pelo Pedro na homologação.
+- No APK da v0.18.1, o convite saía como `https://localhost/convite#…`, porque a interface roda dentro do aparelho.
+  O convite e o link do código de recuperação agora levam ao endereço público do app, gravado no build do APK, e o
+  `android.yml` confere isso.
+- Ainda no APK, não funcionavam o gerenciador de senhas (`NotSupportedError`), "Salvar no celular", o compartilhar e
+  a impressão. Escolhas do Pedro: o Credential Manager do Android já agora, e não só na etapa 4, e os plugins oficiais
+  para salvar e compartilhar ([ADR-0011](adr/0011-app-android-nativo.md)).
+
 ## 2026-11-11: Item 28c: a mensagem enviada na tela em menos de 100 ms (RNF-12)
 
 - Até o balão aparecer, o envio passava pela cifra no worker (selo e embrulho, duas vezes, com as assinaturas), pela

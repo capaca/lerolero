@@ -43,6 +43,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- salvar em Documentos (@capacitor/filesystem): só até o Android 9; depois o app grava os próprios arquivos sem pedir -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <!-- ler o QR do convite (RF-11) e gravar áudio: o WebView pede ao sistema na hora do uso -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
