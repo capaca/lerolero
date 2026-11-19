@@ -41,6 +41,9 @@ jobs:
         run: APP_RELEASE="homolog-${GITHUB_SHA::7}" pnpm apk
         env:
           APP_AMBIENTE: homologacao
+      # convite e código de recuperação levam ao Pages, e não ao https://localhost do APK (bug de 2026-11-18)
+      - name: Links do APK apontam para o Pages
+        run: grep -rqF 'https://lerolero-app.github.io/lerolero/' packages/app/build-nativo/_app
       # o APK assinado só sai na release; aqui ele é montado com uma chave descartável, para um erro na assinatura ou na
       # versão aparecer no PR e não na hora da release
       - name: APK da release, com chave descartável

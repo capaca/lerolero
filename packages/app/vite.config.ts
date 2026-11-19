@@ -53,6 +53,11 @@ export default defineConfig(({ command }) => ({
 		),
 		// app Android (ADR-0011): o repositório cujas Releases trazem o APK, para avisar de versão nova; vazio no PWA,
 		// que se atualiza pelo service worker, e no APK de teste da homologação
+		// app Android: a interface roda em https://localhost dentro do APK, que não abre em outro aparelho; convite e
+		// código de recuperação levam ao endereço do Pages. Vazio no PWA, onde vale o endereço em que o app está.
+		__APP_PUBLIC_URL__: JSON.stringify(
+			!nativo ? '' : process.env.APP_AMBIENTE === 'homologacao' ? 'https://lerolero-app.github.io/lerolero/' : 'https://capaca.github.io/lerolero/'
+		),
 		__APP_APK_REPO__: JSON.stringify(nativo && process.env.APP_AMBIENTE !== 'homologacao' ? 'capaca/lerolero' : ''),
 		// faixa de avisos (P9): o branch `avisos` do repositório, gravado pelo workflow avisos.yml; a homologação e o
 		// app em dev leem um arquivo próprio, para testar o aviso sem que ele apareça para quem usa a produção
