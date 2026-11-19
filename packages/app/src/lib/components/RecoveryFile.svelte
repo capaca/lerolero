@@ -3,19 +3,19 @@
 	// no aparelho ou mandado pelo menu de compartilhar, ou um cartão impresso. O app não sabe para onde o arquivo foi;
 	// por isso a conta só fica protegida quando a pessoa confirma "Guardei o arquivo" (decidido em 2026-10-29).
 	// Usado em "Guarde seu código" e em "Proteção da conta".
-	import { resolve } from '$app/paths';
 	import { numberedWords, recoveryFragment } from '@lerolero/core';
 	import Icon from './Icon.svelte';
 	import QrCode from './QrCode.svelte';
 	import Rich from './Rich.svelte';
+	import { appUrl } from '#lib/app-url.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let { words, onsaved, onwrite }: { words: string[]; onsaved: () => void; onwrite?: () => void } = $props();
 
-	const address = new URL(resolve('/'), location.origin).href;
+	const address = appUrl();
 	// as palavras vão no fragmento (#), que o navegador não manda ao servidor (T21)
-	const link = $derived(new URL(resolve('/restaurar'), location.origin).href + recoveryFragment(words));
+	const link = $derived(appUrl('restaurar') + recoveryFragment(words));
 	const name = $derived(session.identity?.displayName ?? '');
 	let ready = $state(false);
 	let shareError = $state('');

@@ -7,6 +7,7 @@ declare global {
 	const __APP_REPASSADOR__: string;
 	const __APP_AVISOS__: string;
 	const __APP_APK_REPO__: string;
+	const __APP_PUBLIC_URL__: string;
 	const __APP_LOCAL_COLOR__: string;
 
 	namespace App {
