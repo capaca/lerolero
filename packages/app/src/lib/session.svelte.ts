@@ -104,6 +104,7 @@ import {
 	storeIncoming,
 	sendTime,
 	storeOutgoing,
+	storePendingMessage,
 	cleanName,
 	EDIT_KIND,
 	editMine,
@@ -925,13 +926,14 @@ class Session {
 	/**
 	 * Envia para uma conversa: ao contato (1:1) ou a cada membro do grupo, com a tag `g`.
 	 * A mensagem aparece na hora como "enviando" (RNF-12) e segue pela fila; sem internet,
-	 * sai quando a conexão voltar. `store: false` para o que não vira mensagem (pedido de apagar).
+	 * sai quando a conexão voltar. `store: false` para o que não vira mensagem (pedido de apagar). `replaces`: o balão
+	 * provisório de uma mídia que subiu, trocado pela mensagem de verdade no mesmo passo.
 	 */
-	private sendTo(conversationId: string, content: string, tags: string[][], kind: MessageKind, store = true, at?: number) {
+	private sendTo(conversationId: string, content: string, tags: string[][], kind: MessageKind, store = true, at?: number, replaces?: string) {
 		// Em fila: o horário de cada mensagem sai depois da anterior (sendTime), e a primeira para
 		// alguém espera a busca dos relays dele; sem a fila, a segunda pegava o mesmo segundo e
 		// chegava trocada (2026-10-22).
-		const prepared = this.sending.then(() => this.sendNow(conversationId, content, tags, kind, store, at));
+		const prepared = this.sending.then(() => this.sendNow(conversationId, content, tags, kind, store, at, replaces));
 		this.sending = prepared.catch(() => {});
 		// a busca dos relays vai numa segunda fila, na mesma ordem: a mensagem seguinte já aparece sem esperar a
 		// anterior achar os relays do contato, que sem rede leva ~10 s (RNF-12)
@@ -947,8 +949,9 @@ class Session {
 	 * Cifra e guarda a mensagem; no 1:1, devolve em `deliver` o envio, que espera os relays do contato.
 	 * `at`: horário fixo do rumor (a edição leva o da edição, não o da próxima mensagem).
 	 */
-	private async sendNow(conversationId: string, content: string, tags: string[][], kind: MessageKind, store: boolean, at?: number) {
+	private async sendNow(conversationId: string, content: string, tags: string[][], kind: MessageKind, store: boolean, at?: number, replaces?: string) {
 		const network = this.requireNetwork();
+		const provisional = replaces ? await storage.messages.get(replaces) : undefined;
 		if (conversationId.startsWith('grupo:')) {
 			const conversation = await storage.conversations.get(conversationId);
 			if (!conversation?.group?.amMember) throw new NotInGroupError();
@@ -959,7 +962,7 @@ class Session {
 			const createdAt = at ?? sendTime(conversation);
 			const wrapped =
 				store && (kind === 14 || kind === 15)
-					? await this.storeThenWrap(conversationId, kind, content, allTags, createdAt, conversation.members)
+					? await this.storeThenWrap(conversationId, kind, content, allTags, createdAt, conversation.members, undefined, provisional)
 					: await vault.wrapGroupMessage(conversation.members, content, allTags, kind, createdAt);
 			for (const { recipient, wrap } of wrapped.toRecipients) void this.enqueueTo(recipient, wrap, store ? wrapped.rumor.id : undefined, wrapped.rumor);
 			void network.engine.enqueue(wrapped.toSelf, await this.myDmRelays(), undefined, wrapped.rumor);
@@ -977,7 +980,7 @@ class Session {
 		// mensagem não aparecia nem ficava na fila (RNF-12)
 		const wrapped =
 			store && (kind === 14 || kind === 15)
-				? await this.storeThenWrap(conversationId, kind, content, allTags, createdAt, [recipient], recipient).then((w) => ({
+				? await this.storeThenWrap(conversationId, kind, content, allTags, createdAt, [recipient], recipient, provisional).then((w) => ({
 						rumor: w.rumor,
 						toRecipient: w.toRecipients[0].wrap,
 						toSelf: w.toSelf
@@ -989,10 +992,7 @@ class Session {
 				relays = await this.deliveryRelays(recipient);
 			} catch (err) {
 				// sem para onde enviar: não deixa uma "pendente" eterna, o texto volta para o campo
-				if (store) {
-					await deleteForMe(storage, wrapped.rumor.id);
-					this.changed(conversationId, [wrapped.rumor.id]);
-				}
+				if (store) await this.unstore(conversationId, wrapped.rumor.id, provisional);
 				throw err;
 			}
 			// quem nunca me escreveu recebe com prova de trabalho (RF-90); a mensagem já está na tela enquanto ela é feita
@@ -1009,6 +1009,8 @@ class Session {
 	 * Mensagem minha na tela antes da cifra (RNF-12): o rumor é montado aqui, guardado e mostrado, e só depois o cofre
 	 * sela e embrulha, uma vez para cada destinatário e outra para mim. A cifra levava a maior parte do tempo até o
 	 * balão aparecer. Se ela falhar, a mensagem sai da tela e o erro sobe (o texto volta para o campo).
+	 * O balão provisório de uma mídia (`provisional`) sai no mesmo passo em que a mensagem entra: antes ele só saía
+	 * depois da cifra, e os dois ficavam juntos na tela.
 	 */
 	private async storeThenWrap(
 		conversationId: string,
@@ -1017,20 +1019,32 @@ class Session {
 		tags: string[][],
 		createdAt: number,
 		members: string[],
-		recipient?: string
+		recipient?: string,
+		provisional?: MessageRecord
 	) {
 		const me = this.current.publicKey;
 		const others = [...new Set(members)].filter((k) => k !== me);
 		const rumor = newRumor(me, kind, content, [...others.map((k) => ['p', k]), ...tags], createdAt);
 		await storeOutgoing(storage, rumor, recipient);
-		this.changed(conversationId, [rumor.id]);
+		// o arquivo fica: a mensagem de verdade usa o mesmo
+		if (provisional) await deleteForMe(storage, provisional.id);
+		this.changed(conversationId, provisional ? [rumor.id, provisional.id] : [rumor.id]);
 		try {
 			return { rumor, ...(await vault.wrapMine(rumor, others)) };
 		} catch (err) {
-			await deleteForMe(storage, rumor.id);
-			this.changed(conversationId, [rumor.id]);
+			await this.unstore(conversationId, rumor.id, provisional);
 			throw err;
 		}
+	}
+
+	/**
+	 * Desfaz a mensagem guardada que não saiu. O provisório volta antes de ela sair, senão o arquivo, que ficava só
+	 * com ela, saía junto e a próxima tentativa não tinha o que enviar.
+	 */
+	private async unstore(conversationId: string, rumorId: string, provisional?: MessageRecord) {
+		if (provisional) await storePendingMessage(storage, provisional);
+		await deleteForMe(storage, rumorId);
+		this.changed(conversationId, provisional ? [rumorId, provisional.id] : [rumorId]);
 	}
 
 	/**
@@ -1198,7 +1212,7 @@ class Session {
 			const result = await tryPendingUpload(storage, id, {
 				servers: [...list.blossom, ...list.blossomReserva],
 				signer: (template) => vault.sign(template),
-				send: async (media) => void (await this.sendTo(conversationId!, media.urls[0], mediaTags(media as MessageMedia), 15))
+				send: async (media) => void (await this.sendTo(conversationId!, media.urls[0], mediaTags(media as MessageMedia), 15, true, undefined, id))
 			});
 			if (result.state === 'depois') {
 				this.uploadTimers.set(
