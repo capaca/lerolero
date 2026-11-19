@@ -5,18 +5,23 @@
 	import { onMount } from 'svelte';
 	import QrCode from '#lib/components/QrCode.svelte';
 	import { appUrl } from '#lib/app-url.ts';
+	import { isNativeApp, shareLinkNative } from '#lib/native.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
 	let link = $state('');
 	let copied = $state(false);
-	const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
+	// app Android: o WebView não tem o navigator.share; o menu vem pelo aparelho
+	const native = isNativeApp();
+	const canShare = native || (typeof navigator !== 'undefined' && 'share' in navigator);
 
 	onMount(async () => (link = inviteLink(appUrl(), await session.myInvite())));
 
 	async function share() {
 		try {
-			await navigator.share({ title: m.app_nome(), text: m.meuconvite_texto(), url: link });
+			const data = { title: m.app_nome(), text: m.meuconvite_texto(), url: link };
+			if (native) await shareLinkNative(data);
+			else await navigator.share(data);
 		} catch {
 			// a pessoa cancelou o compartilhamento
 		}

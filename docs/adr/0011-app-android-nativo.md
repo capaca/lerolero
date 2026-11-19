@@ -66,4 +66,13 @@ de onde vem a interface.
   cadastro antes de precisar) e a distribuição limitada (grátis, mas no máximo 20 aparelhos, sem folga para o
   beta). O pacote continua `io.github.capaca.lerolero`, que não depende do domínio (Q-N1). Rejeitado esperar o
   `.com.br` para trocar de pacote: o nome não aparece para quem usa o app, e a etapa ficaria parada.
+- O WebView do APK não tem tudo o que o Chrome tem. Visto pelo Pedro na v0.18.1 (2026-11-18): o gerenciador de
+  senhas recusava guardar (`NotSupportedError`), o download por link não fazia nada, e não havia menu de compartilhar
+  nem impressão. Decidido em 2026-11-18: no APK esses recursos vão pelo aparelho. O código de recuperação vai para o
+  Gerenciador de senhas do Google pelo Credential Manager do Android (plugin próprio `Aparelho`, que também o lê na
+  restauração, imprime o cartão pelo `PrintManager` e mostra o aviso de "salvo"). Os arquivos vão para
+  Documentos/Lero-lero pelo `@capacitor/filesystem`, e o compartilhar usa o `@capacitor/share`. Rejeitado esconder
+  a opção do gerenciador de senhas até a etapa 4: no APK ela é o jeito mais fácil de proteger a conta. Também no
+  mesmo dia: a interface roda em `https://localhost` dentro do APK, então o convite e o link do código de recuperação
+  levam ao endereço público do app, gravado no build.
 - Rever se o beta mostrar que instalar o APK é um obstáculo grande: aí a Play (US$ 25) volta à mesa.

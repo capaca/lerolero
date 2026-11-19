@@ -8,6 +8,7 @@
 	import QrCode from './QrCode.svelte';
 	import Rich from './Rich.svelte';
 	import { appUrl } from '#lib/app-url.ts';
+	import { isNativeApp, printNative, saveFileNative, shareFileNative } from '#lib/native.ts';
 	import { m } from '#lib/paraglide/messages.js';
 	import { session } from '#lib/session.svelte.ts';
 
@@ -26,11 +27,22 @@
 			type: 'text/plain'
 		});
 	// só mostra o compartilhar onde ele aceita arquivos (no computador, em geral não)
-	const canShareFiles = typeof navigator.canShare === 'function' && navigator.canShare({ files: [file()] });
+	const native = isNativeApp();
+	const canShareFiles = native || (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file()] }));
+	let saveError = $state('');
 
 	// o download sai no próprio toque, sem nada esperado antes: depois de um await o Chrome do Android o bloqueia
 	// sem aviso, e nada acontecia (bug visto no Motorola, 2026-10-29)
 	function download() {
+		// app Android: o WebView não baixa pelo link; grava em Documentos pelo aparelho
+		if (native) {
+			saveError = '';
+			saveFileNative(file(), m.arquivo_nome()).then(
+				() => (ready = true),
+				(err) => (saveError = (err as Error).message || String(err))
+			);
+			return;
+		}
 		const url = URL.createObjectURL(file());
 		const a = Object.assign(document.createElement('a'), { href: url, download: m.arquivo_nome() });
 		document.body.append(a);
@@ -47,7 +59,8 @@
 		sharing = true;
 		shareError = '';
 		try {
-			await navigator.share({ files: [file()], title: m.arquivo_titulo() });
+			if (native) await shareFileNative(file(), m.arquivo_nome(), m.arquivo_titulo());
+			else await navigator.share({ files: [file()], title: m.arquivo_titulo() });
 			ready = true;
 		} catch (err) {
 			// cancelado no menu: nada foi guardado, e não é erro
@@ -58,7 +71,9 @@
 	}
 
 	function print() {
-		window.print();
+		// no WebView o window.print() não faz nada: a impressão vai pelo Android
+		if (native) void printNative();
+		else window.print();
 		ready = true;
 	}
 </script>
@@ -67,7 +82,7 @@
 <div class="options">
 	<button class="option" onclick={download}>
 		<span class="option-icon"><Icon name="file" /></span>
-		<span class="option-text"><b>{m.arquivo_salvar()}</b><small>{m.arquivo_salvar_dica()}</small></span>
+		<span class="option-text"><b>{m.arquivo_salvar()}</b><small>{native ? m.arquivo_salvar_dica_app() : m.arquivo_salvar_dica()}</small></span>
 		<Icon name="chevron-right" size={18} />
 	</button>
 	{#if canShareFiles}
@@ -90,6 +105,7 @@
 		</button>
 	{/if}
 </div>
+{#if saveError}<p class="error" role="alert">{m.arquivo_salvar_erro({ erro: saveError })}</p>{/if}
 {#if shareError}<p class="error" role="alert">{m.arquivo_compartilhar_erro({ erro: shareError })}</p>{/if}
 {#if ready}
 	<div class="done" role="status">

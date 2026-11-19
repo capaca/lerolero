@@ -1,19 +1,25 @@
 <script lang="ts" module>
+	import { isNativeApp, readPasswordNative, storePasswordNative } from '#lib/native.ts';
+
 	// O TypeScript não declara o PasswordCredential, que só o Chrome tem
 	type PasswordCredentialInit = { id: string; password: string; name?: string };
 	type PasswordCredentialClass = new (init: PasswordCredentialInit) => Credential;
 	type PasswordCredentialResult = Credential & { password?: string };
 
-	const passwordCredential = () => (window as unknown as { PasswordCredential?: PasswordCredentialClass }).PasswordCredential;
+	// o WebView do app Android tem o PasswordCredential, mas recusa guardar (NotSupportedError, v0.18.1): lá o código vai
+	// pelo Credential Manager do Android, no Gerenciador de senhas do Google
+	const passwordCredential = () =>
+		isNativeApp() ? undefined : (window as unknown as { PasswordCredential?: PasswordCredentialClass }).PasswordCredential;
 
 	/** O código salvo no gerenciador de senhas do navegador, para a restauração; `undefined` sem nada salvo ou sem suporte. */
 	export async function savedPhrase(): Promise<string | undefined> {
+		if (isNativeApp()) return readPasswordNative();
 		if (!passwordCredential() || !navigator.credentials?.get) return undefined;
 		const credential = (await navigator.credentials.get({ password: true, mediation: 'optional' } as CredentialRequestOptions)) as PasswordCredentialResult | null;
 		return credential?.password || undefined;
 	}
 
-	export const canReadSavedPhrase = () => !!passwordCredential() && !!navigator.credentials?.get;
+	export const canReadSavedPhrase = () => isNativeApp() || (!!passwordCredential() && !!navigator.credentials?.get);
 </script>
 
 <script lang="ts">
@@ -31,7 +37,8 @@
 	// o nome é o que aparece no gerenciador; o endereço do site ele mostra sozinho
 	const account = $derived(m.senha_conta({ nome: session.identity?.displayName ?? '' }));
 	const phrase = $derived(words.join(' '));
-	const native = !!passwordCredential();
+	const android = isNativeApp();
+	const native = android || !!passwordCredential();
 	let asked = $state(false);
 	let busy = $state(false);
 	let error = $state('');
@@ -40,10 +47,15 @@
 		busy = true;
 		error = '';
 		try {
-			const PasswordCredential = passwordCredential()!;
-			await navigator.credentials.store(new PasswordCredential({ id: account, password: phrase, name: account }));
+			if (android) await storePasswordNative(account, phrase);
+			else {
+				const PasswordCredential = passwordCredential()!;
+				await navigator.credentials.store(new PasswordCredential({ id: account, password: phrase, name: account }));
+			}
 			asked = true;
 		} catch (err) {
+			// fechou a folha do Android sem guardar: não é erro, a opção continua ali
+			if ((err as Error).name === 'AbortError') return;
 			error = (err as Error).name || String(err);
 		} finally {
 			busy = false;
